@@ -19,9 +19,10 @@ julia> E = TwentySevenLines()
 
 An enumerative problem in 4 variable(s) cut out by 4 condition(s) over 20 parameters.
 
-julia> Degree(E)
+
+julia> degree(E)
 Populating a base fibre of the enumerative problem
-Tracking 45 paths... 100%|████████████████████████████████████████| Time: 0:00:06
+Tracking 45 paths... 100%|██████████| Time: 0:00:03
   # paths tracked:                  45
   # non-singular solutions (real):  27 (0)
   # singular endpoints (real):      0 (0)
@@ -31,45 +32,58 @@ Tracking 45 paths... 100%|██████████████████
 
 ## Computing the Galois group of the 27 lines
 ```julia
-julia> G = GaloisGroup(E)
-Sampling 20 elements from the monodromy group of
+julia> G = galois_group(E)
+Sampling 20 elements from the monodromy group of 
 
-  X := V(f_1..f_4) ⊆ C^4 x C^20
+           X := V(f_1..f_4) ⊆ C^4 x C^20
            |
            |
            | π   27-to-1
            |
            V
           C^20
+
+An enumerative problem in 4 variable(s) cut out by 4 condition(s) over 20 parameters.
+
+Tracking 27 paths... 100%|██████████| Time: 0:00:01
+  # paths tracked:                  27
+  # non-singular solutions (real):  27 (0)
+  # singular endpoints (real):      0 (0)
+  # total solutions (real):         27 (0)
 20 out of 20 are plausible permutations
-O(5,3) : C2
+<permutation group with 20 generators>
 
 julia> using Oscar; order(G)
 51840
+
+julia> isprimitive(G)
+true
+
 ```
 ### Observing the reality constraints on the 27 lines
 ```julia
-julia> Data = Explore(E,[RealPointsInFibre];n_samples=10000);
-Solving for 10000 parameters... 100%|████████████████████████████████████████| Time: 0:00:09
+Data = explore(E,[real_points_in_fibre]; n_samples=10000);
+Solving for 10000 parameters... 100% Time: 0:00:33
   # parameters solved:  10000
   # paths tracked:      270000
 Total number of fibres computed:10000
-9945/10000 satisfies DegCheck
-9945/10000 satisfies RealParityCheck
+9965/10000 satisfies degree_check
+9965/10000 satisfies real_parity_check
+
 
 julia> tally(Data[2][1])
 Dict{Any, Int64} with 4 entries:
-  3  => 7381
-  7  => 2120
-  15 => 433
-  27 => 11
+  3  => 7488
+  7  => 2059
+  15 => 413
+  27 => 5
 ```
 
-The main datatypes in PANDORA are currently
+The main datatypes in Pandora are currently
  Enumerative Problem
  Variety
 
-The main functionality in PANDORA currently includes
+The main functionality in Pandora currently includes
 - Monodromy Group Computation
 - Lazy Evaluation of Enumerative Problems
 - Automated Exploration Tools
