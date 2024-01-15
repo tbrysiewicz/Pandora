@@ -46,6 +46,7 @@ include("Enumeration/DegreeBounds.jl")
 
 include("GaloisGroups/GaloisSampling.jl")
 include("GaloisGroups/GaloisGroups.jl")
+include("GaloisGroups/CoordinateSymmetryGroup.jl")
 
 include("CoreObjects/Variety.jl")
 

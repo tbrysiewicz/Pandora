@@ -1,3 +1,7 @@
+export
+    coordinate_symmetry_group,
+    coordinate_symmetry_heatmap
+
 function heatmap_matrix_cleanup(M)
     (n,m) = size(M)
     HM = []
