@@ -85,7 +85,7 @@ function MakeBetter(EP::EnumerativeProblem,
 	# like, UpdateOptimizer(OD,Sols)
 	#This should make things easier to work with when we implement strategies
 	#We could even reintroduce the sampler as an attribute of the optimizer?
-	(Record,RecordFibre) = MaxScore(Sols,RealScoreSpace)   
+	(Record,RecordFibre) = MaxScore(Sols,SC)   
 	if PROG((Record,RecordFibre),(OD.Record,OD.RecordFibre)) && OD.Radius>0.001
 		OD.StuckScore=0
 	else
