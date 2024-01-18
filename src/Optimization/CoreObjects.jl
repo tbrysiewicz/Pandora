@@ -5,6 +5,13 @@ export
    # gt
 
 
+#TODO: Change style so that commands are consistent w/ rest of Pandora
+#      (Structures are Capitalized like EnumerativeProblem, functions are 
+#       not, and use underscores like galois_group(E::EnumerativeProblem))
+#      Recode the optimization procedures anyways to be more clever as discussed. 
+#    
+#
+
  
 struct Score
     ScoreFunction #must accept Tuple{Result, Vector{ComplexF64}} and return anything in T
@@ -61,8 +68,6 @@ function gt(a::Tuple{Int64,Float64},b::Tuple{Int64,Float64})
 end
 
 RealScoreSpace = Score(CtsReal,gt)
-
-@doc raw"""
 
 function MaxScore(Sols::Vector{Tuple{Result,Vector{Float64}}}, SC::Score)
     RecordFibre = Sols[1]
