@@ -5,7 +5,8 @@ using Pkg 					#To remove eventually
 using HomotopyContinuation	
 using LinearAlgebra
 using Combinatorics
-using Oscar					
+using Oscar			
+using Plots		
 
 
 import HomotopyContinuation.solve
