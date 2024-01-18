@@ -2,16 +2,20 @@ export
     Score,
     RealScoreSpace,
     MaxScore
+   # gt
 
 
+ 
 struct Score
     ScoreFunction #must accept Tuple{Result, Vector{ComplexF64}} and return anything in T
     gt #must accept two elements of T and return true/false true = gt or eq
 end
 
+
 function CtsReal(RP::Tuple{Result, Vector{Float64}})
     return((nreal(RP[1]),NonRealMinNorm(RP[1])))
 end
+
 
 function NonRealMinNorm(R::Result)
     record = nothing
@@ -34,6 +38,12 @@ function NonRealMinNorm(R::Result)
     end
 end
 
+@doc raw"""
+    gt(a::Tuple{Int64,Float64},b::Tuple{Int64,Float64})
+    
+    Compares two elements of the type Tuple{Int64,Float64}, and returns true 
+    if the first one is greater than or equal to the latter. 
+"""
 function gt(a::Tuple{Int64,Float64},b::Tuple{Int64,Float64})
     if a[1]>b[1]
         return(true)
@@ -51,6 +61,8 @@ function gt(a::Tuple{Int64,Float64},b::Tuple{Int64,Float64})
 end
 
 RealScoreSpace = Score(CtsReal,gt)
+
+@doc raw"""
 
 function MaxScore(Sols::Vector{Tuple{Result,Vector{Float64}}}, SC::Score)
     RecordFibre = Sols[1]
