@@ -107,7 +107,7 @@ GaloisGroups = []
 for i in 1:35
     if BI[i]==1
         E = HeronProblems[i]
-        push!(GaloisGroups,galois_group(E;nloops = 200))
+        push!(GaloisGroups,galois_group(E;nloops = 20))
     else
         push!(GaloisGroups,nothing)
     end
