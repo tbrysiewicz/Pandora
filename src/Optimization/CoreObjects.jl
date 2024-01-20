@@ -1,7 +1,7 @@
 export
     Score,
     RealScoreSpace,
-    MaxScore
+    max_score
    # gt
 
 
@@ -19,12 +19,12 @@ struct Score
 end
 
 
-function CtsReal(RP::Tuple{Result, Vector{Float64}})
-    return((nreal(RP[1]),NonRealMinNorm(RP[1])))
+function cts_real(RP::Tuple{Result, Vector{Float64}})
+    return((nreal(RP[1]),non_real_min_norm(RP[1])))
 end
 
 
-function NonRealMinNorm(R::Result)
+function non_real_min_norm(R::Result)
     record = nothing
     for r in R
         if is_real(r)==false
@@ -67,9 +67,9 @@ function gt(a::Tuple{Int64,Float64},b::Tuple{Int64,Float64})
     end
 end
 
-RealScoreSpace = Score(CtsReal,gt)
+RealScoreSpace = Score(cts_real,gt)
 
-function MaxScore(Sols::Vector{Tuple{Result,Vector{Float64}}}, SC::Score)
+function max_score(Sols::Vector{Tuple{Result,Vector{Float64}}}, SC::Score)
     RecordFibre = Sols[1]
     Record = SC.ScoreFunction(RecordFibre)
     for i in 2:length(Sols)

@@ -10,10 +10,10 @@
 
 
 export
-	Optimize,
+	optimize,
 	OptimizerData,
-	RealSampler,
-	MakeBetter
+	real_sampler,
+	make_better
 
 mutable struct OptimizerData
 	## This holds inside of it the record holders
@@ -35,7 +35,7 @@ mutable struct OptimizerData
 		#
 end
 
-function RealSampler(EP::EnumerativeProblem, OD::OptimizerData) ##This should also depend on optimizerdata
+function real_sampler(EP::EnumerativeProblem, OD::OptimizerData) ##This should also depend on optimizerdata
 	k = nparameters(EP.F)
 	direction = (OD.RecordFibre[2]-OD.PreviousFibre[2])
 	println("Old Radius: ",OD.Radius)
@@ -58,7 +58,7 @@ function RealSampler(EP::EnumerativeProblem, OD::OptimizerData) ##This should al
 	return(sampler)
 end
 
-function LastScoreProgress(newRec,oldRec)
+function last_score_progress(newRec,oldRec)
 	RecImprovement = -(last(newRec[1])-last(oldRec[1]))
 	if RecImprovement<0 #This means it is larger because of another coord
 		println("Progress:             ",:Inf)
@@ -74,12 +74,12 @@ function LastScoreProgress(newRec,oldRec)
 	end
 end
 
-function MakeBetter(EP::EnumerativeProblem,
+function make_better(EP::EnumerativeProblem,
 					OD::OptimizerData,
 					SC::Score;
 					TS=FirstScoreTabooProportion,
-					PROG = LastScoreProgress, bucketsize=100)
-	newsampler=RealSampler(EP,OD)
+					PROG = last_score_progress, bucketsize=100)
+	newsampler=real_sampler(EP,OD)
 	Sols = solve_over_params(EP,newsampler(bucketsize))
 	#Everything below needs to be its own updating procedure
 	# like, UpdateOptimizer(OD,Sols)
@@ -106,7 +106,7 @@ function MakeBetter(EP::EnumerativeProblem,
 end
 
 
-function Optimize(E::EnumerativeProblem, SC::Score, N;bucketsize=100)
+function optimize(E::EnumerativeProblem, SC::Score, N;bucketsize=100)
 	##First, do a really random brute force search to find a good starting point
 	k = nparameters(E.F)
 	println("Nparameters:",k)
@@ -115,7 +115,7 @@ function Optimize(E::EnumerativeProblem, SC::Score, N;bucketsize=100)
 	(Record,RecordFibre) = MaxScore(Sols,SC)
 	OD = OptimizerData(RecordFibre,Record,0.5,0,RecordFibre,10000)
 	for i in 1:N
-		MakeBetter(E,OD,SC;bucketsize=bucketsize)
+		make_better(E,OD,SC;bucketsize=bucketsize)
 	end
 	return(OD)
 end
@@ -125,7 +125,7 @@ end
 AL = AreaLengthSystem()
 Degree(AL)
 SC = RealScoreSpace
-OD = Optimize(AL,SC,100)
+OD = optimize(AL,SC,100)
 
 All Real solutions!
 [-1291.7598740797775, -1405.7987828197163, -1220.0662595045399, -59.1110622202469, -112.15102526093892, -371.3459096104677, -71.03932987299308, -84.27322083494848, -341.1868353357009, -1244.3188147721949]
