@@ -25,7 +25,7 @@ end
 
 
 function non_real_min_norm(R::Result)
-    record = nothing
+    record = nothing                #Here, record ans record_fibre are just variable names, not parts of the struct OptimizerData.
     for r in R
         if is_real(r)==false
             if record!= nothing
@@ -70,14 +70,14 @@ end
 RealScoreSpace = Score(cts_real,gt)
 
 function max_score(Sols::Vector{Tuple{Result,Vector{Float64}}}, SC::Score)
-    RecordFibre = Sols[1]
-    Record = SC.ScoreFunction(RecordFibre)
+    record_fibre = Sols[1]
+    record = SC.ScoreFunction(record_fibre)
     for i in 2:length(Sols)
         newscore=SC.ScoreFunction(Sols[i])
-        if SC.gt(newscore,Record)
-            RecordFibre=Sols[i]
-            Record = newscore
+        if SC.gt(newscore,record)
+            record_fibre=Sols[i]
+            record = newscore
         end
     end
-    return((Record,RecordFibre))
+    return((record,record_fibre))
 end

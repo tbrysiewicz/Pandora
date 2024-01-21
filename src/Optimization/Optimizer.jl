@@ -35,8 +35,9 @@ mutable struct OptimizerData
 		#
 end
 
-function real_sampler(EP::EnumerativeProblem, OD::OptimizerData) ##This should also depend on optimizerdata
-	k = nparameters(EP.F)
+function real_sampler(EP::EnumerativeProblem, OD::OptimizerData) ##This should also depend on OptimizerData
+	k = nparameters(EP.F)		#The function being used is "nparameters" from HomotopyContinuation, not "n_parameters" defined earlier in EnumerativeProblem.jl. 
+								#Hence not fitting the naming style with other functions here.
 	direction = (OD.RecordFibre[2]-OD.PreviousFibre[2])
 	println("Old Radius: ",OD.Radius)
 	if OD.TabooScore>0.7 #If the taboo score is too high, reduce radius
@@ -58,16 +59,16 @@ function real_sampler(EP::EnumerativeProblem, OD::OptimizerData) ##This should a
 	return(sampler)
 end
 
-function last_score_progress(newRec,oldRec)
-	RecImprovement = -(last(newRec[1])-last(oldRec[1]))
-	if RecImprovement<0 #This means it is larger because of another coord
+function last_score_progress(new_rec,old_rec)
+	rec_improvement = -(last(new_rec[1])-last(old_rec[1]))
+	if rec_improvement<0 #This means it is larger because of another coord
 		println("Progress:             ",:Inf)
 		return(true)
 	end
-	Movement = norm(newRec[2][2]-oldRec[2][2])
-	ProgressScore=RecImprovement/Movement
-	println("Progress:             ",ProgressScore)
-	if ProgressScore>0.1 ###What should this number be?
+	movement = norm(new_rec[2][2]-old_rec[2][2])
+	progress_score=rec_improvement/movement
+	println("Progress:             ",progress_score)
+	if progress_score>0.1 ###What should this number be?
 		return(true)
 	else
 		return(false)
@@ -77,24 +78,24 @@ end
 function make_better(EP::EnumerativeProblem,
 					OD::OptimizerData,
 					SC::Score;
-					TS=FirstScoreTabooProportion,
-					PROG = last_score_progress, bucketsize=100)
-	newsampler=real_sampler(EP,OD)
-	Sols = solve_over_params(EP,newsampler(bucketsize))
+					TS=first_score_taboo_proportion,
+					PROG = last_score_progress, bucket_size=100)
+	new_sampler=real_sampler(EP,OD)
+	sols = solve_over_params(EP,new_sampler(bucket_size))
 	#Everything below needs to be its own updating procedure
-	# like, UpdateOptimizer(OD,Sols)
+	# like, UpdateOptimizer(OD,sols)
 	#This should make things easier to work with when we implement strategies
 	#We could even reintroduce the sampler as an attribute of the optimizer?
-	(Record,RecordFibre) = MaxScore(Sols,SC)   
-	if PROG((Record,RecordFibre),(OD.Record,OD.RecordFibre)) && OD.Radius>0.001
+	(record,record_fibre) = max_score(sols,SC)   
+	if PROG((record,record_fibre),(OD.Record,OD.RecordFibre)) && OD.Radius>0.001
 		OD.StuckScore=0
 	else
 		OD.StuckScore=OD.StuckScore+1
 	end
-	OD.TabooScore = TS(Sols,SC,OD)
+	OD.TabooScore = TS(sols,SC,OD)
 	OD.PreviousFibre = OD.RecordFibre
-	OD.Record=Record
-	OD.RecordFibre=RecordFibre
+	OD.Record=record
+	OD.RecordFibre=record_fibre
 	println("Record:", OD.Record)
 	println("Taboo Score:",OD.TabooScore)
 	println("Stuck Score:", OD.StuckScore)
@@ -106,16 +107,16 @@ function make_better(EP::EnumerativeProblem,
 end
 
 
-function optimize(E::EnumerativeProblem, SC::Score, N;bucketsize=100)
+function optimize(E::EnumerativeProblem, SC::Score, N;bucket_size=100)
 	##First, do a really random brute force search to find a good starting point
-	k = nparameters(E.F)
+	k = nparameters(E.F)		#nparameters from HomotopyContinuation, not from Pandora. Hence the stylistic choice.
 	println("Nparameters:",k)
-	StartingSampleSize = 1
-	Sols = solve_over_params(E,[randn(Float64,k) for i in 1:StartingSampleSize])
-	(Record,RecordFibre) = MaxScore(Sols,SC)
-	OD = OptimizerData(RecordFibre,Record,0.5,0,RecordFibre,10000)
+	starting_sample_size = 1
+	sols = solve_over_params(E,[randn(Float64,k) for i in 1:starting_sample_size])
+	(record,record_fibre) = max_score(sols,SC)
+	OD = OptimizerData(record_fibre,record,0.5,0,record_fibre,10000)
 	for i in 1:N
-		make_better(E,OD,SC;bucketsize=bucketsize)
+		make_better(E,OD,SC;bucket_size=bucket_size)
 	end
 	return(OD)
 end
@@ -131,18 +132,18 @@ All Real solutions!
 [-1291.7598740797775, -1405.7987828197163, -1220.0662595045399, -59.1110622202469, -112.15102526093892, -371.3459096104677, -71.03932987299308, -84.27322083494848, -341.1868353357009, -1244.3188147721949]
 =#
 
-function FirstScoreTabooProportion(Sols::Vector{Tuple{Result,Vector{Float64}}},SC::Score,OD::OptimizerData)
-	taboocounter = 0
-	for Sol in Sols
-		if FirstScoreTaboo(Sol,SC,OD.Record[1])
-			taboocounter=taboocounter+1
+function first_score_taboo_proportion(sols::Vector{Tuple{Result,Vector{Float64}}},SC::Score,OD::OptimizerData)
+	taboo_counter = 0
+	for sol in sols
+		if first_score_taboo(sol,SC,OD.Record[1])
+			taboo_counter=taboo_counter+1
 		end
 	end
-	return(1.0*taboocounter/length(Sols))
+	return(1.0*taboo_counter/length(sols))
 end
 
-function FirstScoreTaboo(Sol::Tuple{Result,Vector{Float64}},SC::Score,k)
-	if (SC.ScoreFunction(Sol))[1]<k
+function first_score_taboo(sol::Tuple{Result,Vector{Float64}},SC::Score,k)
+	if (SC.ScoreFunction(sol))[1]<k
 		return(true)
 	else
 		return(false)
