@@ -1,4 +1,5 @@
 # PANDO(RA)
+### Parallel, Automated, Numerical, Discovery and Optimization (Research Aid)
 
 This is a prototype repository for a suite of numerical methods for 
 automatically and reliably analyzing enumerative problems. 
