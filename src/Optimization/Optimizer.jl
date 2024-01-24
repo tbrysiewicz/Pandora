@@ -86,6 +86,14 @@ function make_better(EP::EnumerativeProblem,
 	# like, UpdateOptimizer(OD,sols)
 	#This should make things easier to work with when we implement strategies
 	#We could even reintroduce the sampler as an attribute of the optimizer?
+	update_optimizer(OD,SC,sols, PROG = PROG, TS = TS)
+end
+
+#=
+Creating an UpdateOptimizer function as mentioned in between the code of MakeBetter function.
+=#
+
+function update_optimizer(OD::OptimizerData, SC:: Score, sols; PROG = last_score_progress, TS=first_score_taboo_proportion)
 	(record,record_fibre) = max_score(sols,SC)   
 	if PROG((record,record_fibre),(OD.Record,OD.RecordFibre)) && OD.Radius>0.001
 		OD.StuckScore=0
