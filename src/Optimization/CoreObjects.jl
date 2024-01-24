@@ -27,7 +27,7 @@ end
 function non_real_min_norm(R::Result)
     record = nothing                #Here, record ans record_fibre are just variable names, not parts of the struct OptimizerData.
     for r in R
-        if is_real(r)==false
+        if HomotopyContinuation.is_real(r)==false
             if record!= nothing
                 nm = norm(imag(r.solution))
                 if nm<record

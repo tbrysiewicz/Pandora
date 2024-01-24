@@ -1,6 +1,8 @@
 export
     tally,
-    mean
+    mean,
+    mode,
+    stat_print
 
 
 
@@ -19,4 +21,20 @@ end
 
 function mean(S)
     return(sum(S)/length(S))
+end
+
+function mode(S)
+    T = tally(S)
+    K = collect(keys(T))
+    FreqMax = max(collect(values(T))...)
+    Kmax = filter(x->T[x]==FreqMax,K)
+    return(Kmax)
+end
+
+function stat_print(S)
+    println("N:", length(S))
+    println("Mean:", mean(S))
+    println("Mode:", mode(S))
+    println("Max:", max(S...))
+    println("Min:", min(S...))
 end

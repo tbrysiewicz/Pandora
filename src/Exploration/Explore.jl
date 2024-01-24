@@ -56,7 +56,7 @@ function explore(E::EnumerativeProblem,L; sampler = nothing, real_parameters=tru
     F = system(E)
     P = []
     if sampler!=nothing
-        P = sampler(n_samples)
+        P = sampler(n_samples,n_parameters(E))
     elseif real_parameters==true
         P = real_sampler(n_samples,n_parameters(E))
     else
