@@ -81,3 +81,4 @@ function max_score(Sols::Vector{Tuple{Result,Vector{Float64}}}, SC::Score)
     end
     return((record,record_fibre))
 end
+
