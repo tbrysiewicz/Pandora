@@ -64,8 +64,8 @@ include("Examples/BasicVarietyExamples.jl")
 include("Statistics/Tally.jl")
 
 
-#include("Optimization/CoreObjects.jl")
-#include("Optimization/Optimizer.jl")
+include("Optimization/CoreObjects.jl")
+include("Optimization/Optimizer.jl")
 
 
 
