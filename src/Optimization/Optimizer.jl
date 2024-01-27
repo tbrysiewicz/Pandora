@@ -21,7 +21,7 @@ mutable struct Strategies
 	Shotgun::Bool
 	Careful::Bool #Maybe it should be Tuple{Bool,Union{Float64,Nothing}} for (Bool, Radius). Think whether it's better to add radius as a part of this attribute.
 	Reset::Bool
-	Reveries::Bool #Maybe it should be Tuple{Bool,Union{Float64,Nothing}} for (Bool, WesightVector).
+	Reveries::Bool #Maybe it should be Tuple{Bool,Union{Float64,Nothing}} for (Bool, WeightVector).
 	Ambitious::Bool
 end
 
