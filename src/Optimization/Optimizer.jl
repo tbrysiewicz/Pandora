@@ -17,6 +17,14 @@ export
 
 ## OptimizerData is the struct that contains all the information about the next sampling step.
 
+mutable struct Strategies
+	Shotgun::Bool
+	Careful::Bool #Maybe it should be Tuple{Bool,Union{Float64,Nothing}} for (Bool, Radius). Think whether it's better to add radius as a part of this attribute.
+	Reset::Bool
+	Reveries::Bool #Maybe it should be Tuple{Bool,Union{Float64,Nothing}} for (Bool, WesightVector).
+	Ambitious::Bool
+end
+
 mutable struct OptimizerData
 	## This holds inside of it the record holders
 	##  and information about the proportion of TABOO runs on the
@@ -28,7 +36,7 @@ mutable struct OptimizerData
 	StuckScore::Int64
 	PreviousFibre::Tuple{Result,Vector{Float64}}
 	Radius::Float64
-	
+	Strategy::Strategies
 	#There should be a strategy flag
 		#strategy: careful (push through valleys)
 		#		   long-shots (additionally take large radius in a second bucket)
@@ -37,34 +45,133 @@ mutable struct OptimizerData
 		#		   lot's of seeds
 		#
 end
+### TODO: The only functions that might need to incorporate the Strategy attribute are real_sampler,
+### 		make_better,update_optimizer and optimize. Need to update them to incorporate the strategies. 
 
 
 
 ## Function for creating a sampling function that fits in with the given OptimizerData and bucket_size.
 
+# Probably have to incorporate careful and ambitious into this. Maybe Reveries also.
+
+
+#=function real_sampler(EP::EnumerativeProblem, OD::OptimizerData) ##This should also depend on OptimizerData
+	k = nparameters(EP.F)		#The function being used is "nparameters" from HomotopyContinuation, not "n_parameters" defined earlier in EnumerativeProblem.jl. 
+								#Hence not fitting the naming style with other functions here.
+	direction = (OD.RecordFibre[2]-OD.PreviousFibre[2])
+	if OD.Strategy.Careful[1] 
+		println("Old Radius: ",OD.Strategy.Careful[2])
+		if OD.TabooScore>0.7 #If the taboo score is too high, reduce radius
+			OD.Strategy.Careful[2]=OD.Strategy.Careful[2]*0.9
+		elseif OD.TabooScore<0.2 #If the taboo score is too low, increase radius
+			OD.Strategy.Careful[2]=OD.Strategy.Careful[2]*1.1
+		end
+		println("Radius: ",OD.Strategy.Careful[2])
+		function sampler1(n)
+			v = [OD.RecordFibre[2]] #Always include current fibre
+			for i in 1:n
+				push!(v,OD.Strategy.Careful[2]*randn(Float64,k)+OD.RecordFibre[2])
+			end
+			if OD.Strategy.Ambitious
+				for i in 1:2
+					push!(v,OD.RecordFibre[2]+direction*OD.Strategy.Careful[2]*i^2) #and the fibres which continues the direction of the last move
+				end
+			end
+			return(v)
+		end
+	sampler = sampler1
+	else
+		function sampler2(n)
+			v = [OD.RecordFibre[2]]
+			for i in 1:n
+				push!(v,OD.Strategy.Careful[2]*randn(Float64,k)+OD.RecordFibre[2])
+			end
+			if OD.Strategy.Ambitious
+				for i in 1:2
+					push!(v,OD.RecordFibre[2]+direction*i^2)
+				end
+			end
+			return(v)
+		end
+	sampler = sampler2
+	end
+return(sampler)
+end
+=#
+
+#=
 function real_sampler(EP::EnumerativeProblem, OD::OptimizerData) ##This should also depend on OptimizerData
 	k = nparameters(EP.F)		#The function being used is "nparameters" from HomotopyContinuation, not "n_parameters" defined earlier in EnumerativeProblem.jl. 
 								#Hence not fitting the naming style with other functions here.
 	direction = (OD.RecordFibre[2]-OD.PreviousFibre[2])
-	println("Old Radius: ",OD.Radius)
-	if OD.TabooScore>0.7 #If the taboo score is too high, reduce radius
-		 OD.Radius=OD.Radius*0.9
-	elseif OD.TabooScore<0.2 #If the taboo score is too low, increase radius
-		OD.Radius=OD.Radius*1.1
-	end
-	println("Radius: ",OD.Radius)
-	function sampler(n)
-		v = [OD.RecordFibre[2]] #Always include current fibre
-		for i in 1:n
-			push!(v,OD.Radius*randn(Float64,k)+OD.RecordFibre[2])
+	 
+		println("Old Radius: ",OD.Radius)
+		if OD.TabooScore>0.7 #If the taboo score is too high, reduce radius
+			OD.Radius=OD.Radius*0.9
+		elseif OD.TabooScore<0.2 #If the taboo score is too low, increase radius
+			OD.Radius=OD.Radius*1.1
 		end
-		for i in 1:2
-			push!(v,OD.RecordFibre[2]+direction*OD.Radius*i^2) #and the fibres which continues the direction of the last move
+		println("Radius: ",OD.Radius)
+		function sampler1(n)
+			v = [OD.RecordFibre[2]] #Always include current fibre
+			for i in 1:n
+				push!(v,OD.Radius*randn(Float64,k)+OD.RecordFibre[2])
+			end
+			if OD.Strategy.Ambitious
+				for i in 1:2
+					push!(v,OD.RecordFibre[2]+direction*OD.Radius*i^2) #and the fibres which continues the direction of the last move
+				end
+			end
+			return(v)
 		end
-		return(v)
-	end
-	return(sampler)
+	return(sampler1)
 end
+=#
+
+function real_sampler(EP::EnumerativeProblem, OD::OptimizerData) ##This should also depend on OptimizerData
+	k = nparameters(EP.F)		#The function being used is "nparameters" from HomotopyContinuation, not "n_parameters" defined earlier in EnumerativeProblem.jl. 
+								#Hence not fitting the naming style with other functions here.
+	direction = (OD.RecordFibre[2]-OD.PreviousFibre[2])
+	if OD.Strategy.Careful 
+		println("Old Radius: ",OD.Radius)
+		if OD.TabooScore>0.7 #If the taboo score is too high, reduce radius
+			OD.Radius=OD.Radius*0.9
+		elseif OD.TabooScore<0.2 #If the taboo score is too low, increase radius
+			OD.Radius=OD.Radius*1.1
+		end
+		println("Radius: ",OD.Radius)
+		function sampler1(n)
+			v = [OD.RecordFibre[2]] #Always include current fibre
+			for i in 1:n
+				push!(v,OD.Radius*randn(Float64,k)+OD.RecordFibre[2])
+			end
+			if OD.Strategy.Ambitious
+				for i in 1:2
+					push!(v,OD.RecordFibre[2]+direction*OD.Radius*i^2) #and the fibres which continues the direction of the last move
+				end
+			end
+			return(v)
+		end
+	sampler = sampler1
+	else
+		function sampler2(n)
+			v = [OD.RecordFibre[2]]
+			for i in 1:n
+				push!(v,OD.Radius*randn(Float64,k)+OD.RecordFibre[2])
+			end
+			if OD.Strategy.Ambitious
+				for i in 1:2
+					push!(v,OD.RecordFibre[2]+direction*i^2)
+				end
+			end
+			return(v)
+		end
+	sampler = sampler2
+	end
+return(sampler)
+end
+
+##Maybe a function to be made for updating radius for the strategy careful, in the real_sampler.
 
 ## The function for tracking stuck scores, i.e., for tracking how long the code has been in the same 
 ## discriminant chamber, making very little progress.
@@ -126,6 +233,28 @@ end
 Creating an update_optimizer function as mentioned in between the code of make_better function.
 =#
 
+#=
+function update_optimizer(OD::OptimizerData, SC:: Score, sols; PROG = last_score_progress, TS=first_score_taboo_proportion)
+	(record,record_fibre) = max_score(sols,SC)   
+	if PROG((record,record_fibre),(OD.Record,OD.RecordFibre)) && OD.Radius>0.001
+		OD.StuckScore=0
+	else
+		OD.StuckScore=OD.StuckScore+1
+	end
+	OD.TabooScore = TS(sols,SC,OD)
+	OD.PreviousFibre = OD.RecordFibre
+	OD.Record=record
+	OD.RecordFibre=record_fibre
+	println("Record:", OD.Record)
+	println("Taboo Score:",OD.TabooScore)
+	println("Stuck Score:", OD.StuckScore)
+	if OD.StuckScore>=100
+		println("It seems we are stuck....going into chaos mode")
+		OD.Radius=1000
+		OD.StuckScore=0
+	end
+end
+=#
 
 function update_optimizer(OD::OptimizerData, SC:: Score, sols; PROG = last_score_progress, TS=first_score_taboo_proportion)
 	(record,record_fibre) = max_score(sols,SC)   
@@ -150,15 +279,20 @@ end
 
 ## Finally, the general optimize function.
 
-function optimize(E::EnumerativeProblem, SC::Score, N;bucket_size=100)
+function optimize_enumerative(E::EnumerativeProblem, SC::Score, N;bucket_size=100)
 	##First, do a really random brute force search to find a good starting point
 	k = nparameters(E.F)		#nparameters from HomotopyContinuation, not from Pandora. Hence the stylistic choice.
 	println("Nparameters:",k)
 	starting_sample_size = 1
 	sols = solve_over_params(E,[randn(Float64,k) for i in 1:starting_sample_size])
 	(record,record_fibre) = max_score(sols,SC)
-	
-	OD = OptimizerData(record_fibre,record,0.5,0,record_fibre,10000, Strategies)
+	shotgun = false
+	careful = false
+	reset = false
+	reveries = false
+	ambitious = false
+	strategy = Strategies(shotgun,careful,reset,reveries,ambitious)
+	OD = OptimizerData(record_fibre,record,0.5,0,record_fibre,10000, strategy)
 	for i in 1:N
 		make_better(E,OD,SC;bucket_size=bucket_size)
 	end
@@ -184,7 +318,7 @@ All Real solutions!
 function optimize_real_solns(F::System, N; bucket_size = 100)
     SC = RealScoreSpace
     E = EnumerativeProblem(F)
-    optimize(E, SC, N, bucket_size = bucket_size)
+    optimize_enumerative(E, SC, N, bucket_size = bucket_size)
 end
 
 
@@ -195,7 +329,22 @@ function optimize_reals_generic(degree_of_poly;n_iterations=100)
 	optimize_real_solns(F, n_iterations)
 end
 
-
+## Defining an example data to make it easier to check the code is working.
+function default_data(E::EnumerativeProblem)
+	k = nparameters(E.F)		#nparameters from HomotopyContinuation, not from Pandora. Hence the stylistic choice.
+	println("Nparameters:",k)
+	starting_sample_size = 1
+	sols = solve_over_params(E,[randn(Float64,k) for i in 1:starting_sample_size])
+	(record,record_fibre) = max_score(sols,SC)
+	shotgun = false
+	careful = false
+	reset = false
+	reveries = false
+	ambitious = false
+	strategy = Strategies(shotgun,careful,reset,reveries,ambitious)
+	OD = OptimizerData(record_fibre,record,0.5,0,record_fibre,10000, strategy)
+	return(OD)
+end
 
 
 
