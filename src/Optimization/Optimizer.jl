@@ -10,10 +10,13 @@
 
 
 export
-	optimize,
+	optimize_enumerative,
 	OptimizerData,
 	real_sampler,
-	make_better
+	make_better,
+	optimize_real_solns,
+	optimize_reals_generic,
+	default_data
 
 ## OptimizerData is the struct that contains all the information about the next sampling step.
 
@@ -36,7 +39,8 @@ mutable struct OptimizerData
 	StuckScore::Int64
 	PreviousFibre::Tuple{Result,Vector{Float64}}
 	Radius::Float64
-	Strategy::Strategies
+	WeightVector::Vector{Float64}
+	Strategy::Strategies	
 	#There should be a strategy flag
 		#strategy: careful (push through valleys)
 		#		   long-shots (additionally take large radius in a second bucket)
@@ -281,7 +285,6 @@ function optimizer_data_updater(OD::OptimizerData, SC:: Score, sols; PROG = last
 end
 
 ## Finally, the general optimize function.
-
 function optimize_enumerative(E::EnumerativeProblem, SC::Score, N;bucket_size=100)
 	##First, do a really random brute force search to find a good starting point
 	OD = default_data(E, SC)
@@ -328,13 +331,19 @@ function default_data(E::EnumerativeProblem,SC::Score)
 	starting_sample_size = 1
 	sols = solve_over_params(E,[randn(Float64,k) for i in 1:starting_sample_size])
 	(record,record_fibre) = max_score(sols,SC)
+	taboo_score = 0.5
+	stuck_score = 0
+	previous_fibre = record_fibre
+	radius = 10000 
+	weightvector = randn(Float64, k)
+	#For defining strategy:
 	shotgun = false
-	careful = false
+	careful = true
 	reset = false
 	reveries = false
-	ambitious = false
+	ambitious = true
 	strategy = Strategies(shotgun,careful,reset,reveries,ambitious)
-	OD = OptimizerData(record_fibre,record,0.5,0,record_fibre,10000, strategy)
+	OD = OptimizerData(record_fibre,record,taboo_score,stuck_score,previous_fibre,radius,weightvector, strategy)
 	return(OD)
 end
 
