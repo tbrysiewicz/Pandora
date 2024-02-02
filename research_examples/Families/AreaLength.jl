@@ -23,7 +23,13 @@ function AreaLengthSystem(; positive_parameters=true)
            x[i[1],i[2]],
            x[i[1],i[3]],
            x[i[2],i[3]],
-           v[i[1],i[2],i[3]]^(parameter_power)) for i in T]
+           v[i[1],i[2],i[3]]^(parameter_power)) for i in T[1:end-1]]
+    i=T[end]
+    push!(Eqs,HeronFormula(
+        x[i[1],i[2]],
+        x[i[1],i[3]],
+        x[i[2],i[3]],
+        1^(parameter_power)))
     F = System(Eqs, parameters = [v[i...] for i in T])
     E = EnumerativeProblem(F)
 end
@@ -35,6 +41,8 @@ G = galois_group(E)
 B = minimal_block_reps(G)
 order(G)
 2^(32)*factorial(big(32))
+SC = RealScoreSpace
+OD = optimize(E,SC,5)
 
 function interval_sampler_sqrt(alpha)
     function sampler(n_samples,sample_length)
