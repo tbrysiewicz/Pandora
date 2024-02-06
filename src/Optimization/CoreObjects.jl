@@ -23,6 +23,21 @@ function cts_real(RP::Tuple{Result, Vector{Float64}})
     return((nreal(RP[1]),non_real_min_norm(RP[1])))
 end
 
+function cts_real_total(RP::Tuple{Result, Vector{Float64}})
+    return((nreal(RP[1]),non_real_total_norm(RP[1])))
+end
+
+
+function non_real_total_norm(R::Result)
+    total = 0.0                #Here, record ans record_fibre are just variable names, not parts of the struct OptimizerData.
+    for r in R
+        if HomotopyContinuation.is_real(r)==false
+            total=total+norm(imag(r.solution))
+        end
+    end
+    return(total)
+end
+
 
 function non_real_min_norm(R::Result)
     record = nothing                #Here, record ans record_fibre are just variable names, not parts of the struct OptimizerData.
@@ -68,6 +83,7 @@ function gt(a::Tuple{Int64,Float64},b::Tuple{Int64,Float64})
 end
 
 RealScoreSpace = Score(cts_real,gt)
+RealScoreSpaceTotal = Score(cts_real_total,gt)
 
 function max_score(Sols::Vector{Tuple{Result,Vector{Float64}}}, SC::Score)
     record_fibre = Sols[1]

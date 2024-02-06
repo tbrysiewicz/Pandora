@@ -1,6 +1,8 @@
 using Pandora
 using HomotopyContinuation
 using Oscar
+using LinearAlgebra
+using Plots
 
 function HeronFormula(a,b,c,A)
     (4*a*b-(a+b-c)^2-16*A)
@@ -36,13 +38,13 @@ end
 
 
 E = AreaLengthSystem()
-d = degree(E)
+d = Pandora.degree(E)
 G = galois_group(E)
 B = minimal_block_reps(G)
 order(G)
 2^(32)*factorial(big(32))
-SC = RealScoreSpace
-OD = optimize(E,SC,5)
+#SC = RealScoreSpace
+#OD = optimize(E,SC,5)
 
 function interval_sampler_sqrt(alpha)
     function sampler(n_samples,sample_length)
@@ -72,12 +74,9 @@ end
 
 function Euclidean(x)
     G = GramMatrix(x)
-    println(G)
     e = LinearAlgebra.eigvals(G)
-    println(e)
     for c in e
         if c<0
-            println(c)
             return(false)
         end
     end
@@ -87,7 +86,6 @@ end
 
 function Lorentzian(x)
     G = GramMatrix(x)
-    println(G)
     e = LinearAlgebra.eigvals(G)
     pos = filter(x->x>0,e)
     if length(pos)==3
@@ -102,16 +100,32 @@ end
 function NLorentzian(E,R,P)
     length(filter(x->Lorentzian(x),HomotopyContinuation.real_solutions(R)))
 end
-
+#=
  v = [randn(Float64,4) for i in 1:5]
  EdgeOrder = [[1,2],[1,3],[2,3],[1,4],[2,4],[3,4],[1,5],[2,5],[3,5],[4,5]]
  X = [sum((v[e[1]]-v[e[2]]).^2) for e in EdgeOrder]
  G = GramMatrix(X)
  Euclidean(X)
 
-Data = explore(E, [real_points_in_fibre, positive_points_in_fibre, NEuclidean, NLorentzian]; 
-               sampler = interval_sampler(0.5), n_samples = 10000)
+ =#
 
-H = histogram([Data[2][1], Data[2][2]], labels=["Real" "Positive"], bins=0:1:64)
+Data = nothing
+
+Data05 = explore(E, [real_points_in_fibre, positive_points_in_fibre, NEuclidean, NLorentzian]; 
+               sampler = interval_sampler(0.5), n_samples = 1000000);
+Data03 = explore(E, [real_points_in_fibre, positive_points_in_fibre, NEuclidean, NLorentzian]; 
+               sampler = interval_sampler(0.3), n_samples = 1000000);
+Data00 = explore(E, [real_points_in_fibre, positive_points_in_fibre, NEuclidean, NLorentzian]; 
+               sampler = interval_sampler(0.0), n_samples = 1000000);
+
+H00RP = histogram([Data00[2][1], Data00[2][2]], labels=["Real" "Positive"], bins=0:1:64)
+H03RP = histogram([Data03[2][1], Data03[2][2]], labels=["Real" "Positive"], bins=0:1:64)
+H05RP = histogram([Data05[2][1], Data05[2][2]], labels=["Real" "Positive"], bins=0:1:64)
+
+H00EL = histogram([Data00[2][3], Data00[2][4]], labels=["Euclidean" "Lorentzian"], bins=0:1:64)
+H03EL = histogram([Data03[2][3], Data03[2][4]], labels=["Euclidean" "Lorentzian"], bins=0:1:64)
+H05EL = histogram([Data05[2][3], Data05[2][4]], labels=["Euclidean" "Lorentzian"], bins=0:1:64; color=[:purple,:teal])
+
+H = histogram([Data[2][1], Data[2][2]], labels=["Real" "Positive"], bins=0:2:64)
 H = histogram([filter(x->x!=0,Data[2][4]),filter(x->x!=0,Data[2][3])], labels=["Real" "Positive"],bins=1:1:32)
 
