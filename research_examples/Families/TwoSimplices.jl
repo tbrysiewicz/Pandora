@@ -1,7 +1,7 @@
 using Pandora
 using HomotopyContinuation
 using Oscar
-using Combinatorics 
+using Combinatorics
 
 
 function Triangles(sets)
