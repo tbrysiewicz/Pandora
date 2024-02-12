@@ -110,11 +110,13 @@ end
  4
  ```
  """
-function affine_multidegree(W::WitnessSet,I::Vector{Int64})
+function affine_multidegree1(W::WitnessSet,I::Vector{Int64})
     d = HomotopyContinuation.dim(W) #Dimension of witness set
     n = length(variables(W.F)) #Ambient Dimension
-    A = randn(Float64,d,n) #The size of linear space on needs to slice with
-    b = randn(Float64,d) #The affine part of the linear space
+    A = randn(ComplexF64,d,n) #The size of linear space on needs to slice with
+    b = randn(ComplexF64,d) #The affine part of the linear space
+    pt = [W.R[1]] 
+    W2 = WitnessSet(W.F,W.L,pt)
     @assert length(I) == d
     for i in 1:d
         for j in 1:n
@@ -125,7 +127,9 @@ function affine_multidegree(W::WitnessSet,I::Vector{Int64})
             end
         end
     end
+    b = A*solution(pt[1]) + 0.0001*randn(ComplexF64,d)
     L = LinearSubspace(A,b)
-    SpecialW = witness_set(W,LinearSubspace(A,b))
-    return(HomotopyContinuation.degree(SpecialW))
+    SpecialW = witness_set(W,LinearSubspace(A,b)) #solving
+    MS = monodromy_solve(SpecialW.F, solutions(SpecialW.R), SpecialW.L)
+    return(length(solutions(MS)))
 end
