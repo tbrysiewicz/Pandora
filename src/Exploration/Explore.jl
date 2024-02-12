@@ -28,7 +28,7 @@ export
    paths tracked:      270000
 
  Total number of fibres computed:10000
- 9937/10000 satisfies degree_check
+ 9937/10000 satfibres compu
  9937/10000 satisfies real_parity_check
  2-element Vector{Vector{Any}}:
  ["real_points_in_fibre", "positive_points_in_fibre"]
