@@ -27,6 +27,34 @@ function cts_real_total(RP::Tuple{Result, Vector{Float64}})
     return((nreal(RP[1]),non_real_total_norm(RP[1])))
 end
 
+function cts_real_no_imag(RP::Tuple{Result, Vector{Float64}})
+    return((nreal(RP[1])-5*n_pure_imag(RP[1]),non_real_min_norm(RP[1])+100000*pure_imag_closeness(RP[1])))
+end
+
+function pure_imag_closeness(R::Result)
+    PI = filter(x->norm(real(x))<0.0000000001,solutions(R))
+    di=-1
+    for i in 1:length(PI)
+        for j in 1:length(PI)
+            if i!=j
+                n = norm(PI[i]-PI[j])
+                if n<di || di==-1
+                    di=n
+                end
+            end
+        end
+    end
+    if di==-1
+        di=0
+    end
+    return(di)
+end
+
+
+function  n_pure_imag(R::Result)
+    length(filter(x->norm(real(x))<0.0000000001,solutions(R)))
+end
+
 
 function non_real_total_norm(R::Result)
     total = 0.0                #Here, record ans record_fibre are just variable names, not parts of the struct OptimizerData.
@@ -84,6 +112,7 @@ end
 
 RealScoreSpace = Score(cts_real,gt)
 RealScoreSpaceTotal = Score(cts_real_total,gt)
+RealScoreSpaceNoImag = Score(cts_real_no_imag,gt)
 
 function max_score(Sols::Vector{Tuple{Result,Vector{Float64}}}, SC::Score)
     record_fibre = Sols[1]

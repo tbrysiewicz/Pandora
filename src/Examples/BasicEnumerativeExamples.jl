@@ -39,7 +39,9 @@ function AreaLengthSystem()
 
     T = combinations(1:5,3)
     Eqs =[HeronFormula(x[i[1],i[2]],x[i[1],i[3]],x[i[2],i[3]],v[i[1],i[2],i[3]]^2) for i in T]
-    F = System(Eqs,parameters = [v[i[1],i[2],i[3]] for i in T])
+    push!(Eqs,v[1,2,3]-1)
+    push!(Eqs,v[1,2,4]-1)
+    F = System(Eqs,parameters = [v[i[1],i[2],i[3]] for i in filter(x->x!=[1,2,3] && x!=[1,2,4]  ,collect(T))])
     E = EnumerativeProblem(F)
 end
 

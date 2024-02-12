@@ -334,7 +334,7 @@ function default_data(E::EnumerativeProblem,SC::Score)
 	taboo_score = 0.5
 	stuck_score = 0
 	previous_fibre = record_fibre
-	radius = 10000 
+	radius = 1
 	weightvector = randn(Float64, k)
 	#For defining strategy:
 	shotgun = false

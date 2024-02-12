@@ -103,7 +103,7 @@ function solve_over_params(E::EnumerativeProblem,P; monodromy_recover=false, che
     end
     if monodromy_recover==true && degree_check(E,S)==false
         println("Lost points during tracking...recovering via monodromy")
-        M = monodromy_solve(E.F,solutions(S),P)
+        M = monodromy_solve(E.F,solutions(S[1]),P)
         S=solutions(M)
     end
     return S
