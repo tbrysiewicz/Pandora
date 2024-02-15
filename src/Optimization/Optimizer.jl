@@ -39,7 +39,7 @@ mutable struct OptimizerData
 	StuckScore::Int64
 	PreviousFibre::Tuple{Result,Vector{Float64}}
 	Radius::Float64
-	WeightVector::Vector{Float64}
+	WeightVector::Array{Float64}   #Needs to be a matrix
 	Strategy::Strategies	
 	#There should be a strategy flag
 		#strategy: careful (push through valleys)
@@ -126,7 +126,7 @@ function real_sampler(EP::EnumerativeProblem, OD::OptimizerData) ##This should a
 					push!(v,OD.RecordFibre[2]+direction*OD.Radius*i^2) #and the fibres which continues the direction of the last move
 				end
 			end
-			return(v)
+			return(v)println("Step: ", i)
 		end
 	return(sampler1)
 end
@@ -289,7 +289,9 @@ function optimize_enumerative(E::EnumerativeProblem, SC::Score, N;bucket_size=10
 	##First, do a really random brute force search to find a good starting point
 	OD = default_data(E, SC)
 	for i in 1:N
+		println("Step: ", i)
 		make_better(E,OD,SC;bucket_size=bucket_size)
+		println("-----------------------------------------------------------")
 	end
 	return(OD)
 end
