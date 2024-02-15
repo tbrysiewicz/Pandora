@@ -1,7 +1,11 @@
 export
     Score,
     RealScoreSpace,
-    max_score
+    RealScoreSpaceTotal,
+    RealScoreSpaceNoImag,
+    RealScoreMin,
+    max_score,
+    real_min_dist
    # gt
 
 
@@ -30,6 +34,34 @@ end
 function cts_real_no_imag(RP::Tuple{Result, Vector{Float64}})
     return((nreal(RP[1])-5*n_pure_imag(RP[1]),non_real_min_norm(RP[1])+100000*pure_imag_closeness(RP[1])))
 end
+
+function cts_real_min(RP::Tuple{Result,Vector{Float64}})   ##for finding the fewest number of real solutions
+    return((-nreal(RP[1]),real_min_dist(RP[1])))
+end
+
+function real_min_dist(R::Result)
+S = HomotopyContinuation.real_solutions(R)
+if length(S)==0
+  return(0.0)
+end
+record=Inf
+n = length(S)
+for i in 1:n
+  for j in 1:n
+    if i!=j
+       s1=S[i]
+       s2=S[j]
+       nm = norm(s1-s2)
+       if nm<record
+          record=nm
+       end
+    end
+   end
+end
+return(record)
+end
+
+
 
 function pure_imag_closeness(R::Result)
     PI = filter(x->norm(real(x))<0.0000000001,solutions(R))
@@ -113,6 +145,8 @@ end
 RealScoreSpace = Score(cts_real,gt)
 RealScoreSpaceTotal = Score(cts_real_total,gt)
 RealScoreSpaceNoImag = Score(cts_real_no_imag,gt)
+RealScoreMin=Score(cts_real_min,gt)
+
 
 function max_score(Sols::Vector{Tuple{Result,Vector{Float64}}}, SC::Score)
     record_fibre = Sols[1]
