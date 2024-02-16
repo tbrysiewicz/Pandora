@@ -35,12 +35,12 @@ mutable struct OptimizerData
 	##  how it samples
 	RecordFibre::Tuple{Result,Vector{Float64}}
 	Record::Any
-	TabooScore::Float64
+	TabooScore::Tuple{Float64,Float64}
 	StuckScore::Int64
 	PreviousFibre::Tuple{Result,Vector{Float64}}
 	Radius::Float64
 	WeightVector::Array{Float64}   #Needs to be a matrix
-	Strategy::Strategies	
+	Strategy::Strategies
 	#There should be a strategy flag
 		#strategy: careful (push through valleys)
 		#		   long-shots (additionally take large radius in a second bucket)
@@ -65,9 +65,9 @@ end
 	direction = (OD.RecordFibre[2]-OD.PreviousFibre[2])
 	if OD.Strategy.Careful[1] 
 		println("Old Radius: ",OD.Strategy.Careful[2])
-		if OD.TabooScore>0.7 #If the taboo score is too high, reduce radius
+		if OD.TabooScore[1]>0.7 #If the taboo score is too high, reduce radius
 			OD.Strategy.Careful[2]=OD.Strategy.Careful[2]*0.9
-		elseif OD.TabooScore<0.2 #If the taboo score is too low, increase radius
+		elseif OD.TabooScore[1]<0.2 #If the taboo score is too low, increase radius
 			OD.Strategy.Careful[2]=OD.Strategy.Careful[2]*1.1
 		end
 		println("Radius: ",OD.Strategy.Careful[2])
@@ -110,9 +110,9 @@ function real_sampler(EP::EnumerativeProblem, OD::OptimizerData) ##This should a
 	direction = (OD.RecordFibre[2]-OD.PreviousFibre[2])
 	 
 		println("Old Radius: ",OD.Radius)
-		if OD.TabooScore>0.7 #If the taboo score is too high, reduce radius
+		if OD.TabooScore[1]>0.7 #If the taboo score is too high, reduce radius
 			OD.Radius=OD.Radius*0.9
-		elseif OD.TabooScore<0.2 #If the taboo score is too low, increase radius
+		elseif OD.TabooScore[1]<0.2 #If the taboo score is too low, increase radius
 			OD.Radius=OD.Radius*1.1
 		end
 		println("Radius: ",OD.Radius)
@@ -173,9 +173,9 @@ end
 
 ##The function for updating radius according to tabooscore, when the strategy careful is true.
 function radius_updater(OD::OptimizerData)
-	if OD.TabooScore>0.7 #If the taboo score is too high, reduce radius
+	if OD.TabooScore[1]>0.7 #If the taboo score is too high, reduce radius
 		OD.Radius=OD.Radius*0.9
-	elseif OD.TabooScore<0.2 #If the taboo score is too low, increase radius
+	elseif OD.TabooScore[1]<0.2 #If the taboo score is too low, increase radius
 		OD.Radius=OD.Radius*1.1
 	end
 end
@@ -186,12 +186,16 @@ end
 function last_score_progress(new_rec,old_rec)
 	rec_improvement = -(last(new_rec[1])-last(old_rec[1]))
 	if rec_improvement<0 #This means it is larger because of another coord
-		println("Progress:             ",:Inf)
+		println("Progress:   ",:Inf)
 		return(true)
 	end
 	movement = norm(new_rec[2][2]-old_rec[2][2])
 	progress_score=rec_improvement/movement
-	println("Progress:             ",progress_score)
+	if isnan(progress_score)
+		println("Progress : Not a number.")
+	else
+	println("Progress:   ",progress_score)
+	end
 	if progress_score>0.1 ###What should this number be?
 		return(true)
 	else
@@ -220,8 +224,7 @@ function first_score_taboo_proportion(sols::Vector{Tuple{Result,Vector{Float64}}
 	return(1.0*taboo_counter/length(sols))
 end
 
-## Functions for improving the sampled parameters, and updating the OptimizerData accordingly.
-
+## Function for improving the sampled parameters.
 function make_better(EP::EnumerativeProblem,
 					OD::OptimizerData,
 					SC::Score;
@@ -229,18 +232,11 @@ function make_better(EP::EnumerativeProblem,
 					PROG = last_score_progress, bucket_size=100)
 	new_sampler=real_sampler(EP,OD)
 	sols = solve_over_params(EP,new_sampler(bucket_size))
-	#Everything below needs to be its own updating procedure
-	# like, UpdateOptimizer(OD,sols)
-	#This should make things easier to work with when we implement strategies
 	#We could even reintroduce the sampler as an attribute of the optimizer?
 	optimizer_data_updater(OD,SC,sols,TS = TS, PROG = PROG)
 end
 
-#=
-Creating an update_optimizer function called optimizer_data_updater as mentioned in between the code of make_better function.
-=#
-
-#=
+## Function for updating OptimizerData.
 function optimizer_data_updater(OD::OptimizerData, SC:: Score, sols; PROG = last_score_progress, TS=first_score_taboo_proportion)
 	(record,record_fibre) = max_score(sols,SC)   
 	if PROG((record,record_fibre),(OD.Record,OD.RecordFibre)) && OD.Radius>0.001
@@ -248,34 +244,13 @@ function optimizer_data_updater(OD::OptimizerData, SC:: Score, sols; PROG = last
 	else
 		OD.StuckScore=OD.StuckScore+1
 	end
-	OD.TabooScore = TS(sols,SC,OD)
+	OD.TabooScore = (TS(sols,SC,OD), real_min_dist(sols[1][1]))
 	OD.PreviousFibre = OD.RecordFibre
 	OD.Record=record
 	OD.RecordFibre=record_fibre
 	println("Record:", OD.Record)
-	println("Taboo Score:",OD.TabooScore)
-	println("Stuck Score:", OD.StuckScore)
-	if OD.StuckScore>=100
-		println("It seems we are stuck....going into chaos mode")
-		OD.Radius=1000
-		OD.StuckScore=0
-	end
-end
-=#
-
-function optimizer_data_updater(OD::OptimizerData, SC:: Score, sols; PROG = last_score_progress, TS=first_score_taboo_proportion)
-	(record,record_fibre) = max_score(sols,SC)   
-	if PROG((record,record_fibre),(OD.Record,OD.RecordFibre)) && OD.Radius>0.001
-		OD.StuckScore=0
-	else
-		OD.StuckScore=OD.StuckScore+1
-	end
-	OD.TabooScore = TS(sols,SC,OD)
-	OD.PreviousFibre = OD.RecordFibre
-	OD.Record=record
-	OD.RecordFibre=record_fibre
-	println("Record:", OD.Record)
-	println("Taboo Score:",OD.TabooScore)
+	println("Taboo Score:",OD.TabooScore[1])
+	println("Closeness of the real solutions", OD.TabooScore[2])
 	println("Stuck Score:", OD.StuckScore)
 	if OD.StuckScore>=100
 		println("It seems we are stuck....going into chaos mode")
@@ -284,7 +259,7 @@ function optimizer_data_updater(OD::OptimizerData, SC:: Score, sols; PROG = last
 	end
 end
 
-## Finally, the general optimize function.
+## The general optimize function.
 function optimize_enumerative(E::EnumerativeProblem, SC::Score, N;bucket_size=100)
 	##First, do a really random brute force search to find a good starting point
 	OD = default_data(E, SC)
@@ -307,33 +282,14 @@ All Real solutions!
 [-1291.7598740797775, -1405.7987828197163, -1220.0662595045399, -59.1110622202469, -112.15102526093892, -371.3459096104677, -71.03932987299308, -84.27322083494848, -341.1868353357009, -1244.3188147721949]
 =#
 
-
-
-## Defining a few functions below to make it easier to check for better optimization strategies, for the case of 
-##real solutions of a polynomial system. Can be changed/removed later if needed. -- Deepak
-
-function optimize_real_solns(F::System, N; bucket_size = 100)
-    SC = RealScoreSpace
-    E = EnumerativeProblem(F)
-    optimize_enumerative(E, SC, N, bucket_size = bucket_size)
-end
-
-
-function optimize_reals_generic(degree_of_poly;n_iterations=100)
-	no_of_variables=degree_of_poly+1
-	@var a[1:no_of_variables], x
-	F = System([a[no_of_variables]+sum([a[i]*x^i for i in 1:degree_of_poly])],variables=[x],parameters=vec(a))
-	optimize_real_solns(F, n_iterations)
-end
-
-## Defining an example data to make it easier to check if the code is working.
+## Default data to use when previous OptimizerData does not exist.
 function default_data(E::EnumerativeProblem,SC::Score)
 	k = nparameters(E.F)		#nparameters from HomotopyContinuation, not from Pandora. Hence the stylistic choice.
 	println("Nparameters:",k)
 	starting_sample_size = 1
 	sols = solve_over_params(E,[randn(Float64,k) for i in 1:starting_sample_size])
 	(record,record_fibre) = max_score(sols,SC)
-	taboo_score = 0.5
+	taboo_score = (0.5,Inf)
 	stuck_score = 0
 	previous_fibre = record_fibre
 	radius = 1
@@ -349,6 +305,24 @@ function default_data(E::EnumerativeProblem,SC::Score)
 	return(OD)
 end
 
+
+
+## Defining a few functions below to make it easier to check for better optimization strategies, for the case of 
+##real solutions of a polynomial system. Can be changed/removed later if needed. -- Deepak
+
+function optimize_real_solns(F::System, N; bucket_size = 100)
+    SC = RealScoreSpace
+    E = EnumerativeProblem(F)
+    optimize_enumerative(E, SC, N, bucket_size = bucket_size)
+end
+
+#Optimizes the number real solutions of a real polynomial system a[0]+a[1]*x^1+...+a[n]*x^n.
+function optimize_reals_generic(degree_of_poly;n_iterations=100)
+	no_of_variables=degree_of_poly+1
+	@var a[1:no_of_variables], x
+	F = System([a[no_of_variables]+sum([a[i]*x^i for i in 1:degree_of_poly])],variables=[x],parameters=vec(a))
+	optimize_real_solns(F, n_iterations)
+end
 
 
 
