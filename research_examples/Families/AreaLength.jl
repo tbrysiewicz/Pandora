@@ -112,19 +112,20 @@ end
 Data = nothing
 
 Data05 = explore(E, [real_points_in_fibre, positive_points_in_fibre, NEuclidean, NLorentzian]; 
-               sampler = interval_sampler(0.5), n_samples = 1000000);
+               sampler = interval_sampler(0.5), n_samples = 1009000);
 Data03 = explore(E, [real_points_in_fibre, positive_points_in_fibre, NEuclidean, NLorentzian]; 
-               sampler = interval_sampler(0.3), n_samples = 1000000);
+               sampler = interval_sampler(0.3), n_samples = 1009000);
 Data00 = explore(E, [real_points_in_fibre, positive_points_in_fibre, NEuclidean, NLorentzian]; 
-               sampler = interval_sampler(0.0), n_samples = 1000000);
+               sampler = interval_sampler(0.0), n_samples = 1009000);
 
 H00RP = histogram([Data00[2][1], Data00[2][2]], labels=["Real" "Positive"], bins=0:1:64)
 H03RP = histogram([Data03[2][1], Data03[2][2]], labels=["Real" "Positive"], bins=0:1:64)
 H05RP = histogram([Data05[2][1], Data05[2][2]], labels=["Real" "Positive"], bins=0:1:64)
 
-H00EL = histogram([Data00[2][3], Data00[2][4]], labels=["Euclidean" "Lorentzian"], bins=0:1:64)
-H03EL = histogram([Data03[2][3], Data03[2][4]], labels=["Euclidean" "Lorentzian"], bins=0:1:64)
-H05EL = histogram([Data05[2][3], Data05[2][4]], labels=["Euclidean" "Lorentzian"], bins=0:1:64; color=[:purple,:teal])
+
+H00EL = histogram([Data00[2][3], Data00[2][4]], labels=["Euclidean" "Lorentzian"], bins=0:1:64; c=[20 6])
+H03EL = histogram([Data03[2][3], Data03[2][4]], labels=["Euclidean" "Lorentzian"], bins=0:1:64; c=[20 6])
+H05EL = histogram([Data05[2][3], Data05[2][4]], labels=["Euclidean" "Lorentzian"], bins=0:1:64; c=[20 6])
 
 H = histogram([Data[2][1], Data[2][2]], labels=["Real" "Positive"], bins=0:2:64)
 H = histogram([filter(x->x!=0,Data[2][4]),filter(x->x!=0,Data[2][3])], labels=["Real" "Positive"],bins=1:1:32)
