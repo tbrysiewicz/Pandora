@@ -173,10 +173,10 @@ end
 
 ##The function for updating radius according to tabooscore, when the strategy careful is true.
 function radius_updater(OD::OptimizerData)
-	if OD.TabooScore[1]>0.7 #If the taboo score is too high, reduce radius
-		OD.Radius=OD.Radius*0.9
-	elseif OD.TabooScore[1]<0.2 #If the taboo score is too low, increase radius
-		OD.Radius=OD.Radius*1.1
+	if OD.TabooScore>0.7 #If the taboo score is too high, reduce radius
+		OD.Radius=OD.Radius*0.1
+	elseif OD.TabooScore<0.2 #If the taboo score is too low, increase radius
+		OD.Radius=OD.Radius*1.5
 	end
 end
 
