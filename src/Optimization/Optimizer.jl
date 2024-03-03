@@ -16,7 +16,8 @@ export
 	make_better,
 	optimize_real_solns,
 	optimize_reals_generic,
-	default_data
+	default_data,
+	reset_base_fibre
 
 ## OptimizerData is the struct that contains all the information about the next sampling step.
 
@@ -41,6 +42,7 @@ mutable struct OptimizerData
 	Radius::Float64
 	WeightVector::Array{Float64}   #Needs to be a matrix
 	Strategy::Strategies
+	BaseFibreCounter::Int64
 	#There should be a strategy flag
 		#strategy: careful (push through valleys)
 		#		   long-shots (additionally take large radius in a second bucket)
@@ -250,7 +252,7 @@ function optimizer_data_updater(OD::OptimizerData, SC:: Score, sols; PROG = last
 	OD.RecordFibre=record_fibre
 	println("Record:", OD.Record)
 	println("Taboo Score:",OD.TabooScore[1])
-	println("Closeness of the real solutions", OD.TabooScore[2])
+	println("Closeness of the real solutions: ", OD.TabooScore[2])
 	println("Stuck Score:", OD.StuckScore)
 	if OD.StuckScore>=100
 		println("It seems we are stuck....going into chaos mode")
@@ -260,12 +262,15 @@ function optimizer_data_updater(OD::OptimizerData, SC:: Score, sols; PROG = last
 end
 
 ## The general optimize function.
-function optimize_enumerative(E::EnumerativeProblem, SC::Score, N;bucket_size=100)
+function optimize_enumerative(E::EnumerativeProblem, SC::Score, N; bucket_size=100,update_base_fibre = false,fibre_update_point=5)#base_fibre_condition=OD.BaseFibreCounter==5)
 	##First, do a really random brute force search to find a good starting point
 	OD = default_data(E, SC)
 	for i in 1:N
 		println("Step: ", i)
 		make_better(E,OD,SC;bucket_size=bucket_size)
+		if update_base_fibre
+		base_fibre_updater(E, OD;base_fibre_condition = OD.BaseFibreCounter==fibre_update_point)#, base_fibre_condition)
+		end
 		println("-----------------------------------------------------------")
 	end
 	return(OD)
@@ -301,7 +306,8 @@ function default_data(E::EnumerativeProblem,SC::Score)
 	reveries = false
 	ambitious = true
 	strategy = Strategies(shotgun,careful,reset,reveries,ambitious)
-	OD = OptimizerData(record_fibre,record,taboo_score,stuck_score,previous_fibre,radius,weightvector, strategy)
+	base_fibre_counter = 1
+	OD = OptimizerData(record_fibre,record,taboo_score,stuck_score,previous_fibre,radius,weightvector, strategy, base_fibre_counter)
 	return(OD)
 end
 
@@ -326,3 +332,43 @@ end
 
 
 
+
+#Base Fibre updater code
+
+function reset_base_fibre(E::EnumerativeProblem, P)
+	#here P can be a real parameter value, so we need to adjust
+		TrueP = P +randn(ComplexF64,length(P))
+		S = solve_over_params(E,[TrueP])
+		E.BaseFibre=S[1]
+end
+
+function base_fibre_updater(E, OD; base_fibre_condition = OD.BaseFibreCounter==fibre_update_point)
+	println("BaseFibre counter: ",OD.BaseFibreCounter)
+	if base_fibre_condition
+		println("Changing the base fibre to readjust..")
+		E.BaseFibre  = reset_base_fibre(E,OD.RecordFibre[2])
+		OD.BaseFibreCounter = 0
+	end
+	OD.BaseFibreCounter = OD.BaseFibreCounter+1
+end
+
+
+#==
+TODO: 
+1) Complete the updater.  -- Partially done.
+2) Think of doing multiple EnumerativeProblems at once. Remember that the  '=' in Julia is just assignment (ie, just adding a pointer)
+and not a mutation (ie, actually changing the value). So keep this in mind while defining new EnumerativeProblems.
+3) Use this to better inform the optimize_enumerative. 
+
+function boundary_finder(iterationnumber, vectorlength, boundary)
+	counter = 0
+	for i = 1:iterationnumber
+       randvector = randn(Float64,vectorlength)
+	   for j = 1:vectorlength
+			if abs(randvector[j])>= boundary
+				counter = counter+1
+		end	end
+	end
+	return(counter)
+end
+==#
