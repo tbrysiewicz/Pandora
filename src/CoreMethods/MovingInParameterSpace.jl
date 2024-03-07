@@ -79,7 +79,7 @@ function solve_over_param(E::EnumerativeProblem,P; monodromy_recover=false)
     if is_populated(E)==false
         populate_base_fibre(E)
     end
-    S = solutions(HomotopyContinuation.solve(system(E),base_solutions(E); start_parameters= base_parameters(E), target_parameters = P))
+    S = HomotopyContinuation.solve(system(E),base_solutions(E); start_parameters= base_parameters(E), target_parameters = P)
     if monodromy_recover==true && degree_check(E,S)==false
         println("Lost points during tracking...recovering via monodromy")
         M = monodromy_solve(system(E),solutions(S),P)
