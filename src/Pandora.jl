@@ -6,7 +6,8 @@ using HomotopyContinuation
 using LinearAlgebra
 using Combinatorics
 using Oscar			
-using Plots		
+using Plots
+
 
 
 import HomotopyContinuation.solve
