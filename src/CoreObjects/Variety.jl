@@ -14,7 +14,8 @@ export
     degree,
     system,
     ambient_dimension,
-    witness_points
+    witness_points,
+    populate_one_point!
 
 
 
@@ -139,6 +140,24 @@ function witness_set(V::Variety)
         return(witness_set(V))
     end
 end
+
+function populate_one_point!(V::Variety,d)
+    monodromy_witness_populate!(V, d; ts=1)
+end
+
+function monodromy_witness_populate!(V::Variety, d; ts = nothing)
+	MS = nothing
+	if ts == nothing
+		MS = monodromy_solve(V.F,dim=d)
+	else
+		MS = monodromy_solve(V.F,dim=d;target_solutions_count=ts)
+	end
+	L = MS.parameters
+	S = solutions(MS)
+	W = WitnessSet(MixedSystem(V.F),MS.parameters,MS.results)
+	V.W=W
+end
+
 
 
 

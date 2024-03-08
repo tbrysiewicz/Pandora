@@ -15,13 +15,25 @@ function condition_number_of_basis(V :: Variety, c :: Vector{Int}, p :: Vector{C
     C = LinearAlgebra.cond(HomotopyContinuation.jacobian(system(V), p)[:,filter(x->in(x,c)==false,1:n)])
 end
 
-function condition_numbers_of_candidate_bases(V :: Variety)
+function condition_numbers_of_candidate_bases(V :: Variety; dim = nothing)
+    if is_populated(V)==false 
+        if dim != nothing
+            populate_one_point!(V,dim)
+        else
+            populate_witness!(V)
+        end
+    end
     n = ambient_dimension(V)
-    dimension = dim(V)
+    dimension = Pandora.dim(V)
     candidateBases = Combinatorics.combinations(1:n, dimension)
     p = witness_points(V)[1]
     D = Dict{Vector{Int},Float64}()
+    counter=0
     for c in candidateBases
+        counter=counter+1
+        if floor(counter/10000)==counter//10000
+            println(counter)
+        end
         D[c]=condition_number_of_basis(V,c,p,n)
     end
     return(D)
