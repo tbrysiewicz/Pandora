@@ -12,7 +12,9 @@ export
     numerical_bases
 
 function condition_number_of_basis(V :: Variety, c :: Vector{Int}, p :: Vector{ComplexF64}, n :: Int)
-    C = LinearAlgebra.cond(HomotopyContinuation.jacobian(system(V), p)[:,filter(x->in(x,c)==false,1:n)])
+    J = HomotopyContinuation.jacobian(system(V), p)
+    C = LinearAlgebra.cond(J[:,filter(x->in(x,c)==false,1:n)])
+    return(C)
 end
 
 function condition_numbers_of_candidate_bases(V :: Variety; dim = nothing)
@@ -29,12 +31,15 @@ function condition_numbers_of_candidate_bases(V :: Variety; dim = nothing)
     p = witness_points(V)[1]
     D = Dict{Vector{Int},Float64}()
     counter=0
+
+    J = HomotopyContinuation.jacobian(system(V), p)
+
     for c in candidateBases
         counter=counter+1
-        if floor(counter/10000)==counter//10000
+        if floor(counter/1000)==counter//1000
             println(counter)
         end
-        D[c]=condition_number_of_basis(V,c,p,n)
+        D[c]=LinearAlgebra.cond(J[:,filter(x->in(x,c)==false,1:n)])
     end
     return(D)
 end
