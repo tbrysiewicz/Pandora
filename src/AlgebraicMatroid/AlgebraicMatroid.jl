@@ -5,10 +5,67 @@
 export
     algebraic_matroid,
     affine_multidegree,
-    affine_multidegrees
-    
+    affine_multidegrees,
+    condition_number_of_basis,
+    condition_numbers_of_candidate_bases,
+    numerical_algebraic_matroid,
+    numerical_bases
 
+function condition_number_of_basis(V :: Variety, c :: Vector{Int}, p :: Vector{ComplexF64}, n :: Int)
+    C = LinearAlgebra.cond(HomotopyContinuation.jacobian(system(V), p)[:,filter(x->in(x,c)==false,1:n)])
+end
 
+function condition_numbers_of_candidate_bases(V :: Variety)
+    n = ambient_dimension(V)
+    dimension = dim(V)
+    candidateBases = Combinatorics.combinations(1:n, dimension)
+    p = witness_points(V)[1]
+    D = Dict{Vector{Int},Float64}()
+    for c in candidateBases
+        D[c]=condition_number_of_basis(V,c,p,n)
+    end
+    return(D)
+end
+
+function numerical_bases(V :: Variety; tol = 1e7)
+    D = condition_numbers_of_candidate_bases(V)
+    bases = []
+    for k in keys(D)
+        if D[k]<tol
+            push!(bases,k)
+        end
+    end
+    return(Vector{Vector{Int}}(bases))
+end
+
+@doc raw"""
+    numerical_algebraic_matroid(V::Variety; tol = 1e7)
+
+ Returns the algebraic matroid of the variety V computed numerically
+ # Examples
+ ```jldoctest
+ julia> V = SpecialOrthogonalGroup(3);
+
+ julia> M = numerical_algebraic_matroid(V)
+ Matroid of rank 3 on 9 elements
+ 
+ julia> nonbases(M)
+ 6-element Vector{Vector{Int64}}:
+  [1, 2, 3]
+  [1, 4, 7]
+  [2, 5, 8]
+  [3, 6, 9]
+  [4, 5, 6]
+  [7, 8, 9]
+ ```
+ """
+function numerical_algebraic_matroid(V :: Variety; tol = 1e7)
+    Bases = numerical_bases(V;tol=tol)
+    M = Oscar.matroid_from_bases(Bases,ambient_dimension(V))
+    return(M)
+end
+
+#TODO: make this a symbolic computation (find exact symbolic det function and use GB for zero-test (ideal containment))
 @doc raw"""
     algebraic_matroid(V::Variety)
 
@@ -37,6 +94,10 @@ function algebraic_matroid(V::Variety)
     Oscar.matroid_from_bases(Bases,ambient_dimension(V))
 end
 
+
+#TODO: Update these so that the bases are calculated fast, and monodromy is used to find degrees?
+# Possibly monodromy recover would be an optional argument and one can do the big computation if
+# reliability is suspect for monodromy recover.
 @doc raw"""
     affine_multidegrees(V::Variety)
 
