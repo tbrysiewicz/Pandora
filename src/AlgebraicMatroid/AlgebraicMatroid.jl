@@ -11,49 +11,71 @@ export
     numerical_algebraic_matroid,
     numerical_bases
 
-function condition_number_of_basis(V :: Variety, c :: Vector{Int}, p :: Vector{ComplexF64}, n :: Int)
-    J = HomotopyContinuation.jacobian(system(V), p)
-    C = LinearAlgebra.cond(J[:,filter(x->in(x,c)==false,1:n)])
-    return(C)
+
+function condition_number_of_basis(V :: Variety, candidate :: Vector{Int}, witnessPoint :: Vector{ComplexF64}, groundSetSize :: Int)
+    
+    jac = jacobian(system(V), witnessPoint)
+
+    conditionNumber = cond(jac[:,filter(x->in(x,candidate) == false,1:groundSetSize)])
+
+    return(conditionNumber)
+
 end
 
+
 function condition_numbers_of_candidate_bases(V :: Variety; dim = nothing)
-    if is_populated(V)==false 
-        if dim != nothing
+    
+    if !is_populated(V)
+        if !isnothing(dim)
             populate_one_point!(V,dim)
         else
             populate_witness!(V)
         end
     end
-    n = ambient_dimension(V)
-    dimension = Pandora.dim(V)
-    candidateBases = Combinatorics.combinations(1:n, dimension)
-    p = witness_points(V)[1]
-    D = Dict{Vector{Int},Float64}()
-    counter=0
 
-    J = HomotopyContinuation.jacobian(system(V), p)
+    ambientDimension = ambient_dimension(V)
+    candidateBases = Combinatorics.combinations(1:ambientDimension, Pandora.dim(V))
+    point = witness_points(V)[1]    
+    jac = HomotopyContinuation.jacobian(system(V), point)
+
+    conditionNums = Dict{Vector{Int},Float64}()
+    counter = 0
 
     for c in candidateBases
-        counter=counter+1
+
+        counter += 1
+
         if floor(counter/1000)==counter//1000
             println(counter)
         end
-        D[c]=LinearAlgebra.cond(J[:,filter(x->in(x,c)==false,1:n)])
+
+        conditionNums[c]=LinearAlgebra.cond(jac[:,filter(x->in(x,c) == false,1:ambientDimension)])
+
     end
-    return(D)
+
+    return(conditionNums)
+
 end
 
+
 function numerical_bases(V :: Variety; tol = 1e7)
-    D = condition_numbers_of_candidate_bases(V)
+
+    conditionNums = condition_numbers_of_candidate_bases(V)
+
     bases = []
-    for k in keys(D)
-        if D[k]<tol
+
+    for k in keys(conditionNums)
+
+        if conditionNums[k]<tol
             push!(bases,k)
         end
+
     end
+
     return(Vector{Vector{Int}}(bases))
+
 end
+
 
 @doc raw"""
     numerical_algebraic_matroid(V::Variety; tol = 1e7)
@@ -77,9 +99,13 @@ end
  ```
  """
 function numerical_algebraic_matroid(V :: Variety; tol = 1e7)
+
     Bases = numerical_bases(V;tol=tol)
+
     M = Oscar.matroid_from_bases(Bases,ambient_dimension(V))
+
     return(M)
+
 end
 
 #TODO: make this a symbolic computation (find exact symbolic det function and use GB for zero-test (ideal containment))
@@ -210,4 +236,6 @@ function affine_multidegree1(W::WitnessSet,I::Vector{Int64})
     SpecialW = witness_set(W,LinearSubspace(A,b)) #solving
     MS = monodromy_solve(SpecialW.F, solutions(SpecialW.R), SpecialW.L)
     return(length(solutions(MS)))
+
 end
+
