@@ -14,9 +14,9 @@ export
 
 function condition_number_of_basis(V :: Variety, candidate :: Vector{Int}, witnessPoint :: Vector{ComplexF64}, groundSetSize :: Int)
     
-    jac = jacobian(system(V), witnessPoint)
+    jac :: Matrix{ComplexF64} = jacobian(system(V), witnessPoint)
 
-    conditionNumber = cond(jac[:,filter(x->in(x,candidate) == false,1:groundSetSize)])
+    conditionNumber :: Float64 = cond(jac[:,filter(x->in(x,candidate) == false,1:groundSetSize)])
 
     return(conditionNumber)
 
@@ -33,13 +33,12 @@ function condition_numbers_of_candidate_bases(V :: Variety; dim = nothing)
         end
     end
 
-    ambientDimension = ambient_dimension(V)
+    ambientDimension :: Int = ambient_dimension(V)
     candidateBases = Combinatorics.combinations(1:ambientDimension, Pandora.dim(V))
-    point = witness_points(V)[1]    
-    jac = HomotopyContinuation.jacobian(system(V), point)
+    jac :: Matrix{ComplexF64} = HomotopyContinuation.jacobian(system(V), witness_points(V)[1])
 
     conditionNums = Dict{Vector{Int},Float64}()
-    counter = 0
+    counter :: Int = 0
 
     for c in candidateBases
 
@@ -49,7 +48,7 @@ function condition_numbers_of_candidate_bases(V :: Variety; dim = nothing)
             println(counter)
         end
 
-        conditionNums[c]=LinearAlgebra.cond(jac[:,filter(x->in(x,c) == false,1:ambientDimension)])
+        conditionNums[c] = LinearAlgebra.cond(jac[:,setdiff(collect(1:ambientDimension), c)])
 
     end
 
@@ -62,7 +61,7 @@ function numerical_bases(V :: Variety; tol = 1e7)
 
     conditionNums = condition_numbers_of_candidate_bases(V)
 
-    bases = []
+    bases :: Vector{Vector{Int}} = []
 
     for k in keys(conditionNums)
 
