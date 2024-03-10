@@ -39,10 +39,16 @@ function condition_numbers_of_candidate_bases(V :: Variety; dim = nothing)
 
     conditionNums = Dict{Vector{Int},Float64}()
 
+    lk = ReentrantLock()
+
     Threads.@threads for c in ProgressBar(candidateBases)
 
-        conditionNums[c] = LinearAlgebra.cond(jac[:,setdiff(collect(1:ambientDimension), c)])
+        num :: Float64 = LinearAlgebra.cond(jac[:,setdiff(collect(1:ambientDimension), c)])
 
+        Threads.lock(lk) do
+            conditionNums[c] = num
+        end
+        
     end
 
     return(conditionNums)
