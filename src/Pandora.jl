@@ -7,6 +7,8 @@ using LinearAlgebra
 using Combinatorics
 using Oscar			
 using Plots
+using ProgressBars
+using Clustering
 
 
 

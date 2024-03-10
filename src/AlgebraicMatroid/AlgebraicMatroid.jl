@@ -34,19 +34,12 @@ function condition_numbers_of_candidate_bases(V :: Variety; dim = nothing)
     end
 
     ambientDimension :: Int = ambient_dimension(V)
-    candidateBases = Combinatorics.combinations(1:ambientDimension, Pandora.dim(V))
+    candidateBases = collect(Combinatorics.combinations(1:ambientDimension, Pandora.dim(V)))
     jac :: Matrix{ComplexF64} = HomotopyContinuation.jacobian(system(V), witness_points(V)[1])
 
     conditionNums = Dict{Vector{Int},Float64}()
-    counter :: Int = 0
 
-    for c in candidateBases
-
-        counter += 1
-
-        if floor(counter/1000)==counter//1000
-            println(counter)
-        end
+    Threads.@threads for c in ProgressBar(candidateBases)
 
         conditionNums[c] = LinearAlgebra.cond(jac[:,setdiff(collect(1:ambientDimension), c)])
 
@@ -57,15 +50,21 @@ function condition_numbers_of_candidate_bases(V :: Variety; dim = nothing)
 end
 
 
-function numerical_bases(V :: Variety; tol = 1e7)
+function numerical_bases(V :: Variety)
 
     conditionNums = condition_numbers_of_candidate_bases(V)
+
+    conditionNumsMatrix :: Matrix{Float64} = reshape([((x) -> isfinite(x) ? log10(x) : 308.0)(c) for c in values(conditionNums)], 1, length(values(conditionNums)))
+
+    clusters = kmeans(conditionNumsMatrix, 2)
+
+    tolerence :: Float64 = 10 ^ ((clusters.centers[1] + clusters.centers[2])/2)
 
     bases :: Vector{Vector{Int}} = []
 
     for k in keys(conditionNums)
 
-        if conditionNums[k]<tol
+        if conditionNums[k] < tolerence
             push!(bases,k)
         end
 
@@ -97,9 +96,9 @@ end
   [7, 8, 9]
  ```
  """
-function numerical_algebraic_matroid(V :: Variety; tol = 1e7)
+function numerical_algebraic_matroid(V :: Variety)
 
-    Bases = numerical_bases(V;tol=tol)
+    Bases = numerical_bases(V)
 
     M = Oscar.matroid_from_bases(Bases,ambient_dimension(V))
 
