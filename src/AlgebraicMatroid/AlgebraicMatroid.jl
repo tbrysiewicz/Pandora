@@ -2,6 +2,9 @@
 #TODO: Make sure proper attention to irreducibility is given
 #TODO: Make it so that one can construct the enumerative problems associated to bases
 
+include("HelperFunctions.jl")
+
+
 export
     algebraic_matroid,
     affine_multidegree,
@@ -25,6 +28,7 @@ end
 
 function condition_numbers_of_candidate_bases(V :: Variety; dim = nothing)
     
+    # maybe another condition number trick to find dimension
     if !is_populated(V)
         if !isnothing(dim)
             populate_one_point!(V,dim)
@@ -33,22 +37,30 @@ function condition_numbers_of_candidate_bases(V :: Variety; dim = nothing)
         end
     end
 
-    ambientDimension :: Int = ambient_dimension(V)
-    candidateBases = collect(Combinatorics.combinations(1:ambientDimension, Pandora.dim(V)))
+    ambientDim :: Int = ambient_dimension(V)
+    dim :: Int = Pandora.dim(V)
     jac :: Matrix{ComplexF64} = HomotopyContinuation.jacobian(system(V), witness_points(V)[1])
 
+    # might be a faster data structure
     conditionNums = Dict{Vector{Int},Float64}()
+
+    groundSet = collect(1:ambientDim)
+
+    numCandidates = binomial(ambientDim, dim)
 
     lk = ReentrantLock()
 
-    Threads.@threads for c in ProgressBar(candidateBases)
 
-        num :: Float64 = LinearAlgebra.cond(jac[:,setdiff(collect(1:ambientDimension), c)])
+    Threads.@threads for i in ProgressBar(1:numCandidates)
+
+        c = rank_r_combination(ambientDim, dim, i)
+            
+        num :: Float64 = LinearAlgebra.cond(jac[:,setdiff(groundSet, c)])
 
         Threads.lock(lk) do
             conditionNums[c] = num
         end
-        
+
     end
 
     return(conditionNums)
@@ -59,6 +71,7 @@ end
 function numerical_bases(V :: Variety)
 
     conditionNums = condition_numbers_of_candidate_bases(V)
+
 
     conditionNumsMatrix :: Matrix{Float64} = reshape([((x) -> isfinite(x) ? log10(x) : 308.0)(c) for c in values(conditionNums)], 1, length(values(conditionNums)))
 
@@ -76,13 +89,13 @@ function numerical_bases(V :: Variety)
 
     end
 
-    return(Vector{Vector{Int}}(bases))
+    return(bases)
 
 end
 
 
 @doc raw"""
-    numerical_algebraic_matroid(V::Variety; tol = 1e7)
+    numerical_algebraic_matroid(V::Variety)
 
  Returns the algebraic matroid of the variety V computed numerically
  # Examples
@@ -218,7 +231,7 @@ end
  4
  ```
  """
-function affine_multidegree1(W::WitnessSet,I::Vector{Int64})
+function affine_multidegree(W::WitnessSet,I::Vector{Int64})
     d = HomotopyContinuation.dim(W) #Dimension of witness set
     n = length(variables(W.F)) #Ambient Dimension
     A = randn(ComplexF64,d,n) #The size of linear space on needs to slice with

@@ -1,0 +1,91 @@
+[1mdiff --git a/src/AlgebraicMatroid/AlgebraicMatroid.jl b/src/AlgebraicMatroid/AlgebraicMatroid.jl[m
+[1mindex 62eb07b..6793708 100644[m
+[1m--- a/src/AlgebraicMatroid/AlgebraicMatroid.jl[m
+[1m+++ b/src/AlgebraicMatroid/AlgebraicMatroid.jl[m
+[36m@@ -2,6 +2,9 @@[m
+ #TODO: Make sure proper attention to irreducibility is given[m
+ #TODO: Make it so that one can construct the enumerative problems associated to bases[m
+ [m
+[32m+[m[32minclude("HelperFunctions.jl")[m
+[32m+[m
+[32m+[m
+ export[m
+     algebraic_matroid,[m
+     affine_multidegree,[m
+[36m@@ -25,6 +28,7 @@[m [mend[m
+ [m
+ function condition_numbers_of_candidate_bases(V :: Variety; dim = nothing)[m
+     [m
+[32m+[m[32m    # maybe another condition number trick to find dimension[m
+     if !is_populated(V)[m
+         if !isnothing(dim)[m
+             populate_one_point!(V,dim)[m
+[36m@@ -33,22 +37,30 @@[m [mfunction condition_numbers_of_candidate_bases(V :: Variety; dim = nothing)[m
+         end[m
+     end[m
+ [m
+[31m-    ambientDimension :: Int = ambient_dimension(V)[m
+[31m-    candidateBases = collect(Combinatorics.combinations(1:ambientDimension, Pandora.dim(V)))[m
+[32m+[m[32m    ambientDim :: Int = ambient_dimension(V)[m
+[32m+[m[32m    dim :: Int = Pandora.dim(V)[m
+     jac :: Matrix{ComplexF64} = HomotopyContinuation.jacobian(system(V), witness_points(V)[1])[m
+ [m
+[32m+[m[32m    # might be a faster data structure[m
+     conditionNums = Dict{Vector{Int},Float64}()[m
+ [m
+[32m+[m[32m    groundSet = collect(1:ambientDim)[m
+[32m+[m
+[32m+[m[32m    numCandidates = binomial(ambientDim, dim)[m
+[32m+[m
+     lk = ReentrantLock()[m
+ [m
+[31m-    Threads.@threads for c in ProgressBar(candidateBases)[m
+ [m
+[31m-        num :: Float64 = LinearAlgebra.cond(jac[:,setdiff(collect(1:ambientDimension), c)])[m
+[32m+[m[32m    Threads.@threads for i in ProgressBar(1:numCandidates)[m
+[32m+[m
+[32m+[m[32m        c = rank_r_combination(ambientDim, dim, i)[m
+[32m+[m[41m            [m
+[32m+[m[32m        num :: Float64 = LinearAlgebra.cond(jac[:,setdiff(groundSet, c)])[m
+ [m
+         Threads.lock(lk) do[m
+             conditionNums[c] = num[m
+         end[m
+[31m-        [m
+[32m+[m
+     end[m
+ [m
+     return(conditionNums)[m
+[36m@@ -60,6 +72,7 @@[m [mfunction numerical_bases(V :: Variety)[m
+ [m
+     conditionNums = condition_numbers_of_candidate_bases(V)[m
+ [m
+[32m+[m
+     conditionNumsMatrix :: Matrix{Float64} = reshape([((x) -> isfinite(x) ? log10(x) : 308.0)(c) for c in values(conditionNums)], 1, length(values(conditionNums)))[m
+ [m
+     clusters = kmeans(conditionNumsMatrix, 2)[m
+[36m@@ -76,13 +89,13 @@[m [mfunction numerical_bases(V :: Variety)[m
+ [m
+     end[m
+ [m
+[31m-    return(Vector{Vector{Int}}(bases))[m
+[32m+[m[32m    return(bases)[m
+ [m
+ end[m
+ [m
+ [m
+ @doc raw"""[m
+[31m-    numerical_algebraic_matroid(V::Variety; tol = 1e7)[m
+[32m+[m[32m    numerical_algebraic_matroid(V::Variety)[m
+ [m
+  Returns the algebraic matroid of the variety V computed numerically[m
+  # Examples[m
+[36m@@ -218,7 +231,7 @@[m [mend[m
+  4[m
+  ```[m
+  """[m
+[31m-function affine_multidegree1(W::WitnessSet,I::Vector{Int64})[m
+[32m+[m[32mfunction affine_multidegree(W::WitnessSet,I::Vector{Int64})[m
+     d = HomotopyContinuation.dim(W) #Dimension of witness set[m
+     n = length(variables(W.F)) #Ambient Dimension[m
+     A = randn(ComplexF64,d,n) #The size of linear space on needs to slice with[m
