@@ -9,7 +9,7 @@ function rank_r_combination(n :: Int, k :: Int, r ::Int)
 
     runningRank :: Int64 = r - sum
 
-    comb :: Vector{Int64} = Vector{Int64}(undef, k)
+    comb :: Vector{Int} = Vector{Int}(undef, k)
     comb[1] = first
 
 

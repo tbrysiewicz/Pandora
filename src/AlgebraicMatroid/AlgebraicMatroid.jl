@@ -40,25 +40,64 @@ function condition_numbers_of_candidate_bases(V :: Variety; dim = nothing)
     ambientDim :: Int = ambient_dimension(V)
     dim :: Int = Pandora.dim(V)
     jac :: Matrix{ComplexF64} = HomotopyContinuation.jacobian(system(V), witness_points(V)[1])
+    groundSet :: Vector{Int} = collect(1:ambientDim)
 
-    # might be a faster data structure
+    # might be a faster data structure  
     conditionNums = Dict{Vector{Int},Float64}()
+    combs = combinations(collect(1:ambientDim), dim)
 
-    groundSet = collect(1:ambientDim)
+    if Threads.nthreads() == 1
 
-    numCandidates = binomial(ambientDim, dim)
-
-    lk = ReentrantLock()
-
-
-    Threads.@threads for i in ProgressBar(1:numCandidates)
-
-        c = rank_r_combination(ambientDim, dim, i)
-            
-        num :: Float64 = LinearAlgebra.cond(jac[:,setdiff(groundSet, c)])
-
-        Threads.lock(lk) do
+        for c in ProgressBar(combs)
+            num :: Float64 = LinearAlgebra.cond(jac[:,setdiff(groundSet, c)])
             conditionNums[c] = num
+        end
+
+    else
+        
+        lk = ReentrantLock()
+
+        function check_bases(start :: Int, finish :: Int)
+        
+            next = (rank_r_combination(ambientDim, dim, start), nothing)
+
+            curr = nothing
+            
+            for i in start:finish - 1
+
+                curr = next[1]
+                next = iterate(combs, curr)
+        
+                num :: Float64 = LinearAlgebra.cond(jac[:,setdiff(groundSet, curr)])
+
+                #println(c, "=>", num, "   ", i, ", ",length(unique(collect(keys(conditionNums)))))
+        
+                Threads.lock(lk) do
+                    conditionNums[curr] = num
+                end
+              
+            end
+
+        end
+
+        numCandidates = binomial(ambientDim, dim)
+        numThreads :: Int = Threads.nthreads()
+
+        # these lines figure out how to split up the work between threads
+        rangeSize :: Int = (numCandidates - (numCandidates % numThreads))/numThreads
+        ranges :: Vector{Int} = [1+k*rangeSize for k in 0:numThreads]
+
+        for i in 1:(numCandidates % numThreads)
+            for j in (i + 1):length(ranges)
+                ranges[j] += 1
+            end
+        end
+
+        println(ranges)
+
+
+        Threads.@sync for i in 1:numThreads
+            Threads.@spawn check_bases(ranges[i], ranges[i + 1])
         end
 
     end
@@ -71,7 +110,6 @@ end
 function numerical_bases(V :: Variety)
 
     conditionNums = condition_numbers_of_candidate_bases(V)
-
 
     conditionNumsMatrix :: Matrix{Float64} = reshape([((x) -> isfinite(x) ? log10(x) : 308.0)(c) for c in values(conditionNums)], 1, length(values(conditionNums)))
 
