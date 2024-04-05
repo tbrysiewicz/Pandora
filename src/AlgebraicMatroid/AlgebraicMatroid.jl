@@ -15,14 +15,10 @@ export
     numerical_bases
 
 
-function condition_number_of_basis(V :: Variety, candidate :: Vector{Int}, witnessPoint :: Vector{ComplexF64}, groundSetSize :: Int)
-    
-    jac :: Matrix{ComplexF64} = jacobian(system(V), witnessPoint)
 
-    conditionNumber :: Float64 = cond(jac[:,filter(x->in(x,candidate) == false,1:groundSetSize)])
-
-    return(conditionNumber)
-
+struct condBasis
+    basis :: Vector{Int}
+    conditionNum :: Float64
 end
 
 
@@ -100,11 +96,47 @@ function condition_numbers_of_candidate_bases(V :: Variety; dim = nothing)
 end
 
 
+function condition_numbers_of_candidate_bases3(V :: Variety; dim = nothing)
+    
+    # maybe another condition number trick to find dimension
+    if !is_populated(V)
+        if !isnothing(dim)
+            populate_one_point!(V,dim)
+        else
+            populate_witness!(V)
+        end
+    end
+
+    ambientDim :: Int = ambient_dimension(V)
+    dim :: Int = Pandora.dim(V)
+    jac :: Matrix{ComplexF64} = HomotopyContinuation.jacobian(system(V), witness_points(V)[1])
+
+    # might be a faster data structure
+    conditionNums = Array{condBasis}(undef, binomial(ambientDim, dim))
+
+    groundSet = collect(1:ambientDim)
+    numCandidates = binomial(ambientDim, dim)
+
+    Threads.@threads for i in ProgressBar(1:numCandidates)
+
+        c = rank_r_combination(ambientDim, dim, i)
+            
+        num :: Float64 = LinearAlgebra.cond(jac[:,setdiff(groundSet, c)])
+
+        conditionNums[i] = condBasis(c,num)
+
+    end
+
+    return(conditionNums)
+
+end
+
+
 function numerical_bases(V :: Variety)
 
-    conditionNums = condition_numbers_of_candidate_bases(V)
+    conditionNums = condition_numbers_of_candidate_bases3(V)
 
-    conditionNumsMatrix :: Matrix{Float64} = reshape([((x) -> isfinite(x) ? log10(x) : 308.0)(c) for c in values(conditionNums)], 1, length(values(conditionNums)))
+    conditionNumsMatrix :: Matrix{Float64} = reshape([((x) -> isfinite(x) ? log10(x) : 308.0)(c.conditionNum) for c in conditionNums], 1, length(conditionNums))
 
     clusters = kmeans(conditionNumsMatrix, 2)
 
@@ -112,10 +144,10 @@ function numerical_bases(V :: Variety)
 
     bases :: Vector{Vector{Int}} = []
 
-    for k in keys(conditionNums)
+    for k in conditionNums
 
-        if conditionNums[k] < tolerence
-            push!(bases,k)
+        if k.conditionNum < tolerence
+            push!(bases,k.basis)
         end
 
     end
