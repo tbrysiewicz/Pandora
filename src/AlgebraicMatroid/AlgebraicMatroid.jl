@@ -26,7 +26,7 @@ function condition_number_of_basis(V :: Variety, candidate :: Vector{Int}, witne
 end
 
 
-function taylor_condition_numbers_of_candidate_bases(V :: Variety; dim = nothing)
+function condition_numbers_of_candidate_bases(V :: Variety; dim = nothing)
 
     # maybe another condition number trick to find dimension
     if !is_populated(V)
@@ -45,65 +45,56 @@ function taylor_condition_numbers_of_candidate_bases(V :: Variety; dim = nothing
     # might be a faster data structure  
     conditionNums = Dict{Vector{Int},Float64}()
     combs = combinations(collect(1:ambientDim), dim)
-    #T: For now, do not have a separate code block for one thread 
-    if Threads.nthreads() == 1
 
-        for c in ProgressBar(combs)
-            num :: Float64 = LinearAlgebra.cond(jac[:,setdiff(groundSet, c)])
-            conditionNums[c] = num
-        end
+    lk = ReentrantLock()
+    #T: Move function outside and pass extra arguments as necessary (ambdim, dim, jac).
+    #   Make sure it is safe to pass the jacobian as an argument to multiple threads (i.e. compare with making T copies) 
+    function check_bases!(start :: Int, finish :: Int, local_conditionNums :: Dict{Vector{Int},Float64})
+    
+        next = (rank_r_combination(ambientDim, dim, start), nothing)
 
-    else
+        curr = nothing
         
-        lk = ReentrantLock()
-        #T: Move function outside and pass extra arguments as necessary (ambdim, dim, jac).
-        #   Make sure it is safe to pass the jacobian as an argument to multiple threads (i.e. compare with making T copies) 
-        function check_bases!(start :: Int, finish :: Int, local_conditionNums :: Dict{Vector{Int},Float64})
-        
-            next = (rank_r_combination(ambientDim, dim, start), nothing)
+        for i in start:finish - 1
 
-            curr = nothing
-            
-            for i in start:finish - 1
+            curr = next[1]
+            next = iterate(combs, curr)
+    
+            num :: Float64 = LinearAlgebra.cond(jac[:,setdiff(groundSet, curr)])
 
-                curr = next[1]
-                next = iterate(combs, curr)
-        
-                num :: Float64 = LinearAlgebra.cond(jac[:,setdiff(groundSet, curr)])
-
-                #println(c, "=>", num, "   ", i, ", ",length(unique(collect(keys(conditionNums)))))
-        
-                
-                local_conditionNums[curr] = num
-                              
+            #println(c, "=>", num, "   ", i, ", ",length(unique(collect(keys(conditionNums)))))
+    
+            Threads.lock(lk) do 
+                conditionNums[curr] = num
             end
-            return(local_conditionNums)
+                            
         end
-
-        numCandidates = binomial(ambientDim, dim)
-        numThreads :: Int = Threads.nthreads()
-
-        # these lines figure out how to split up the work between threads
-        rangeSize :: Int = (numCandidates - (numCandidates % numThreads))/numThreads
-        ranges :: Vector{Int} = [1+k*rangeSize for k in 0:numThreads]
-
-        for i in 1:(numCandidates % numThreads)
-            for j in (i + 1):length(ranges)
-                ranges[j] += 1
-            end
-        end
-
-        println(ranges)
-
-        Bucket = Vector{Dict{Vector{Int},Float64}}()
-        Threads.@sync for i in 1:numThreads
-            D = Dict{Vector{Int},Float64}()
-            Threads.@spawn check_bases!(ranges[i], ranges[i + 1], D)
-            push!(Bucket,D)
-        end
-
+        return(local_conditionNums)
     end
-    return(Bucket)
+
+    numCandidates = binomial(ambientDim, dim)
+    numThreads :: Int = Threads.nthreads()
+
+    # these lines figure out how to split up the work between threads
+    rangeSize :: Int = (numCandidates - (numCandidates % numThreads))/numThreads
+    ranges :: Vector{Int} = [1+k*rangeSize for k in 0:numThreads]
+
+    for i in 1:(numCandidates % numThreads)
+        for j in (i + 1):length(ranges)
+            ranges[j] += 1
+        end
+    end
+
+    println(ranges)
+
+    Bucket = Vector{Dict{Vector{Int},Float64}}()
+    Threads.@sync for i in 1:numThreads
+        D = Dict{Vector{Int},Float64}()
+        Threads.@spawn check_bases!(ranges[i], ranges[i + 1], D)
+        push!(Bucket,D)
+    end
+
+    #return(Bucket)
     return(conditionNums)
 
 end
