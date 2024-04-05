@@ -21,6 +21,9 @@ struct condBasis
     conditionNum :: Float64
 end
 
+function Base.show(io::IO, cb::condBasis)
+    print(cb.basis," -> ",cb.conditionNum)
+end
 
 function condition_numbers_of_candidate_bases(V :: Variety; dim = nothing)
 
