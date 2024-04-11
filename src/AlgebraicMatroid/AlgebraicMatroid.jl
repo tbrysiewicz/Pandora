@@ -16,102 +16,17 @@ export
 
 
 
-struct condBasis
+mutable struct condBasis
     basis :: Vector{Int}
     conditionNum :: Float64
 end
 
 
-function condition_numbers_of_candidate_bases(V :: Variety; dim = nothing)
 
-    # maybe another condition number trick to find dimension
-    if !is_populated(V)
-        if !isnothing(dim)
-            populate_one_point!(V,dim)
-        else
-            populate_witness!(V)
-        end
-    end
+function condition_numbers_of_candidate_bases(V :: Variety, jacobian :: Matrix{ComplexF64}, dim = nothing)
 
     ambientDim :: Int = ambient_dimension(V)
-    dim :: Int = Pandora.dim(V)
-    jac :: Matrix{ComplexF64} = HomotopyContinuation.jacobian(system(V), witness_points(V)[1])
-    groundSet :: Vector{Int} = collect(1:ambientDim)
 
-    # might be a faster data structure  
-    conditionNums = Dict{Vector{Int},Float64}()
-    combs = combinations(collect(1:ambientDim), dim)
-
-    lk = ReentrantLock()
-    #T: Move function outside and pass extra arguments as necessary (ambdim, dim, jac).
-    #   Make sure it is safe to pass the jacobian as an argument to multiple threads (i.e. compare with making T copies) 
-    function check_bases!(start :: Int, finish :: Int, local_conditionNums :: Dict{Vector{Int},Float64})
-    
-        next = (rank_r_combination(ambientDim, dim, start), nothing)
-
-        curr = nothing
-        
-        for i in start:finish - 1
-
-            curr = next[1]
-            next = iterate(combs, curr)
-    
-            num :: Float64 = LinearAlgebra.cond(jac[:,setdiff(groundSet, curr)])
-
-            #println(c, "=>", num, "   ", i, ", ",length(unique(collect(keys(conditionNums)))))
-    
-            Threads.lock(lk) do 
-                conditionNums[curr] = num
-            end
-                            
-        end
-        return(local_conditionNums)
-    end
-
-    numCandidates = binomial(ambientDim, dim)
-    numThreads :: Int = Threads.nthreads()
-
-    # these lines figure out how to split up the work between threads
-    rangeSize :: Int = (numCandidates - (numCandidates % numThreads))/numThreads
-    ranges :: Vector{Int} = [1+k*rangeSize for k in 0:numThreads]
-
-    for i in 1:(numCandidates % numThreads)
-        for j in (i + 1):length(ranges)
-            ranges[j] += 1
-        end
-    end
-
-    println(ranges)
-
-    Bucket = Vector{Dict{Vector{Int},Float64}}()
-    Threads.@sync for i in 1:numThreads
-        D = Dict{Vector{Int},Float64}()
-        Threads.@spawn check_bases!(ranges[i], ranges[i + 1], D)
-        push!(Bucket,D)
-    end
-
-    #return(Bucket)
-    return(conditionNums)
-
-end
-
-
-function condition_numbers_of_candidate_bases3(V :: Variety; dim = nothing)
-    
-    # maybe another condition number trick to find dimension
-    if !is_populated(V)
-        if !isnothing(dim)
-            populate_one_point!(V,dim)
-        else
-            populate_witness!(V)
-        end
-    end
-
-    ambientDim :: Int = ambient_dimension(V)
-    dim :: Int = Pandora.dim(V)
-    jac :: Matrix{ComplexF64} = HomotopyContinuation.jacobian(system(V), witness_points(V)[1])
-
-    # might be a faster data structure
     conditionNums = Array{condBasis}(undef, binomial(ambientDim, dim))
 
     groundSet = collect(1:ambientDim)
@@ -119,9 +34,9 @@ function condition_numbers_of_candidate_bases3(V :: Variety; dim = nothing)
 
     Threads.@threads for i in ProgressBar(1:numCandidates)
 
-        c = rank_r_combination(ambientDim, dim, i)
+        c :: Vector{Int} = rank_r_combination(ambientDim, dim, i)
             
-        num :: Float64 = LinearAlgebra.cond(jac[:,setdiff(groundSet, c)])
+        num :: Float64 = LinearAlgebra.cond(jacobian[:,setdiff(groundSet, c)])
 
         conditionNums[i] = condBasis(c,num)
 
@@ -132,15 +47,56 @@ function condition_numbers_of_candidate_bases3(V :: Variety; dim = nothing)
 end
 
 
-function numerical_bases(V :: Variety)
+function numerical_bases(V :: Variety; dimension = nothing, amplify = 1)
 
-    conditionNums = condition_numbers_of_candidate_bases3(V)
+    # first get the points that we need depending on if the dimension is given or not
+    if is_populated(V) # best case scenario the points already exist
+        witnessPoints = witness_points(V)
+        dimension = Pandora.dim(V)
+    elseif !isnothing(dimension) # almost as good we can find them quickly since we know the dimension
+        witnessPoints = get_n_points(V, dimension, amplify)
+    else # worst case we don't know points or dimension so we have to find the whole witness set
+        witnessPoints = witness_points(V)
+        dimension = Pandora.dim(V)
+    end
 
+    # make the jacobian and pass it off for the first run of condition numbers
+    jac :: Matrix{ComplexF64} = HomotopyContinuation.jacobian(system(V), witnessPoints[1])
+    conditionNums = condition_numbers_of_candidate_bases(V, jac, dimension)
+
+    # put the condition numbers in a matrix so we can cluster them and find the tolerence
     conditionNumsMatrix :: Matrix{Float64} = reshape([((x) -> isfinite(x) ? log10(x) : 308.0)(c.conditionNum) for c in conditionNums], 1, length(conditionNums))
-
     clusters = kmeans(conditionNumsMatrix, 2)
-
     tolerence :: Float64 = 10 ^ ((clusters.centers[1] + clusters.centers[2])/2)
+
+    # now we can execute the amplification procedure
+    for i in 2:amplify
+
+        # first create the new jacobian with the new point
+        jac = HomotopyContinuation.jacobian(system(V), witnessPoints[i])
+        
+        ambientDim :: Int = ambient_dimension(V)    
+        groundSet = collect(1:ambientDim)
+
+        # look at the condition nums
+        for i in conditionNums
+            if i.conditionNum > tolerence
+
+                newCond = LinearAlgebra.cond(jac[:,setdiff(groundSet, i.basis)])
+
+                if (i.conditionNum - newCond) > 0.0
+                    i.conditionNum = newCond
+                end
+
+            end
+        end
+
+        # once large condition nums have been rechecked redo the clustering
+        conditionNumsMatrix = reshape([((x) -> isfinite(x) ? log10(x) : 308.0)(c.conditionNum) for c in conditionNums], 1, length(conditionNums))
+        clusters = kmeans(conditionNumsMatrix, 2)
+        tolerence = 10 ^ ((clusters.centers[1] + clusters.centers[2])/2)
+
+    end
 
     bases :: Vector{Vector{Int}} = []
 

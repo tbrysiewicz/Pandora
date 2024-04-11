@@ -5,7 +5,7 @@ export
 
 function rank_r_combination(n :: Int, k :: Int, r ::Int)
 
-    first :: Int64, sum :: Int64 = first_elt_comb(n,k,r)
+    first :: Int, sum :: Int = first_elt_comb(n,k,r)
 
     runningRank :: Int64 = r - sum
 

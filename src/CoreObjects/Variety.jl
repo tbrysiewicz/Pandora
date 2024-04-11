@@ -14,9 +14,7 @@ export
     degree,
     system,
     ambient_dimension,
-    witness_points,
-    populate_one_point!
-
+    witness_points
 
 
 mutable struct Variety
@@ -141,8 +139,16 @@ function witness_set(V::Variety)
     end
 end
 
-function populate_one_point!(V::Variety,d)
-    monodromy_witness_populate!(V, d; ts=1)
+# this function was created to support numerical_bases in AlgebraicMatroid.jl 
+# you must know the dim, d to use
+function get_n_points(V::Variety, d::Int, n)
+
+	MS = monodromy_solve(V.F,dim=d;target_solutions_count=n)
+
+	W = WitnessSet(MixedSystem(V.F),MS.parameters,MS.results)
+	
+	return(solutions(W))
+
 end
 
 function monodromy_witness_populate!(V::Variety, d; ts = nothing)
@@ -157,8 +163,6 @@ function monodromy_witness_populate!(V::Variety, d; ts = nothing)
 	W = WitnessSet(MixedSystem(V.F),MS.parameters,MS.results)
 	V.W=W
 end
-
-
 
 
 @doc raw"""
