@@ -141,6 +141,9 @@ end
 
 # this function was created to support numerical_bases in AlgebraicMatroid.jl 
 # you must know the dim, d to use
+## TODO: perform homotopy continuation on one sample n times instead of pulling n pts from a witness set
+        #issue 1: degree of variety may not be at least n
+        #issue 2: it is a bit of a mysterious induced by sampling points from the same witness set, ideally they are independent samples of each pt
 function get_n_points(V::Variety, d::Int, n)
 
 	MS = monodromy_solve(V.F,dim=d;target_solutions_count=n)
