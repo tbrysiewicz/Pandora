@@ -53,10 +53,10 @@ end
 function numerical_bases(V :: Variety; dimension = nothing, amplify = 1)
 
     # first get the points that we need depending on if the dimension is given or not
-    if is_populated(V) # best case scenario the points already exist
+    if is_populated(V) && length(witness_points(V))>=amplify# best case scenario the points already exist
         witnessPoints = witness_points(V)
         dimension = Pandora.dim(V)
-    elseif !isnothing(dimension) # almost as good we can find them quickly since we know the dimension
+    elseif is_populated(V) || (!isnothing(dimension)) #If we are populated, but not enough witness points (or dimension is given)
         witnessPoints = get_n_points(V, dimension, amplify)
     else # worst case we don't know points or dimension so we have to find the whole witness set
         witnessPoints = witness_points(V)
@@ -74,7 +74,6 @@ function numerical_bases(V :: Variety; dimension = nothing, amplify = 1)
 
     # now we can execute the amplification procedure
     for i in 2:amplify
-
         # first create the new jacobian with the new point
         jac = HomotopyContinuation.jacobian(system(V), witnessPoints[i])
         
@@ -83,18 +82,27 @@ function numerical_bases(V :: Variety; dimension = nothing, amplify = 1)
 
         # look at the condition nums
         for i in conditionNums
+<<<<<<< HEAD
             if i.conditionNum > tolerance
 
                 newCond = LinearAlgebra.cond(jac[:,setdiff(groundSet, i.basis)])
                 diff::Float64 = i.conditionNum - newCond
                 if diff > 1.0
+=======
+            if i.conditionNum > tolerence
+                newCond = LinearAlgebra.cond(jac[:,setdiff(groundSet, i.basis)])
+                #Consider this?
+                #m= min(newCond,i.conditionNum)
+                #i.conditionNum = m
+                if (i.conditionNum - newCond) > 0.0
+>>>>>>> 932aebd6d9ed573b197d7128aa4978addc8d307f
                     i.conditionNum = newCond
                     println("old: ", i.conditionNum, " new: ", newCond, " diff: ", diff)
                 end
 
             end
         end
-
+        
         # once large condition nums have been rechecked redo the clustering
         conditionNumsMatrix = reshape([((x) -> isfinite(x) ? log10(x) : 308.0)(c.conditionNum) for c in conditionNums], 1, length(conditionNums))
         clusters = kmeans(conditionNumsMatrix, 2)
