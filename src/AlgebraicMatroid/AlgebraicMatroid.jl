@@ -67,10 +67,10 @@ function numerical_bases(V :: Variety; dimension = nothing, amplify = 1)
     jac :: Matrix{ComplexF64} = HomotopyContinuation.jacobian(system(V), witnessPoints[1])
     conditionNums = condition_numbers_of_candidate_bases(V, jac, dimension)
 
-    # put the condition numbers in a matrix so we can cluster them and find the tolerence
+    # put the condition numbers in a matrix so we can cluster them and find the tolerance
     conditionNumsMatrix :: Matrix{Float64} = reshape([((x) -> isfinite(x) ? log10(x) : 308.0)(c.conditionNum) for c in conditionNums], 1, length(conditionNums))
     clusters = kmeans(conditionNumsMatrix, 2)
-    tolerence :: Float64 = 10 ^ ((clusters.centers[1] + clusters.centers[2])/2)
+    tolerance :: Float64 = 10 ^ ((clusters.centers[1] + clusters.centers[2])/2)
 
     # now we can execute the amplification procedure
     for i in 2:amplify
@@ -83,12 +83,13 @@ function numerical_bases(V :: Variety; dimension = nothing, amplify = 1)
 
         # look at the condition nums
         for i in conditionNums
-            if i.conditionNum > tolerence
+            if i.conditionNum > tolerance
 
                 newCond = LinearAlgebra.cond(jac[:,setdiff(groundSet, i.basis)])
-
-                if (i.conditionNum - newCond) > 0.0
+                diff::Float64 = i.conditionNum - newCond
+                if diff > 1.0
                     i.conditionNum = newCond
+                    println("old: ", i.conditionNum, " new: ", newCond, " diff: ", diff)
                 end
 
             end
@@ -97,7 +98,7 @@ function numerical_bases(V :: Variety; dimension = nothing, amplify = 1)
         # once large condition nums have been rechecked redo the clustering
         conditionNumsMatrix = reshape([((x) -> isfinite(x) ? log10(x) : 308.0)(c.conditionNum) for c in conditionNums], 1, length(conditionNums))
         clusters = kmeans(conditionNumsMatrix, 2)
-        tolerence = 10 ^ ((clusters.centers[1] + clusters.centers[2])/2)
+        tolerance = 10 ^ ((clusters.centers[1] + clusters.centers[2])/2)
 
     end
 
@@ -105,7 +106,7 @@ function numerical_bases(V :: Variety; dimension = nothing, amplify = 1)
 
     for k in conditionNums
 
-        if k.conditionNum < tolerence
+        if k.conditionNum < tolerance
             push!(bases,k.basis)
         end
 
