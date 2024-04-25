@@ -26,6 +26,7 @@ function monodromy_element(E::EnumerativeProblem,γ::Vector{Vector{ComplexF64}})
         populate_base_fibre(E)
     end
     BS = solve_over_param(E,BP) #The labeling is well-defined as long as base param is not changed
+    BS = solutions(BS)
     if γ[1] != γ[end]
         println("Parameters do not describe a loop. Appending first parameter to last")
         push!(γ,γ[1])

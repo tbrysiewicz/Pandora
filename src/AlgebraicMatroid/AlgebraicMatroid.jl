@@ -82,20 +82,9 @@ function numerical_bases(V :: Variety; dimension = nothing, amplify = 1)
 
         # look at the condition nums
         for i in conditionNums
-<<<<<<< HEAD
-            if i.conditionNum > tolerance
-
-                newCond = LinearAlgebra.cond(jac[:,setdiff(groundSet, i.basis)])
-                diff::Float64 = i.conditionNum - newCond
-                if diff > 1.0
-=======
             if i.conditionNum > tolerence
                 newCond = LinearAlgebra.cond(jac[:,setdiff(groundSet, i.basis)])
-                #Consider this?
-                #m= min(newCond,i.conditionNum)
-                #i.conditionNum = m
                 if (i.conditionNum - newCond) > 0.0
->>>>>>> 932aebd6d9ed573b197d7128aa4978addc8d307f
                     i.conditionNum = newCond
                     println("old: ", i.conditionNum, " new: ", newCond, " diff: ", diff)
                 end
