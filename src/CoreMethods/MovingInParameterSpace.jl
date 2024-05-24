@@ -4,13 +4,6 @@ export
 
 
 
-
-
-
-
-
-
-
 #####Basic moving in parameter space
 
 function solve_over_param(E::EnumerativeProblem,P; monodromy_recover=false)
