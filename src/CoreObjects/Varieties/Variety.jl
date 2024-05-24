@@ -1,6 +1,7 @@
 import HomotopyContinuation.dim
 import HomotopyContinuation.degree
 import HomotopyContinuation.witness_set
+import HomotopyContinuation.nid
 import HomotopyContinuation.system
 import Oscar.dim
 import Oscar.degree
@@ -14,7 +15,9 @@ export
     degree,
     system,
     ambient_dimension,
-    witness_points
+    witness_points,
+    nid,
+    assign_component!
 
 
 mutable struct Variety
@@ -273,4 +276,29 @@ function dim(V::Variety; dim = nothing, codim = nothing)
         return(dim(V))
     end
     d = HomotopyContinuation.dim(witness_set(V))
+end
+
+function nid(V::Variety)
+    NID = HomotopyContinuation.nid(V.F)
+    V.NID=NID
+end
+
+function assign_component!(V::Variety,dim::Int,num::Int)
+    V.W = V.NID.Witness_Sets[dim][num]
+    return(nothing)
+end
+
+function assign_component!(V::Variety,dim::Int,nums::Vector{Int})
+    W = V.NID.Witness_Sets[dim][nums[1]]
+    R = copy(W.R)
+    for i in nums[2:end] #for each additional component of dimension dim
+        Wother = V.NID.Witness_Sets[dim][i] #pull that witness set
+        Rnew = solutions((witness_set(Wother,W.L)))  #and move it to the first one's linear space
+        for r in Rnew
+            push!(R,r) #and collect the witness superset points all together
+        end
+    end
+    WNew = WitnessSet(W.F,W.L,R) #and create a new witness set with that data
+    V.W = WNew
+    return(nothing)
 end
