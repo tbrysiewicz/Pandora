@@ -1,73 +1,13 @@
-import HomotopyContinuation.is_real
-import HomotopyContinuation.nreal
-
 export
     solve_over_param,
-    solve_over_params,
-    degree_check,
-    real_parity_check,
-    is_real,
-    n_real
+    solve_over_params
 
 
 
 
-@doc raw"""
-    is_real(s::Vector{ComplexF64};tol=1e-6)
-
- Determine if a vector of complex numbers is (approximately) real (i.e. the largest imaginary part is smaller than `tol`)
- """
-function is_real(s::Vector{ComplexF64};tol=1e-6)
-    for i in s
-        if abs(imag(i))>tol
-            return(false)
-        end
-    end
-    return(true)
-end
-
-
-@doc raw"""
-    n_real(S::Vector{Vector{ComplexF64}};tol=1e-6)
-
- Counts the number of complex vectors in `S` which are (approximately) real (i.e. the largest imaginary part is smaller than `tol`)
- """
-function n_real(S::Vector{Vector{ComplexF64}};tol=1e-6)
-    count(s->is_real(s),S)
-end
 
 
 
-
-@doc raw"""
-    degree_check(E::EnumerativeProblem, S)
-
- Returns `true` if the number of solutions in `S` equal the degree of `E` and returns `false` otherwise.
- """
-function degree_check(E::EnumerativeProblem, S)
-    if length(S)!=degree(E)
-        return(false)
-    else
-        return(true)
-    end
-end
-
-
-
-
-@doc raw"""
-    real_parity_check(E::EnumerativeProblem, S)
-
- Returns `true` if the number of real solutions in `S` has the same parity as the degree of `E` and returns `false` otherwise.
-    Note: This should return `true` whenever `S` describes a fibre of a real enumerative problem `E` over a real parameter.
- """
-function real_parity_check(E::EnumerativeProblem, S)
-    if iseven(n_real(S)-degree(E))==false
-        return(false)
-    else
-        return(true)
-    end
-end
 
 
 
