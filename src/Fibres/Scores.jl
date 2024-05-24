@@ -1,5 +1,5 @@
 export
-    Score,
+    Score
 
 
 struct Score

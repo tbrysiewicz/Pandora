@@ -40,35 +40,42 @@ function __init__()
 		printstyled(" $VERSION_NUMBER ", color = :green)
 end
 
-
-
-
-include("CoreObjects/EnumerativeProblem.jl")
-include("CoreMethods/MovingInParameterSpace.jl")
-
-include("Enumeration/DegreeBounds.jl")
-
-include("GaloisGroups/GaloisSampling.jl")
-include("GaloisGroups/GaloisGroups.jl")
-include("GaloisGroups/CoordinateSymmetryGroup.jl")
-
-include("CoreObjects/Variety.jl")
+include("CoreObjects/Varieties/Variety.jl")
+include("CoreObjects/EnumerativeProblems/EnumerativeProblem.jl")
+include("Fibres/Scores.jl")
 
 include("AlgebraicMatroid/AlgebraicMatroid.jl")
 
-include("Exploration/Explore.jl")
-include("Exploration/FibreFunctions.jl")
-include("Exploration/Samplers.jl")
+include("CoreMethods/MovingInParameterSpace.jl")
+
+
+include("CoreObjects/EnumerativeProblems/EPGetters.jl")
+
+include("Enumeration/DegreeBounds.jl")
 
 include("Examples/BasicEnumerativeExamples.jl")
 include("Examples/FamousEnumerativeExamples.jl")
 include("Examples/BasicVarietyExamples.jl")
 
-include("Statistics/Tally.jl")
 
+include("Exploration/Explore.jl")
+include("Exploration/FibreFunctions.jl")
+include("Exploration/Samplers.jl")
+
+include("Fibres/FibreChecks.jl")
+include("Fibres/FibreFunctions.jl")
+include("Fibres/RealityScores.jl")
+
+include("GaloisGroups/GaloisSampling.jl")
+include("GaloisGroups/GaloisGroups.jl")
+include("GaloisGroups/CoordinateSymmetryGroup.jl")
 
 include("Optimization/CoreObjects.jl")
 include("Optimization/Optimizer.jl")
+
+
+include("Statistics/Tally.jl")
+
 
 
 

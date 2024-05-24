@@ -20,6 +20,7 @@ export
 mutable struct Variety
     F::System
     W::Union{WitnessSet,Nothing}
+    NID::Union{NumericalIrreducibleDecomposition,Nothing}
 end
 
 @doc raw"""
@@ -38,7 +39,7 @@ end
  ```
  """
 function Variety(F::System)
-    Variety(F,nothing)
+    Variety(F,nothing,nothing)
 end
 
 
@@ -130,11 +131,11 @@ end
  Witness set for dimension 2 of degree 2
  ```
  """
-function witness_set(V::Variety)
+function witness_set(V::Variety; dim = nothing, codim = nothing)
     if is_populated(V)
         return(V.W)
     else
-        populate_witness!(V)
+        populate_witness!(V; dim = dim, codim = codim)
         return(witness_set(V))
     end
 end
@@ -216,11 +217,11 @@ end
  2
  ```
  """
-function degree(V::Variety)
+function degree(V::Variety; dim = nothing, codim=nothing)
     if is_populated(V)
         return(length(witness_points(V)))
     else
-        populate_witness!(V)
+        populate_witness!(V; dim = dim, codim = codim)
         return(degree(V))
     end
 end
@@ -229,13 +230,18 @@ end
 
 
 @doc raw"""
-    populate_witness!(V::Variety)
+    populate_witness!(V::Variety; dim = nothing, codim = nothing)
 
- Populates a witness set for $V$.
+ Populates a witness superset for $V$ in dimension/codimension given.
+    If no dimension or codimension are provided, the code defaults
+    to HC.jl's expected dim/codim.
 
  """
-function populate_witness!(V::Variety)
-    W = witness_set(system(V))
+function populate_witness!(V::Variety; dim = nothing, codim = nothing)
+    if dim==nothing && codim == nothing
+        println("Warning: no dimension or codimension was given...defaulting to HC.jl's expected dimension")
+    end
+    W = witness_set(system(V); dim = dim, codim = codim)
     V.W=W
 end
 
@@ -261,9 +267,9 @@ end
  Returns the  dimension of the variety $V$.
 
  """
-function dim(V::Variety)
+function dim(V::Variety; dim = nothing, codim = nothing)
     if is_populated(V)==false
-        populate_witness!(V)
+        populate_witness!(V; dim = dim, codim = codim)
         return(dim(V))
     end
     d = HomotopyContinuation.dim(witness_set(V))
