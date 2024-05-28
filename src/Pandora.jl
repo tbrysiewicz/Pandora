@@ -81,6 +81,11 @@ include("Statistics/Tally.jl")
 
 
 
+include("Visualization/Visualize.jl")
+
+
+
+
 end # module Pandora
 
 

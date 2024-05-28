@@ -1,7 +1,36 @@
-#export
-#	Visualize
+export
+	visualizationWithRefinement
 	
+
 	
+
+#TODO: Catch when the user tries to input an EP w/ more than two params
+#      and suggest restricting
+
+
+#Input: 
+#		EP - an enumerative problem 
+#		P  - a collection of (n) parameter values of EP
+#Output:
+#       a new enumerative problem which is EP restricted to the affine (n-1)-dimensional space
+#       spanned by the parameters in P
+
+function restrict_enumerative_problem(EP::EnumerativeProblem,P::Vector{Vector{Float64}})
+	F = system(EP)
+	xv = variables(F)
+	xp = parameters(F)
+	n = length(P)
+	@var t[1:n-1]
+	affine_span = P[n]+sum([t[i].*(P[i]-P[n]) for i in 1:n-1])
+	NewEquations = [subs(f,xp=>affine_span) for f in expressions(F)]
+	return(EnumerativeProblem(System(NewEquations,variables=xv,parameters=t)))
+end
+#=
+EP = TwentySevenLines()
+MyPlots = visualizationWithRefinement(restrict_enumerative_problem(EP,[randn(Float64,20) for i in 1:3]),[-1,1],[-1,1],100,5)
+=#
+
+
 #function Visualize(Something)
 #	println("Probably delete this later. It is an example to learn how to use git");
 #end
@@ -149,7 +178,7 @@ end
 
 #visualizationWithRefinement function will take a system and produce a plot of the parameter space with the given initial resolution. It will then refine the data and produce and save a plot at each refinement step.
 
-function visualizationWithRefinement(E, xlims = [-5,5], ylims = [-5,5], initialResolution = 5000, refinementSteps = 3; certification = true)
+function visualizationWithRefinement(E, xlims = [-5,5], ylims = [-5,5], initialResolution = 5000, refinementSteps = 3; certification = false)
 	F = system(E)
 	numberOfSolutions = degree(E)
 	
@@ -166,8 +195,11 @@ function visualizationWithRefinement(E, xlims = [-5,5], ylims = [-5,5], initialR
 	yDistance = yDivisionSize*(1.05)
 	
 	P = randn(ComplexF64, 2)
-	S = solve(H; target_parameters = P)
-	data1 = solve(H, S; start_parameters = P, target_parameters = mesh1)
+	S = solve(F; target_parameters = P)
+	println(typeof(S))
+	println(typeof(P))
+	println(typeof(mesh1))
+	data1 = solve(F, S; start_parameters = P, target_parameters = mesh1)
 	
 	dictionary1 = dataDict(F, data1, numberOfSolutions, certification)
 	parameterDictionaryScatter(dictionary1)
@@ -175,18 +207,20 @@ function visualizationWithRefinement(E, xlims = [-5,5], ylims = [-5,5], initialR
 	
 	dictionary2 = refinedData(F, dictionary1, xDistance, yDistance, numberOfSolutions, certification)
 	
-	parameterDictionaryScatter(dictionary2)
-	savefig("Refinement1Plot.pdf")
+	MyPlots = []
+	push!(MyPlots,parameterDictionaryScatter(dictionary2))
+	#savefig("Refinement1Plot.pdf")
 	
 	for i in 2:refinementSteps
 		xDistance2 = xDistance/2^(i-1)
 		yDistance2 = yDistance/2^(i-1)
 		dictionary3 = refinedData(F, dictionary2, xDistance2, yDistance2, numberOfSolutions, certification)
-		parameterDictionaryScatter(dictionary3)
+		push!(MyPlots,parameterDictionaryScatter(dictionary3))
 		savefig("Refinement$(i)Plot.pdf")
 		
 		dictionary2 = dictionary3
 	end
+	return(MyPlots)
 end
 
 
