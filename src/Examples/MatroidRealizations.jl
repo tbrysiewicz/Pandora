@@ -1,17 +1,10 @@
 
-
-
-using HomotopyContinuation
-using LinearAlgebra 
-using Combinatorics 
-using Plots
-
 #Function: matroid_space_eqns  #Input: n = number of points, NonBases = points we want collinear/ nonbases of matroid  #Output: Eqns = determinant equations defining a matroid 
 function matroid_space_eqns(n, nonbases) 
 	@var x[1:2,1:n]
 	matrix = vcat([1 for i in 1:n]', x) 
 	eqns = [det(matrix[1:3,c]) for c in nonbases] #Computing equations 
-	return eqns	
+	return System(eqns,variables=vcat(x...))	
 end 
 
 
@@ -22,6 +15,7 @@ function solution_to_matrix(soln)
  	matrix = vcat([1 for i in 1:n]' , matrix_without_ones) #Adding the row of 1s to make M
 	return matrix
  end 
+
 
 
 #Function : matrix_to_nonbases #Input: matrix = matirx   #Output: nonbases = Non-Bases of matrix
@@ -42,9 +36,11 @@ function matrix_to_nonbases(matrix)
 end 
  
 
-#Function : decompose_matroid_space #Input: n= number of points, nonbases = points we want collinear/ nonbases of a matrix  #Output: matroidwitnessresults = Witness set of a matroid
+#Function : decompose_matroid_space 
+#Input: n= number of points, nonbases = points we want collinear/ nonbases of a matrix  
+#Output: matroidwitnessresults = Witness set of a matroid
 function decompose_matroid_space(n,nonbases)  
-	matroid_variety = Variety(System(matroid_space_eqns(n, nonbases)))
+	matroid_variety = Variety(matroid_space_eqns(n, nonbases))
 	witness_superset = nid(matroid_variety)
 	sorted_nonbases = sort([sort(m) for m in nonbases])
 

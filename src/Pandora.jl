@@ -56,6 +56,7 @@ include("Enumeration/DegreeBounds.jl")
 include("Examples/BasicEnumerativeExamples.jl")
 include("Examples/FamousEnumerativeExamples.jl")
 include("Examples/BasicVarietyExamples.jl")
+include("Examples/MatroidRealizations.jl")
 
 
 include("Exploration/Explore.jl")
