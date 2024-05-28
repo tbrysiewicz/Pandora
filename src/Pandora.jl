@@ -44,7 +44,8 @@ include("CoreObjects/Varieties/Variety.jl")
 include("CoreObjects/EnumerativeProblems/EnumerativeProblem.jl")
 include("Fibres/Scores.jl")
 
-include("AlgebraicMatroid/AlgebraicMatroid.jl")
+#This needs to be fixed in several ways.
+#include("AlgebraicMatroid/AlgebraicMatroid.jl")
 
 include("CoreMethods/MovingInParameterSpace.jl")
 

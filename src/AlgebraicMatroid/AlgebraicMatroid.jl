@@ -26,9 +26,9 @@ function Base.show(io::IO, cb::condBasis)
 end
 
 
-function condition_numbers_of_candidate_bases(V :: Variety, jacobian :: Matrix{ComplexF64}, dim = nothing)
+function condition_numbers_of_candidate_bases(M :: Matrix{ComplexF64}, dim = nothing)
 
-    ambientDim :: Int = ambient_dimension(V)
+    ambientDim :: Int = size(M)[2]
 
     conditionNums = Array{condBasis}(undef, binomial(ambientDim, dim))
 
@@ -39,7 +39,7 @@ function condition_numbers_of_candidate_bases(V :: Variety, jacobian :: Matrix{C
 
         c :: Vector{Int} = rank_r_combination(ambientDim, dim, i)
             
-        num :: Float64 = LinearAlgebra.cond(jacobian[:,setdiff(groundSet, c)])
+        num :: Float64 = LinearAlgebra.cond(M[:,setdiff(groundSet, c)])
 
         conditionNums[i] = condBasis(c,num)
 
@@ -49,6 +49,31 @@ function condition_numbers_of_candidate_bases(V :: Variety, jacobian :: Matrix{C
 
 end
 
+function bases_of_matrix(A::Matrix{T} where T; tol = 10000)
+    M = Matrix{ComplexF64}(A)
+    r = rank(M,0.00001)
+
+    conditionNums = condition_numbers_of_candidate_bases(M, r)
+
+    # put the condition numbers in a matrix so we can cluster them and find the tolerance
+    conditionNumsMatrix :: Matrix{Float64} = reshape([((x) -> isfinite(x) ? log10(x) : 308.0)(c.conditionNum) for c in conditionNums], 1, length(conditionNums))
+    #Clustering does not work well
+    #clusters = kmeans(conditionNumsMatrix, 2)
+    #tolerance :: Float64 = 10 ^ ((clusters.centers[1] + clusters.centers[2])/2)
+    tolerance = tol
+    bases :: Vector{Vector{Int}} = []
+
+    for k in conditionNums
+
+        if k.conditionNum < tolerance
+            push!(bases,k.basis)
+        end
+
+    end
+
+    return(bases)
+
+end
 
 function numerical_bases(V :: Variety; dimension = nothing, amplify = 1)
 
@@ -65,7 +90,7 @@ function numerical_bases(V :: Variety; dimension = nothing, amplify = 1)
 
     # make the jacobian and pass it off for the first run of condition numbers
     jac :: Matrix{ComplexF64} = HomotopyContinuation.jacobian(system(V), witnessPoints[1])
-    conditionNums = condition_numbers_of_candidate_bases(V, jac, dimension)
+    conditionNums = condition_numbers_of_candidate_bases(jac, dimension)
 
     # put the condition numbers in a matrix so we can cluster them and find the tolerance
     conditionNumsMatrix :: Matrix{Float64} = reshape([((x) -> isfinite(x) ? log10(x) : 308.0)(c.conditionNum) for c in conditionNums], 1, length(conditionNums))

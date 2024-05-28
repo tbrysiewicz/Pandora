@@ -17,7 +17,8 @@ export
     ambient_dimension,
     witness_points,
     nid,
-    assign_component!
+    assign_component!,
+    sample
 
 
 mutable struct Variety
@@ -302,3 +303,18 @@ function assign_component!(V::Variety,dim::Int,nums::Vector{Int})
     V.W = WNew
     return(nothing)
 end
+
+
+function sample(W::WitnessSet) #Takes witness set and samples random solution from it 
+	return(rand(solutions(W)))
+end 
+
+#TODO: make it possible to sample n points at random - so that the witness set is randomly
+# moved on each iteration
+function sample(V::Variety; random = false) #Takes witness set and samples random solution from it 
+    if is_populated(V)==true
+    	return(rand(solutions(witness_set(V))))
+    else
+        println("You must first compute a witness set")
+    end
+end 
