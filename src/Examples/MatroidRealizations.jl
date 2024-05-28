@@ -92,4 +92,19 @@ function visualize_matroid(n, nonbases)
 		end 
 	return(visualization)
 	
+	#scores 
+	point_pairs = collect(combinations(1:n, 2))
+	points = []
+	distance = []
+	
+		for k in 1:n
+		push!(points, pointMatrix[:,k])
+		end
+	
+	for j in 1:length(point_pairs) 		
+		u = points[(point_pairs[j][1])]
+		v = points[((point_pairs[j][2])
+		push!(distance, distance(u, v, EuclideanNorm()))
+	end 						
+	
 end 
