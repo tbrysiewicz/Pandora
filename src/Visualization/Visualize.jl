@@ -1,5 +1,7 @@
 export
-	visualizationWithRefinement
+	visualization_with_refinement
+	
+
 	
 
 	
@@ -31,16 +33,14 @@ MyPlots = visualizationWithRefinement(restrict_enumerative_problem(EP,[randn(Flo
 =#
 
 
-#function Visualize(Something)
-#	println("Probably delete this later. It is an example to learn how to use git");
-#end
+#Input:
+#		xlims - x parameter interval
+#		ylims - y parameter interval
+#		resolution - the maximum number of points outputted in the mesh	
+#Output:
+#		A collection of target parameters "on a grid", restricted by the inputted xlims and ylims with maximum number of outputted parameters limited by resoluton.
 
-#Noah this is your job now.
-
-
-#createMesh takes x value and y value limits as well as resolution and generates a grid of target parameter points.
-
-function createMesh(xlims, ylims, resolution)
+function create_mesh(xlims::Vector, ylims::Vector, resolution::Int)
 	xRange = xlims[2]-xlims[1]
 	yRange = ylims[2]-ylims[1]
 	
@@ -54,9 +54,15 @@ function createMesh(xlims, ylims, resolution)
 	return targetParameters
 end
 
-#dataDict takes a dataset from solving a polynomial system and produces a dictionary that takes parameter pairs as keys and number of real solutions as values. Option to certify solutions.
+#Input:
+#		F - a system
+#		data1 - a dataset produced by solving F using the "solve" function
+#		numberOfSolutions - the "correct" number of solutions to a problem, i.e., the degree of the problem
+#		certification - option to certify the solutions in data1
+#Output:
+#		A dictionary that takes each of the target parameters from data1 as keys and assigns the corresponding number of real solutions to its value.
 
-function dataDict(F, data1, numberOfSolutions, certification = true)
+function data_to_dictionary_converter(F::System, data1::Vector{Tuple{Result, Vector{Float64}}}, numberOfSolutions::Int, certification = false)
 	D = Dict()
 	for i in 1:length(data1)
 		if certification == true
@@ -79,9 +85,12 @@ function dataDict(F, data1, numberOfSolutions, certification = true)
 	return D
 end
 
-#boxRefinement takes two pairs of parameters and produces the additional parameters on the box produced by the two pairs. If the pairs are colinear then the additional parameter returned is their midpoint.
-
-function boxRefinement(parameterVector1, parameterVector2)
+#Input:
+#		parameterVector1 - a two-dimensional parameter
+#		parameterVector2 - a two-dimensional parameter
+#Output:
+#		a collection of parameters on the "box" produced by the two inputted parameter pairs. If the pairs are colinear, the outputted parameter is simply their midpoint. Otherwise, seven parameters are returned
+function box_refinement(parameterVector1::Vector, parameterVector2::Vector)
 	boxParameters = []
 		if parameterVector1[1] == parameterVector2[1] || parameterVector1[2]==parameterVector2[2]
 			midpointVector = (0.5)*(parameterVector2 - parameterVector1) + parameterVector1
@@ -106,15 +115,21 @@ function boxRefinement(parameterVector1, parameterVector2)
 	return boxParameters
 end
 
-#refinedParameters takes a dictionary of parameter pairs corresponding to a number of real solutions for those given parameters and goes through each key, checking if there are any other keys within a certain distance in terms of x or a certain distance in terms of y and has a different number of real solutions. If there are, it adds parameters produced by box refinement to a set of new parameters. These parameters are then returned and can be solved for.
+#Input:
+#		dictionary1 - a dictionary of the sort produced by data_to_dictionary_converter
+#		xDistance - A numerical value that determines the x length of the rectangle used for refinement
+#		yDistance - A numerical value that determines the y length of the rectangle used for refinement
+#Output:
+#		a collection of parameters. For each parameter in dictionary1, the function checks in the 2*xDistance x 2*yDistance rectangle centered at the parameter for other parameters with a differing number of real solutions. If such a parameter point exists, box_refinement is used to produce new target parameters. The function does this for every parameter in dictionary1 and then returns all of the generated parameters.
 
-function refinedParameters(dictionary1, xDistance, yDistance)
+
+function refined_parameters(dictionary1::Dict, xDistance, yDistance)
 	newParameters = []
 	
 	for i in keys(dictionary1)
 		for j in keys(dictionary1)
 			if  (abs(i[1]-j[1]))<=xDistance && (abs(i[2]-j[2]))<=yDistance && dictionary1[i]!=dictionary1[j]
-				tempBoxParameters = boxRefinement(i,j)
+				tempBoxParameters = box_refinement(i,j)
 				
 				for k in 1:length(tempBoxParameters)
 					if (tempBoxParameters[k] in newParameters) == false
@@ -128,10 +143,18 @@ function refinedParameters(dictionary1, xDistance, yDistance)
 	return newParameters
 end
 
-#refinedData uses refinedParameters to generate new parameters to solve for. It then solves for these parameters and returns a dictionary that contains all new points and number of real solutions as well as all of the initial points and their corresponding number of real solutions.
+#Input:
+#		F - a system
+#		dictionary1 - a dictionary of the sort produced by data_to_dictionary_converter
+#		xDistance - A numerical value that determines the x length of the rectangle used for box_refinement
+#		yDistance - A numerical value that determines the y length of the rectangle used for box_refinement
+#		numberOfSolutions - the "correct" number of solutions to a problem, i.e., the degree of the problem
+#		certification - option to certify solutions
+#Output:
+#		returns a dictionary with parameter keys with values corresponding to number of real solutions. The function takes dictionary1 and then uses refined_parameters to generate new parameters, solves for these parameters, and then returns a dictionary containing both these new points and the original points from dictionary1.
 
-function refinedData(F, dictionary1, xDistance, yDistance, numberOfSolutions, certification)
-	newTargetParameters = refinedParameters(dictionary1, xDistance, yDistance)
+function refined_data(F::System, dictionary1::Dict, xDistance, yDistance, numberOfSolutions::Int, certification=False)
+	newTargetParameters = refined_parameters(dictionary1, xDistance, yDistance)
 	repeatParameters = [] 
 	for i in 1:length(newTargetParameters)
 		if (newTargetParameters[i] in keys(dictionary1)) == true
@@ -143,16 +166,19 @@ function refinedData(F, dictionary1, xDistance, yDistance, numberOfSolutions, ce
 	S = solve(F; target_parameters = P)
 	newData = solve(F, S; start_parameters = P, target_parameters = newTargetParameters)
 	
-	dictionary2 = dataDict(F, newData, numberOfSolutions, certification)
+	dictionary2 = data_to_dictionary_converter(F, newData, numberOfSolutions, certification)
 	
 	dictionary3 = merge(dictionary1,dictionary2)
 	
 	return dictionary3
 end
 
-#parameterDictionaryScatter takes as input a dictionary in which the keys are parameter points and values are number of real solutions and then plots a corresponding scatter plot.
+#Input:
+#		dictionary1 - a dictionary of the sort porduced by data_to_dictionary_converter
+#Output:
+#		a scatter plot of the parameters from dictionary1 with differing marker colors for different number of real solutions.
 
-function parameterDictionaryScatter(dictionary1)
+function parameter_dictionary_scatter(dictionary1)
 
 	possibleNumberOfRealSolutions = []
 	for i in keys(dictionary1)
@@ -176,13 +202,26 @@ function parameterDictionaryScatter(dictionary1)
 end
 
 
-#visualizationWithRefinement function will take a system and produce a plot of the parameter space with the given initial resolution. It will then refine the data and produce and save a plot at each refinement step.
+#Input:
+#		E - an EnumerativeProblem
+#		xlims - the x paramater interval over which the system will be solved
+#		ylims - the y parameter interval over which the system will be solved
+#		initialResolution - the number of parameters to be solved for in the initial plot
+#		depth - the number of times the plot is refined
+#		certification - option to certify solutions
+# Output:
+#		Returns a collection of plots. The function solves for and plots the data for the system corresponding to E over the inputted xlims and ylims with a maximum number of data points equal to initialResolution. It then uses refined_data on this initial data to produce a second plot. This procedure repeats for the specified depth.
 
-function visualizationWithRefinement(E, xlims = [-5,5], ylims = [-5,5], initialResolution = 5000, refinementSteps = 3; certification = false)
+function visualization_with_refinement(E, xlims = [-2,2], ylims = [-2,2], initialResolution = 2000, depth = 3; certification = false)
 	F = system(E)
+	
+	if length(parameters(F))!=2
+		throw(ArgumentError("System does not consist of two parameters."))
+	end
+	
 	numberOfSolutions = degree(E)
 	
-	mesh1 = createMesh(xlims, ylims, initialResolution)
+	mesh1 = create_mesh(xlims, ylims, initialResolution)
 	xRange = xlims[2]-xlims[1]
 	yRange = ylims[2]-ylims[1]
 	
@@ -196,27 +235,22 @@ function visualizationWithRefinement(E, xlims = [-5,5], ylims = [-5,5], initialR
 	
 	P = randn(ComplexF64, 2)
 	S = solve(F; target_parameters = P)
-	println(typeof(S))
-	println(typeof(P))
-	println(typeof(mesh1))
 	data1 = solve(F, S; start_parameters = P, target_parameters = mesh1)
 	
-	dictionary1 = dataDict(F, data1, numberOfSolutions, certification)
-	parameterDictionaryScatter(dictionary1)
-	savefig("OriginalPlot.pdf")
-	
-	dictionary2 = refinedData(F, dictionary1, xDistance, yDistance, numberOfSolutions, certification)
+	dictionary1 = data_to_dictionary_converter(F, data1, numberOfSolutions, certification)
 	
 	MyPlots = []
-	push!(MyPlots,parameterDictionaryScatter(dictionary2))
-	#savefig("Refinement1Plot.pdf")
+	push!(MyPlots,parameter_dictionary_scatter(dictionary1))
 	
-	for i in 2:refinementSteps
+	dictionary2 = refined_data(F, dictionary1, xDistance, yDistance, numberOfSolutions, certification)
+	
+	push!(MyPlots,parameter_dictionary_scatter(dictionary2))
+	
+	for i in 2:depth
 		xDistance2 = xDistance/2^(i-1)
 		yDistance2 = yDistance/2^(i-1)
-		dictionary3 = refinedData(F, dictionary2, xDistance2, yDistance2, numberOfSolutions, certification)
-		push!(MyPlots,parameterDictionaryScatter(dictionary3))
-		savefig("Refinement$(i)Plot.pdf")
+		dictionary3 = refined_data(F, dictionary2, xDistance2, yDistance2, numberOfSolutions, certification)
+		push!(MyPlots,parameter_dictionary_scatter(dictionary3))
 		
 		dictionary2 = dictionary3
 	end
