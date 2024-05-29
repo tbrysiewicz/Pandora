@@ -2,7 +2,6 @@ export
 	matroid_space_eqns,
 	matroid_realization_space
 
-	
 
 #TODO List
 #-Take an oscar matroid as input
