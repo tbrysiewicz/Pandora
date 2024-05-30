@@ -1,5 +1,5 @@
 export
-	visualization_with_refinement
+	visualization_with_refinement, restrict_enumerative_problem, moving_window_refinement
 	
 
 	
@@ -40,7 +40,11 @@ MyPlots = visualizationWithRefinement(restrict_enumerative_problem(EP,[randn(Flo
 #Output:
 #		A collection of target parameters "on a grid", restricted by the inputted xlims and ylims with maximum number of outputted parameters limited by resoluton.
 
-function create_mesh(xlims::Vector, ylims::Vector, resolution::Int)
+function create_mesh(xlims::Vector, ylims::Vector, resolution)
+	if resolution < 8
+		resolution = 8
+	end
+	
 	xRange = xlims[2]-xlims[1]
 	yRange = ylims[2]-ylims[1]
 	
@@ -178,7 +182,7 @@ end
 #Output:
 #		a scatter plot of the parameters from dictionary1 with differing marker colors for different number of real solutions.
 
-function parameter_dictionary_scatter(dictionary1)
+function parameter_dictionary_scatter(dictionary1::Dict)
 
 	possibleNumberOfRealSolutions = []
 	for i in keys(dictionary1)
@@ -192,7 +196,13 @@ function parameter_dictionary_scatter(dictionary1)
 	for i in 1:length(possibleNumberOfRealSolutions)
 		number = possibleNumberOfRealSolutions[i]
 		tempDataPoints = filter(x->dictionary1[x]==possibleNumberOfRealSolutions[i], keys(dictionary1))
+		
+		if number == -2
+			scatter!([x[1] for x in tempDataPoints], [x[2] for x in tempDataPoints], palette =:rainbow, markerstrokewidth = 0, markershape =:rect, markersize = 1.5, labels = "Error")
+		
+		else
 		scatter!([x[1] for x in tempDataPoints], [x[2] for x in tempDataPoints], palette =:rainbow, markerstrokewidth = 0, markershape =:rect, markersize = 1.5, labels = "$(number) Real Solutions")
+		end
 	end
 	
 	display(MyPlot)
@@ -212,7 +222,7 @@ end
 # Output:
 #		Returns a collection of plots. The function solves for and plots the data for the system corresponding to E over the inputted xlims and ylims with a maximum number of data points equal to initialResolution. It then uses refined_data on this initial data to produce a second plot. This procedure repeats for the specified depth.
 
-function visualization_with_refinement(E, xlims = [-2,2], ylims = [-2,2], initialResolution = 2000, depth = 3; certification = false)
+function visualization_with_refinement(E::EnumerativeProblem, xlims = [-2,2], ylims = [-2,2], initialResolution = 2000, depth::Int = 3; certification = false)
 	F = system(E)
 	
 	if length(parameters(F))!=2
@@ -256,5 +266,169 @@ function visualization_with_refinement(E, xlims = [-2,2], ylims = [-2,2], initia
 	end
 	return(MyPlots)
 end
+
+
+#Input:
+#		xlims - interval for the x parameter over which the windows will be generated
+#		ylims - interval for the y parameter over which the windows will be generated
+#		windowxLength - the x parameter length of each window
+#		windowyLength - the y parameter length of each window
+#		coverage - the amount of overlap between adjacent windows, e.g. if coverage = 20, each window will overlap with 20% of the area of each adjacent window.
+#Output:
+#		A collection of vectors where each vector corresponds to a rectangular "window" defined by four coordinates.
+
+function window_generator(xlims::Vector, ylims::Vector, windowxLength, windowyLength, coverage)
+	upperLeftWindowCoords = [[A,B] for A in xlims[1]:(1-(0.01*coverage))*windowxLength:xlims[2] for B in ylims[2]:-(1-(0.01*coverage))*windowyLength:ylims[1]]
+	upperLeftWindowCoords = filter(x->x[1]!=xlims[2] && x[2]!=ylims[1], upperLeftWindowCoords) #removing any coordinates on the lower or right boundary of the parameter space
+	
+	windowCoords = Vector[]
+	
+	for i in 1:length(upperLeftWindowCoords)
+	
+		tempWindowCoords = []
+		push!(tempWindowCoords, upperLeftWindowCoords[i])
+		
+		tempLowerLeftWindowCoord = upperLeftWindowCoords[i] - [0,windowyLength]
+		if tempLowerLeftWindowCoord[2]<ylims[1]
+			tempLowerLeftWindowCoord[2] = ylims[1]
+		end
+		
+		push!(tempWindowCoords, tempLowerLeftWindowCoord)
+		
+		tempUpperRightWindowCoord = upperLeftWindowCoords[i] + [windowxLength, 0]
+		if tempUpperRightWindowCoord[1]>xlims[2]
+			tempUpperRightWindowCoord[1] = xlims[2]
+		end
+		
+		push!(tempWindowCoords, tempUpperRightWindowCoord)
+		
+		
+		tempLowerRightWindowCoord = [tempUpperRightWindowCoord[1], tempLowerLeftWindowCoord[2]]
+		push!(tempWindowCoords, tempLowerRightWindowCoord)
+		
+		push!(windowCoords, tempWindowCoords)
+	end
+	
+	return windowCoords
+end 
+
+#Input:
+#		dictionary1 - a dictionary of the sort produced by data_to_dictionary_converter
+#		windows - a collection of windows as produced by window_generator
+#		initialResolution - the resolution limit inputted for the initial plot
+#Output:
+#		returns a collection of parameters. The function takes the data from dictionary1 and "overlays" the windows onto the parameter space, checking in each window for parameter pairs corresponding to two distinct numbers of real solutions. If such a pair of points exists, the window is deemed "interesting" and a mesh of new parameters is generated over the area cut out by that window in the parameter space. The initial resolution is distributed equally amongst the interesting windows. These parameters are returned.
+
+function refined_parameters2(dictionary1::Dict, windows::Vector{Vector}, initialResolution)
+	
+	interestingWindows = []
+	newParameters = Set{Vector}()
+	
+	for i in windows
+		solutionsInWindow = []
+		for j in keys(dictionary1)
+			if i[1][1]<=j[1] && j[1]<=i[3][1] && j[2]<=i[1][2] && i[2][2]<=j[2] && (dictionary1[j] in solutionsInWindow)==false
+				push!(solutionsInWindow, dictionary1[j])
+			end
+			
+			length(solutionsInWindow)>1 && break
+		end
+		
+		if length(solutionsInWindow)>1
+			push!(interestingWindows, i)
+		end
+	end
+	
+	windowResolution = initialResolution/length(interestingWindows)
+	
+	for i in interestingWindows
+		xlims = [i[1][1], i[3][1]]
+		ylims = [i[2][2], i[1][2]]
+		
+		mesh1 = create_mesh(xlims, ylims, windowResolution)
+		
+		for j in mesh1
+			push!(newParameters, j)
+		end
+	end
+	return newParameters
+end
+
+#Input
+#		F - a System
+#		dictionary1 - a dictionary of the sort produced by data_to_dictionary_converter
+#		numberOfSolutions - The "correct" number of solutions, i.e., the degree of the problem
+#		windows - a collection of windows as produced by window_generator
+#		initialResoluton - the maximum resolution of the initial plot
+#		certification - option to certify solutions
+#Output
+#		returns a dictionary of the sort produced by data_to_dictionary_converter. The function uses refined_parameters2 to create new target parameters. After solving for them it returns a dictionary that contains both these new points and their corresponding numbers of real solutions as well as the initial points from dictionary1.
+
+function window_refinement_step(F::System, dictionary1::Dict, numberOfSolutions::Int, windows::Vector{Vector}, initialResolution, certification=false)
+	targetParameters = refined_parameters2(dictionary1, windows, initialResolution)
+	
+	P = randn(ComplexF64, 2)
+	S = solve(F; target_parameters = P)
+	
+	newSolutions = solve(F, S; start_parameters = P, target_parameters = targetParameters)
+
+	dictionary2 = data_to_dictionary_converter(F, newSolutions, numberOfSolutions, certification)
+	dictionary3 = merge(dictionary1, dictionary2)
+	
+	return dictionary3
+end
+
+#Input:
+#		E - an EnumerativeProblem
+#		xlims - interval for the x parameter
+#		ylims - interval for the y parameter
+#		initialResolution - the maximum resolution of the initial plot
+#		depth - the number of refinement steps
+#		certification - option to certify solutions
+#		windowxLength - the x parameter length of each window
+#		windowyLength - the y parameter length of each window
+#		coverage - the amount of overlap between adjacent windows, e.g. if coverage = 20, each window will overlap with 20% of the area of each adjacent window.
+#Output:
+#		returns a collection of plots. The first is the initial plot and each subsequent plot is produced by plotting the dictionary given by window_refinement_step. In each stage of refinement, the dimensions of the windows are halved.
+
+function moving_window_refinement(E::EnumerativeProblem, xlims::Vector, ylims::Vector, initialResolution, depth::Int, certification = false; windowxLength = ((xlims[2]-xlims[1])/10), windowyLength = ((ylims[2]-ylims[1])/10), coverage=20)
+	F = system(E)
+	
+	if length(parameters(F))!=2
+		throw(ArgumentError("System does not consist of two parameters."))
+	end
+	
+	numberOfSolutions = degree(E)
+	
+	mesh1 = create_mesh(xlims, ylims, initialResolution)
+	
+	P = randn(ComplexF64,2)
+	S = solve(F; target_parameters = P)
+	data1 = solve(F,S; start_parameters = P, target_parameters = mesh1)
+	
+	dictionary1 = data_to_dictionary_converter(F, data1, numberOfSolutions, certification)
+	
+	myPlots = []
+	
+	push!(myPlots, parameter_dictionary_scatter(dictionary1))
+	
+	windows1 = window_generator(xlims, ylims, windowxLength, windowyLength, coverage)
+	dictionary2 = window_refinement_step(F, dictionary1, numberOfSolutions, windows1, initialResolution, certification)
+	
+	push!(myPlots, parameter_dictionary_scatter(dictionary2))
+	
+	for i in 2:depth
+		windowxLength1 = windowxLength/((2)^(i-1))
+		windowyLength1 = windowyLength/((2)^(i-1))
+		windows2 = window_generator(xlims, ylims, windowxLength1, windowyLength1, coverage)
+		dictionary3 = window_refinement_step(F, dictionary2, numberOfSolutions, windows2, initialResolution, certification)
+		push!(myPlots, parameter_dictionary_scatter(dictionary3))
+		
+		dictionary2 = dictionary3
+	end
+end
+
+
+
 
 
