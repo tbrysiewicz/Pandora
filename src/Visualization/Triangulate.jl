@@ -57,8 +57,13 @@ function initial_triangular_mesh(EP;fibre_function = x->HomotopyContinuation.nre
             tr = [xrange[i+1],yrange[j]]
             bl = [xrange[i],yrange[j+1]]
             br = [xrange[i+1],yrange[j+1]]
-            push!(Triangles,[tl,tr,bl])
-            push!(Triangles,[bl,tr,br])
+            if rand([1])==1
+                push!(Triangles,[tl,tr,bl])
+                push!(Triangles,[bl,tr,br])
+            else
+                push!(Triangles,[tl,tr,br])
+                push!(Triangles,[bl,tl,br])
+            end
         end
     end
     return((value_dict,Triangles))
