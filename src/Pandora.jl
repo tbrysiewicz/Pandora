@@ -14,6 +14,12 @@ using ImplicitPlots
 
 
 import HomotopyContinuation.solve
+import HomotopyContinuation.degree
+import HomotopyContinuation.dim
+import Oscar.dim
+import Oscar.degree
+
+export order
 
 const PROJECT_TOML = Pkg.TOML.parsefile(joinpath(@__DIR__, "..", "Project.toml"))
 const VERSION_NUMBER = VersionNumber(PROJECT_TOML["version"])

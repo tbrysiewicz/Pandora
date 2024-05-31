@@ -22,7 +22,7 @@ function solve_over_param(E::EnumerativeProblem,P; monodromy_recover=false)
 end
 
 
-function solve_over_params(E::EnumerativeProblem,P; monodromy_recover=false, checks=[degree_check, real_parity_check])
+function solve_over_params(E::EnumerativeProblem,P; monodromy_recover=false, checks=[degree_check, real_parity_check],retry=false)
     #Consider implementing special solvers when
     #  there is decomposability
     if is_populated(E)==false
@@ -31,8 +31,16 @@ function solve_over_params(E::EnumerativeProblem,P; monodromy_recover=false, che
     S = HomotopyContinuation.solve(system(E),base_solutions(E); start_parameters= base_parameters(E), target_parameters = P)
     println("Total number of fibres computed:",length(S))
     for f in checks
-        S=filter!(s->f(E,solutions(s[1])),S)
+        B=filter(s->f(E,solutions(s[1]))==false,S)
+        S = setdiff(S,B)
+
+        #S=filter!(s->f(E,solutions(s[1])),S)
         println(string(length(S)),"/",length(P)," satisfies ",f)
+        if retry==true && length(B)>0
+            println("Retrying some failed runs")
+            newS = solve_over_params(E,[b[2] for b in B]; checks=checks, retry=false)
+            S=vcat(S,newS)
+        end
     end
     if monodromy_recover==true && degree_check(E,S)==false
         println("Lost points during tracking...recovering via monodromy")
