@@ -277,6 +277,7 @@ function dim(V::Variety; dim = nothing, codim = nothing)
         return(dim(V))
     end
     d = HomotopyContinuation.dim(witness_set(V))
+    return(d)
 end
 
 function nid(V::Variety)
