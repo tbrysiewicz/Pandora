@@ -53,10 +53,10 @@ function initial_triangular_mesh(EP;fibre_function = x->HomotopyContinuation.nre
     end
     for i in 1:length(xrange)-1
         for j in 1:length(yrange)-1
-            tl = [xrange[i],yrange[j]]
-            tr = [xrange[i+1],yrange[j]]
-            bl = [xrange[i],yrange[j+1]]
-            br = [xrange[i+1],yrange[j+1]]
+            bl = [xrange[i],yrange[j]]
+            br = [xrange[i+1],yrange[j]]
+            tl = [xrange[i],yrange[j+1]]
+            tr = [xrange[i+1],yrange[j+1]]
             if rand([1])==1
                 push!(Triangles,[tl,tr,bl])
                 push!(Triangles,[bl,tr,br])
@@ -86,6 +86,68 @@ function draw_triangular_mesh(value_dict,Triangles;xlims = [-2,2],ylims=[-2,2])
     end
     return(myplot)
 end
+
+
+#Below is code for "triforce" triangulation visualization strategy
+
+
+function refine_triangular_mesh2(EP::EnumerativeProblem, value_dictionary, triangles; fibre_function = x->HomotopyContinuation.nreal(x[1]), xlims = [-2,2],ylims=[-2,2],resolution=1000)
+	whiteSpace = filter(x->value_dictionary[x[1]]!=value_dictionary[x[2]] || value_dictionary[x[1]]!=value_dictionary[x[3]], triangles)
+	new_triangles = setdiff(triangles, whiteSpace)
+	newParameters = []
+	
+	if (length(whiteSpace)*3)>resolution
+		whiteSpace = unique(rand(whiteSpace,Int(floor(resolution/3))))
+	end
+	
+		
+	for i in whiteSpace
+		midpoint1 = 0.5*(i[2]-i[1]) + i[1]
+		midpoint2 = 0.5*(i[3]-i[2]) + i[2]
+		midpoint3 = 0.5*(i[3]-i[1]) + i[1]
+		
+		push!(new_triangles, [midpoint1, midpoint3, i[1]])
+		push!(new_triangles, [i[2], midpoint2, midpoint1])
+		push!(new_triangles, [midpoint2, i[3], midpoint3])
+		push!(new_triangles, [midpoint1, midpoint2, midpoint3])
+		
+		push!(newParameters, midpoint1)
+		push!(newParameters, midpoint2)
+		push!(newParameters, midpoint3)
+	end
+	
+	S = solve_over_params(EP, newParameters, checks = [])
+	
+	for i in S
+		value_dictionary[i[2]] = fibre_function(i)
+	end
+	
+	return((value_dictionary, new_triangles))
+end
+		
+
+function triforce_visualization(EP;depth = 4, resolution=1000,xlims=[-2,2],ylims=[-2,2],fibre_function = x->HomotopyContinuation.nreal(x[1]))
+    (V,T) = initial_triangular_mesh(EP;
+                                    fibre_function = fibre_function, 
+                                    xlims = xlims,
+                                    ylims=ylims,
+                                    resolution=resolution)
+    for i in 2:depth
+        (V,T) = refine_triangular_mesh2(EP,V,T;
+                                    fibre_function = fibre_function, 
+                                    xlims = xlims,
+                                    ylims=ylims,
+                                    resolution=resolution)
+    end
+
+    myplot = draw_triangular_mesh(V,T)
+end
+
+
+		
+
+
+
 
 #rectangle_refinement is essentially the same as visualize_with_triangles except instead it uses rectangles. For each unresolved rectangle (rectangles with vertices that have different fibre function values) five new parameter points are generated subdividing the original rectangle into four new rectangles. Also has autofill function that generates an additional plot after plots for all depth levels are generated. After the last level of refinement, autofill subdivides each unresolved rectangle into four and colors each subrectangle with the color corresponding to the fibre function value for that vertex.
 
@@ -283,5 +345,5 @@ function auto_fill(dictionary1, rectangles, xlims, ylims)
 	
 	return myPlot1
 end
-		
-		
+
+
