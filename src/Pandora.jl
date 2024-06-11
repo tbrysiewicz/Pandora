@@ -89,6 +89,7 @@ include("Statistics/Tally.jl")
 
 
 include("Visualization/Visualize.jl")
+include("Visualization/Triangulate.jl")
 
 
 

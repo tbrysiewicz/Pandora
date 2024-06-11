@@ -1,4 +1,8 @@
-using Random
+#using Random
+
+export
+	visualize_with_triangles,
+	triforce_visualization
 
 function visualize_with_triangles(EP;depth = 4, resolution=1000,xlims=[-2,2],ylims=[-2,2],fibre_function = x->HomotopyContinuation.nreal(x[1]))
     (V,T) = initial_triangular_mesh(EP;
@@ -39,25 +43,26 @@ function refine_triangular_mesh(EP,value_dict,Triangles; fibre_function = x->Hom
     end
     return((value_dict,new_triangles))
 end
-
 function initial_triangular_mesh(EP;fibre_function = x->HomotopyContinuation.nreal(x[1]), xlims = [-2,2],ylims=[-2,2],resolution=1000)
     nxy = Int(floor(sqrt(resolution+100)))
     xrange = range(xlims[1],xlims[2],nxy)
     yrange = range(ylims[1],ylims[2],nxy)
+    delta = (xrange[2]-xrange[1])/2
     Triangles = []
-    P = [[i,j] for i in xrange for j in yrange]
+    P = [[i-isodd(findfirst(x->x==j,yrange))*delta,j] for i in xrange for j in yrange]
     S = solve_over_params(EP,P; checks = [])
     value_dict=Dict{Any,Any}()
     for s in S
         value_dict[s[2]]=fibre_function(s)
     end
+    M = reshape(P,length(xrange),length(yrange))
     for i in 1:length(xrange)-1
         for j in 1:length(yrange)-1
-            bl = [xrange[i],yrange[j]]
-            br = [xrange[i+1],yrange[j]]
-            tl = [xrange[i],yrange[j+1]]
-            tr = [xrange[i+1],yrange[j+1]]
-            if rand([1])==1
+            tl = M[i,j]#[xrange[i],yrange[j]+isodd(j)*(1/(2*nxy))]
+            tr = M[i+1,j]#[xrange[i+1],yrange[j]+isodd(j)*(1/(2*nxy))]
+            bl = M[i,j+1]#[xrange[i],yrange[j+1]+isodd(j)*(1/(2*nxy))]
+            br = M[i+1,j+1]#[xrange[i+1],yrange[j+1]+isodd(j)*(1/(2*nxy))]
+            if isodd(i)
                 push!(Triangles,[tl,tr,bl])
                 push!(Triangles,[bl,tr,br])
             else
@@ -68,6 +73,7 @@ function initial_triangular_mesh(EP;fibre_function = x->HomotopyContinuation.nre
     end
     return((value_dict,Triangles))
 end
+
 
 function draw_triangle!(T,v)
     Triangle = Shape([(t[1],t[2]) for t in T])
