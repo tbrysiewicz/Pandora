@@ -25,11 +25,14 @@ end
 
 function refine_triangular_mesh(EP,value_dict,Triangles; fibre_function = x->HomotopyContinuation.nreal(x[1]), xlims = [-2,2],ylims=[-2,2],resolution=1000)
     non_complete = filter(T->value_dict[T[1]]!=value_dict[T[2]] || value_dict[T[1]] != value_dict[T[3]],Triangles)
-    println("Number of incomplete triangles: ", length(non_complete))
-    if length(non_complete)>resolution 
-        non_complete = unique(rand(non_complete,resolution))
+
+    if length(non_complete)>resolution
+    	non_complete = unique(rand(non_complete, Int(resolution))
+    	end
+    		 
+  
     end
-    println("Number of incomplete triangles to be refined after resolution bottleneck: ", length(non_complete))
+
     new_triangles = setdiff(Triangles,non_complete)
     new_parameters=[]
     for T in non_complete
@@ -125,17 +128,26 @@ end
 
 function refine_triangular_mesh2(EP::EnumerativeProblem, value_dictionary, triangles; fibre_function = x->HomotopyContinuation.nreal(x[1]), xlims = [-2,2],ylims=[-2,2],resolution=1000)
 	whiteSpace = filter(x->value_dictionary[x[1]]!=value_dictionary[x[2]] || value_dictionary[x[1]]!=value_dictionary[x[3]], triangles)
-	println("Number of incomplete triangles: ", length(whiteSpace))
-	new_triangles = setdiff(triangles, whiteSpace)
+
 	newParameters = []
 	
+	TrianglesToRefine=[]
 	if (length(whiteSpace)*3)>resolution
-		whiteSpace = unique(rand(whiteSpace,Int(floor(resolution/3))))
+		while length(TrianglesToRefine)*3<resolution
+			v = rand(whiteSpace,Int(floor(resolution/10)))
+			TrianglesToRefine = unique(vcat(TrianglesToRefine,v))
+		end
+		TrianglesToRefine = TrianglesToRefine[1:Int(floor(resolution/3))]
+#		whiteSpace = unique(rand(whiteSpace,Int(floor(resolution/3))))
+	else
+		TrianglesToRefine = whiteSpace
 	end
-	println("Number of incomplete triangles to be refined after resolution bottleneck: ", length(whiteSpace))
+	
+	new_triangles = setdiff(triangles, TrianglesToRefine) #Triangles not to refine. 
+
 	
 		
-	for i in whiteSpace
+	for i in TrianglesToRefine
 		midpoint1 = 0.5*(i[2]-i[1]) + i[1]
 		midpoint2 = 0.5*(i[3]-i[2]) + i[2]
 		midpoint3 = 0.5*(i[3]-i[1]) + i[1]
