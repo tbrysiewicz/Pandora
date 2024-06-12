@@ -102,7 +102,7 @@ function draw_triangular_mesh(value_dict,Triangles;xlims = [-2,2],ylims=[-2,2], 
         end
     end
     
-    if scatter == true
+    if scatter1 == true
     	for i in unique(values(value_dict))
     		temp_parameters = filter(x->value_dict[x]==i, keys(value_dict))
     		if i == -2
