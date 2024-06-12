@@ -1,5 +1,9 @@
 export 
 	matroid_space_eqns,
+	points_to_matrix,
+	matrix_to_nonbases,
+	find_real_points,
+	random_real_linear_space, 
 	matroid_realization_space
 
 
@@ -14,7 +18,7 @@ export
 #            (e.g. solution to matrix is a general function name which does something
 #                  very specific: it makes a 2xn matrix.)
 #-Can you upgrade this to handle matroids of points in higher-dimensional spaces (other than the plane?)
-#		Alex: I renamed solution_to_matrix (not sure if name is accurate though) and I did update this function, so it takes an 	
+#		Alex: I renamed solution_to_matrix and I did update this function, so it takes an 	
 #			  input d::the dimension of space the points are in. I'm thinking I should change matroid_space_eqns and matroid_realization_space
 #			  to also take points that are not just in the plane. 
 #
@@ -78,18 +82,13 @@ end
 #Function : solution_to_matrix 
 #Input: points = vector of point entries  
 #		d = dimension of space points lie in
-#Output: m = matrix where columns are the points in the projective space (so the points are in higher dimensional space, with first entry as 1)
+#Output: m = matrix where columns are the points 
 #TODO: generalize this function. What if the solution corresponds to a differently shaped matrix?
-
-
-function points_to_projective_space_matrix(points::Union{Vector{Float64},Vector{ComplexF64}}, d::Int) 
+function points_to_matrix(points::Union{Vector{Float64},Vector{ComplexF64}}, d::Int) 
 	n = div(length(points),d) #Number of columns 
- 	matrix_without_ones = reshape(points, d, n)  #Matrix of points without the row of ones 
- 	M = vcat([1 for i in 1:n]' , matrix_without_ones) #Adding the row of 1s to make M
+ 	M = reshape(points, d, n)  #Matrix of points
 	return(M)
  end 
-
-
 
 #Function : matrix_to_nonbases 
 #Input: matrix = matirx   
@@ -132,7 +131,7 @@ function matroid_realization_space(n::Int,nonbases::Vector{Vector{Int}})
 		for j in 1:number_components_dim_i #Scroll through each of the components of that dimension
 
 			solution = sample(WS[i][j]) #sample a point on that component
-			matrix_solution = solution_to_matrix(solution, 2) #turn that point into a matrix (projective)
+			matrix_solution = vcat([1 for i in 1:n]', points_to_matrix(solution, 2)) #turn that point into a matrix (projective)
 			nonbases_component = matrix_to_nonbases(matrix_solution) #compute the corresponding matroid
 			sorted_nonbases_component= sort([sort(m) for m in nonbases_component])
                  
@@ -166,7 +165,9 @@ function matroid_realization_space(Matr::Matroid)
 	return(matroid_realization_space(n, NB))
 end 
 
-
+#Function : find_real_points
+#Input: V = variety, N = number of real points to find   
+#Output: Nrealpts = list containing N real points from V
 function find_real_points(V::Variety,N::Int; limit = 100)
 	D = ambient_dimension(V) 
 	d = D -Pandora.dim(V) #dimension of linear subspace is codim of variety
@@ -182,12 +183,72 @@ function find_real_points(V::Variety,N::Int; limit = 100)
 		length(realpts)>= N && break #break if we have found at least N real points 
 		i = i+1
 	end 
-	nrealpts = vcat(realpts[1:N]) #collecting N real points off of witness ser
-	return(nrealpts)
+	Nrealpts = vcat(realpts[1:N]) #collecting N real points off of witness set
+	return(Nrealpts)
 end 
 
+#Function : random_real_linear_space
+#Input: d = dimension of linear space, D = dimension of ambient space 
+#Output: L = random affine linear space of dimension d
 function random_real_linear_space(d::Int,D::Int)
 	L = rand_subspace(D, dim=d, real = true, affine = true)
 	return(L)
 end
-       
+     
+
+#Function : matrix_repersentative 
+#Input: n = number of points, d = dimension of space, nobases = nonbases of matroid  
+#Output: M = matrix repersentative of matroid 
+function matrix_repersentative(n::Int, d::Int, nonbases::Vector{Vector{Int}})
+	V = matroid_realization_space(n,nonbases)
+	if V == nothing
+		println("There is no matrix repersentative for this matroid.") 
+		return(nothing)
+	
+	else
+		pt= find_real_points(V,1)
+		M = points_to_matrix(pt[1],d)
+		return(M)
+	end 
+end
+
+
+
+#These are some score functions I wrote, I'm still working on assigning a specific score to the matroid, instead of just computing data about it 
+#(e.g. slopes or distances). I will put it all under one master score function later. 
+function distance_score(M::Matrix{Float64})
+	n = size(M,2) #number of points (columns of matrix)
+	point_pairs = collect(combinations(1:n, 2)) #all point pair combinations
+	d = []
+
+	for j in 1:length(point_pairs) 	
+		u = M[:,(point_pairs[j][1])]
+		v = M[:,(point_pairs[j][2])]
+		push!(d, distance(u, v, EuclideanNorm())) #putting the distance between all pairs of points into a vector
+	end 						
+	return(maximum(abs,d), minimum(abs,d)) #returning the largest and smallest distance between a pair of points 
+end 
+
+function slope_score(M::Matrix{Float64}, nonbases::Vector{Vector{Int}})
+	x = M[1,:] 
+	y = M[2,:]
+	for i in 1:size(M,2) 
+		point = i 
+		NB_with_i = filter(x -> point in x, nonbases) #list of all nonbases with point i in it 
+		slopes = [] #initializing vector of slopes of lines all going through point i 
+
+		for j in 1:length(NB_with_i)
+			slopes = push!(slopes, (y[NB_with_i[j][2]] - y[NB_with_i[j][1]]) / (x[NB_with_i[j][2]] - x[NB_with_i[j][1]])) #add slopes of each line to list
+			line_pairs = collect(combinations(1:length(NB_with_i))) 
+
+			for k in length(line_pairs)
+				u = slopes[line_pairs[k][1]]
+				v = slopes[line_pairs[k][2]]
+				d = u-v 
+			end 
+
+		end 
+
+	end
+
+end 
