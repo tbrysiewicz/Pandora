@@ -26,13 +26,14 @@ end
 function refine_triangular_mesh(EP,value_dict,Triangles; fibre_function = x->HomotopyContinuation.nreal(x[1]), xlims = [-2,2],ylims=[-2,2],resolution=1000)
     non_complete = filter(T->value_dict[T[1]]!=value_dict[T[2]] || value_dict[T[1]] != value_dict[T[3]],Triangles)
 
+    #=
     if length(non_complete)>resolution
     	non_complete = unique(rand(non_complete, Int(resolution))
     	end
     		 
   
     end
-
+	=#
     new_triangles = setdiff(Triangles,non_complete)
     new_parameters=[]
     for T in non_complete
