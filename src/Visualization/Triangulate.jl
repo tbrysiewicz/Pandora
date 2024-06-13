@@ -174,23 +174,94 @@ function refine_triangular_mesh2(EP::EnumerativeProblem, value_dictionary, trian
 	
 	return((value_dictionary, new_triangles))
 end
+
+function refine_mesh_for_automatic(EP::EnumerativeProblem, value_dict, triangles, total_resolution; xlims = [-2,2], ylims = [-2,2], fibre_function = x->HomotopyContinuation.nreal(x[1]))
+	whiteSpace = filter(x->value_dict[x[1]]!=value_dict[x[2]] || value_dict[x[1]]!=value_dict[x[3]], triangles)
+	TrianglesToRefine = []
+	Termination = false
+	if (length(whiteSpace)*3)>total_resolution
+		while length(TrianglesToRefine)*3<total_resolution
+			v = rand(whiteSpace,Int(floor(total_resolution/10)))
+			TrianglesToRefine = unique(vcat(TrianglesToRefine,v))
+		end
+		TrianglesToRefine = TrianglesToRefine[1:Int(floor(total_resolution/3))]
+		Termination = true
+	else
+		TrianglesToRefine = whiteSpace
+	end
+	
+	newParameters = []
+	new_triangles = setdiff(triangles, TrianglesToRefine) #Triangles not to refine. 
+	
+	for i in TrianglesToRefine
+		midpoint1 = 0.5*(i[2]-i[1]) + i[1]
+		midpoint2 = 0.5*(i[3]-i[2]) + i[2]
+		midpoint3 = 0.5*(i[3]-i[1]) + i[1]
+		
+		push!(new_triangles, [midpoint1, midpoint3, i[1]])
+		push!(new_triangles, [i[2], midpoint2, midpoint1])
+		push!(new_triangles, [midpoint2, i[3], midpoint3])
+		push!(new_triangles, [midpoint1, midpoint2, midpoint3])
+		
+		push!(newParameters, midpoint1)
+		push!(newParameters, midpoint2)
+		push!(newParameters, midpoint3)
+	end
+	
+	S = solve_over_params(EP, newParameters, checks = [])
+	
+	for i in S
+		value_dict[i[2]] = fibre_function(i)
+		if length(solutions(i[1]))!=degree(EP) || nsingular(i[1])!=0
+        	value_dict[i[2]] = -2
+        	end
+	end
+	
+	total_resolution = total_resolution - length(newParameters)
+	
+	return((value_dict, new_triangles, total_resolution, Termination))
+end
 		
 
-function triforce_visualization(EP;depth = 4, resolution=1000,xlims=[-2,2],ylims=[-2,2],fibre_function = x->HomotopyContinuation.nreal(x[1]), scatter = true)
-    (V,T) = initial_triangular_mesh(EP;
+function triforce_visualization(EP;depth = 4, initial_resolution=1000, total_resolution = 10*initial_resolution, xlims=[-2,2],ylims=[-2,2],fibre_function = x->HomotopyContinuation.nreal(x[1]), scatter = true, automatic = true)
+  
+    if automatic == true
+    	
+    	(V,T) = initial_triangular_mesh(EP;
                                     fibre_function = fibre_function, 
                                     xlims = xlims,
                                     ylims=ylims,
-                                    resolution=resolution)
-    for i in 2:depth
-    	println("Refinement step: ", (i-1))
-        (V,T) = refine_triangular_mesh2(EP,V,T;
+                                    resolution=initial_resolution)
+         total_resolution = total_resolution - initial_resolution
+         
+         while total_resolution > 0
+         	(V,T,R,D) = refine_mesh_for_automatic(EP,V,T, total_resolution;
+                                    fibre_function = fibre_function, 
+                                    xlims = xlims,
+                                    ylims=ylims)
+                     
+                total_resolution = R
+                
+		if D == true
+			break
+		end
+	end
+	
+	else
+   	 (V,T) = initial_triangular_mesh(EP;
                                     fibre_function = fibre_function, 
                                     xlims = xlims,
                                     ylims=ylims,
-                                    resolution=resolution)
-    end
+                                    resolution=initial_resolution)
+   	 for i in 2:depth
+    		println("Refinement step: ", (i-1))
+       		 (V,T) = refine_triangular_mesh2(EP,V,T;
+                                    fibre_function = fibre_function, 
+                                    xlims = xlims,
+                                    ylims=ylims,
+                                    resolution=initial_resolution)
+   	 end
+   	 end
 
     myplot = draw_triangular_mesh(V,T, scatter1 = scatter)
 end
-
