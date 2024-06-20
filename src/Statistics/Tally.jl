@@ -32,9 +32,16 @@ function mode(S)
 end
 
 function stat_print(S)
+    str = "N:"
+    str = str*string(length(S))*"\n"
+    str = str*"Mean:"*string(mean(S))*"\n"
+    str = str*"Mode:"*string(mode(S))*"\n"
+    str = str*"Max:"*string(max(S...))*"\n"
+    str = str*"Min:"*string(min(S...))*"\n"
     println("N:", length(S))
     println("Mean:", mean(S))
     println("Mode:", mode(S))
     println("Max:", max(S...))
     println("Min:", min(S...))
+    return([length(S),mean(S),mode(S),max(S...),min(S...)])
 end
