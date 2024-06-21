@@ -1,5 +1,7 @@
 #using Random
 
+using DelaunayTriangulation
+
 export
 	visualize_with_triangles,
 	triforce_visualization
