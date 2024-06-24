@@ -3,9 +3,28 @@
 using DelaunayTriangulation
 
 export
-	visualize_with_triangles,
-	triforce_visualization
+	visualize_discriminant
 
+#General visualize_discriminant function that allows you to use different strategies: "Delaunay", "Triforce", "Barycenter"
+function visualize_discriminant(EP::EnumerativeProblem, strategy::AbstractString; fibre_function = x->HomotopyContinuation.nreal(x[1]), xlims = [-2,2], ylims = [-2,2], resolution = 1000, depth = 4, automatic = false, total_resolution = 8*resolution, scatter = false)
+	
+	if strategy == "Delaunay"
+		return Delaunay_visualization(EP, xlims = xlims, ylims = ylims, fibre_function = fibre_function, depth = depth, resolution = resolution, total_resolution = total_resolution, automatic = automatic, scatter = scatter)
+	
+	elseif strategy == "Triforce"
+		return triforce_visualization(EP, xlims = xlims, ylims = ylims, fibre_function = fibre_function, depth = depth, initial_resolution = resolution, total_resolution = total_resolution, automatic = automatic, scatter = scatter)
+	elseif strategy == "Barycenter"
+		return visualize_with_triangles(EP, xlims = xlims, ylims = ylims, fibre_function = fibre_function, depth = depth, resolution = resolution, scatter = scatter)
+	
+	else
+		println("Invalid strategy inputted. Valid strategies include:"
+		println("Delaunay")
+		println("Barycenter")
+		println("Triforce")
+	end
+end	
+	
+	
 function visualize_with_triangles(EP;depth = 4, resolution=1000,xlims=[-2,2],ylims=[-2,2],fibre_function = x->HomotopyContinuation.nreal(x[1]), scatter = true)
     (V,T) = initial_triangular_mesh(EP;
                                     fibre_function = fibre_function, 
@@ -267,3 +286,159 @@ function triforce_visualization(EP;depth = 4, initial_resolution=1000, total_res
 
     myplot = draw_triangular_mesh(V,T, scatter1 = scatter)
 end
+
+
+#Below is code for visualization using Delaunay triangulation with triforce refinement method
+
+function Delaunay_initial_triangular_mesh(EP;fibre_function = x->HomotopyContinuation.nreal(x[1]), xlims = [-2,2],ylims=[-2,2],resolution=1000)
+    nxy = Int(floor(sqrt(resolution+100)))
+    xrange = range(xlims[1],xlims[2],nxy)
+    yrange = range(ylims[1],ylims[2],nxy)
+    delta = (xrange[2]-xrange[1])/2
+    Triangles = []
+    P = [[i-isodd(findfirst(x->x==j,yrange))*delta,j] for i in xrange for j in yrange]
+    S = solve_over_params(EP,P; checks = [])
+    value_dict=Dict{Any,Any}()
+    for s in S
+        value_dict[s[2]]=fibre_function(s)
+        if length(solutions(s[1]))!=degree(EP) || nsingular(s[1])!=0
+        	value_dict[s[2]] = false
+        end
+    end
+    M = reshape(P,length(xrange),length(yrange))
+    for i in 1:length(xrange)-1
+        for j in 1:length(yrange)-1
+            tl = M[i,j]#[xrange[i],yrange[j]+isodd(j)*(1/(2*nxy))]
+            tr = M[i+1,j]#[xrange[i+1],yrange[j]+isodd(j)*(1/(2*nxy))]
+            bl = M[i,j+1]#[xrange[i],yrange[j+1]+isodd(j)*(1/(2*nxy))]
+            br = M[i+1,j+1]#[xrange[i+1],yrange[j+1]+isodd(j)*(1/(2*nxy))]
+            if isodd(i)
+                push!(Triangles,[tl,tr,bl])
+                push!(Triangles,[bl,tr,br])
+            else
+                push!(Triangles,[tl,tr,br])
+                push!(Triangles,[bl,tl,br])
+            end
+        end
+    end
+    return((value_dict,Triangles))
+end
+
+function Delaunay_triforce_refinement(EP::EnumerativeProblem, value_dict::Dict, Triangles; fibre_function = x->HomotopyContinuation.nreal(x[1]), xlims = [-2,2],ylims=[-2,2],resolution=1000)
+	automatic_termination = false #used for termination of automatic refinement
+	whiteSpace = filter(x->value_dict[x[1]]!=value_dict[x[2]]||value_dict[x[1]]!=value_dict[x[3]], Triangles)
+	
+	newParameters = []
+	
+	TrianglesToRefine=[]
+	if (length(whiteSpace)*3)>resolution
+		while length(TrianglesToRefine)*3<resolution
+			v = rand(whiteSpace,Int(floor(resolution/10)))
+			TrianglesToRefine = unique(vcat(TrianglesToRefine,v))
+		end
+		TrianglesToRefine = TrianglesToRefine[1:Int(floor(resolution/3))]
+		automatic_termination = true
+
+	else
+		TrianglesToRefine = whiteSpace
+	end
+	
+	for i in TrianglesToRefine
+		midpoint1 = 0.5*(i[2]-i[1]) + i[1]
+		midpoint2 = 0.5*(i[3]-i[2]) + i[2]
+		midpoint3 = 0.5*(i[3]-i[1]) + i[1]
+		push!(newParameters, midpoint1)
+		push!(newParameters, midpoint2)
+		push!(newParameters, midpoint3)
+	end
+	
+	S = solve_over_params(EP, newParameters, checks = [])
+	number_of_parameters_solved = length(S)
+	
+	for i in S
+		value_dict[i[2]] = fibre_function(i)
+		if length(solutions(i[1]))!=degree(EP) || nsingular(i[1])!=0
+        	value_dict[i[2]] = false
+        	end
+	end
+	
+	return (value_dict, automatic_termination, number_of_parameters_solved)
+end
+
+function Delaunay_triangulation(value_dict)
+	vertices = hcat(keys(value_dict)...)
+	tri = triangulate(vertices)
+	triangle_iterator = each_solid_triangle(tri)
+	Triangles = []
+	for T in triangle_iterator
+		i,j,k = triangle_vertices(T)
+		i,j,k = get_point(tri, i, j, k)
+		vertex_1 = [i[1], i[2]]
+		vertex_2 = [j[1], j[2]]
+		vertex_3 = [k[1], k[2]]
+		push!(Triangles, [vertex_1,vertex_2,vertex_3])
+	end
+	return (value_dict, Triangles)
+end
+
+function Delaunay_draw_triangular_mesh2(value_dict,Triangles;xlims = [-2,2],ylims=[-2,2], scatter1 = true)
+    M = max(values(value_dict)...)
+    m = min(values(value_dict)...)
+    
+    myplot = plot(xlims=xlims,ylims=ylims,legend=true)
+    for T in Triangles
+        if value_dict[T[1]]==value_dict[T[2]] && value_dict[T[1]]==value_dict[T[3]] && value_dict[T[1]] isa Number
+            draw_triangle!(T,value_dict[T[1]]/M)
+        end
+    end
+    
+    if scatter1 == true
+    	for i in unique(values(value_dict))
+    		temp_parameters = filter(x->value_dict[x]==i, keys(value_dict))
+    		if i == false
+    			scatter!([A[1] for A in temp_parameters], [A[2] for A in temp_parameters], markercolor =:red, markersize = 0.8, markershape =:rect, markerstrokewidth = 0.2, labels = "Error")
+    		else
+    		c =cgrad(:thermal, rev = false)[i/M]
+    		scatter!([A[1] for A in temp_parameters], [A[2] for A in temp_parameters], markercolor = c, markersize = 0.8, markershape =:rect, markerstrokewidth = 0.2, labels = "$(i) real solutions")
+    		end
+    	end
+    end
+    		
+    
+    return(myplot)
+end	
+	
+
+function Delaunay_visualization(EP::EnumerativeProblem; xlims = [-2,2], ylims = [-2,2], fibre_function = x->HomotopyContinuation.nreal(x[1]), depth = 4, resolution = 1000, total_resolution = 8*resolution, automatic = true, scatter = false)
+	
+	v, t = Delaunay_initial_triangular_mesh(EP, fibre_function = fibre_function, xlims = xlims, ylims = ylims, resolution = resolution)
+	
+	if automatic == false
+		for i in 2:depth
+			a,b,c = Delaunay_triforce_refinement(EP, v, t, fibre_function = fibre_function, xlims = xlims, ylims = ylims, resolution = resolution)
+			v, t = Delaunay_triangulation(a)
+		end
+	elsefibre_function = x->HomotopyContinuation.nreal(x[1])
+		total_resolution = total_resolution - length(v)
+		
+		while total_resolution > 0
+			a,b,c = Delaunay_triforce_refinement(EP, v, t, fibre_function = fibre_function, xlims = xlims, ylims = ylims, resolution = total_resolution)
+			v, t = Delaunay_triangulation(a)
+			
+			if b == true
+				break
+			else
+				total_resolution = total_resolution - c
+			end
+		end
+	end
+	
+	myplot = Delaunay_draw_triangular_mesh2(v, t, xlims = xlims, ylims = ylims, scatter1 = scatter)
+	
+	return myplot
+end
+			
+		
+		
+	
+
