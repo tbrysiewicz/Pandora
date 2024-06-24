@@ -418,7 +418,8 @@ function Delaunay_visualization(EP::EnumerativeProblem; xlims = [-2,2], ylims = 
 			a,b,c = Delaunay_triforce_refinement(EP, v, t, fibre_function = fibre_function, xlims = xlims, ylims = ylims, resolution = resolution)
 			v, t = Delaunay_triangulation(a)
 		end
-	elsefibre_function = x->HomotopyContinuation.nreal(x[1])
+	else
+	
 		total_resolution = total_resolution - length(v)
 		
 		while total_resolution > 0
@@ -440,5 +441,6 @@ end
 			
 		
 		
+	
 	
 
