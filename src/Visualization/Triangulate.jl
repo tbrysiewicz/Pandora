@@ -6,7 +6,7 @@ export
 	visualize_discriminant
 
 #General visualize_discriminant function that allows you to use different strategies: "Delaunay", "Triforce", "Barycenter"
-function visualize_discriminant(EP::EnumerativeProblem, strategy::AbstractString; fibre_function = x->HomotopyContinuation.nreal(x[1]), xlims = [-2,2], ylims = [-2,2], resolution = 1000, depth = 4, automatic = false, total_resolution = 8*resolution, scatter = false)
+function visualize_discriminant(EP::EnumerativeProblem, strategy; fibre_function = x->HomotopyContinuation.nreal(x[1]), xlims = [-2,2], ylims = [-2,2], resolution = 1000, depth = 4, automatic = false, total_resolution = 8*resolution, scatter = false)
 	
 	if strategy == "Delaunay"
 		return Delaunay_visualization(EP, xlims = xlims, ylims = ylims, fibre_function = fibre_function, depth = depth, resolution = resolution, total_resolution = total_resolution, automatic = automatic, scatter = scatter)
@@ -17,7 +17,7 @@ function visualize_discriminant(EP::EnumerativeProblem, strategy::AbstractString
 		return visualize_with_triangles(EP, xlims = xlims, ylims = ylims, fibre_function = fibre_function, depth = depth, resolution = resolution, scatter = scatter)
 	
 	else
-		println("Invalid strategy inputted. Valid strategies include:"
+		println("Invalid strategy inputted. Valid strategies include:")
 		println("Delaunay")
 		println("Barycenter")
 		println("Triforce")
