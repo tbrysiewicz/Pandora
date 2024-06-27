@@ -158,6 +158,9 @@ julia> P = OD.RecordFibre[2]
  -0.6912648497026905
  -1.4426115948474645
 
+
+julia> visualize_discriminant(EP, "Delaunay";resolution=5000,total_resolution=20000,depth=4,scatter=true,xlims=[-2,2],ylims=[-2,2])
+
 ```
 
 
