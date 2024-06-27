@@ -82,7 +82,7 @@ Dict{Any, Int64} with 4 entries:
 
 ### Finding all real solutions
 ```julia
-julia> OD = optimize_enumerative(TSL,RealScoreSpace,3;bucket_size=500)
+julia> OD = optimize_enumerative(TSL,RealScoreSpace,2;bucket_size=500)
 Nparameters:20
 Total number of fibres computed:1
 1/1 satisfies degree_check
@@ -109,20 +109,8 @@ Progress:   0.046864661191914056
 Record:(27, 0.0)
 Taboo Score:0.8842315369261478
 Closeness of the real solutions: 1.141065805355264
-Stuck Score:1
------------------------------------------------------------
-Step: 3
-Old Radius: 1.0
-Radius: 0.1
-Total number of fibres computed:503
-499/503 satisfies degree_check
-499/503 satisfies real_parity_check
-Progress:   -0.0
-Record:(27, 0.0)
-Taboo Score:0.3346693386773547
-Closeness of the real solutions: 0.5851193752114505
-Stuck Score:2
------------------------------------------------------------
+Stuck Score:0
+
 OptimizerData((Result with 27 solutions
 ========================
 • 27 paths tracked
@@ -139,8 +127,6 @@ OptimizerData((Result with 27 solutions
 
 ### Visualizing a discriminant slice
 ```
-
-
 julia> P = OD.RecordFibre[2]
 20-element Vector{Float64}:
  -3.0276536401879435
