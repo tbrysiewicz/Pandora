@@ -161,8 +161,8 @@ julia> visualize_discriminant(EP, "Delaunay";resolution=5000,total_resolution=20
 ![Alt text](Discriminant.png?raw=true "Discriminant Visualization")
 
 The main datatypes in Pandora are currently
- Enumerative Problem
- Variety
+- Enumerative Problem
+- Variety
 
 The main functionality in Pandora currently includes
 - Monodromy Group Computation
