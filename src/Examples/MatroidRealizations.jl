@@ -64,11 +64,31 @@ export
 #Input: n = number of points,
 #       NonBases = points we want collinear/ nonbases of matroid  
 #Output: Eqns = determinant equations defining a matroid 
+#		 m = matrix repersenting the realization space, with 3 columns forming a basis set as triangle (1,1,0),(1,-1,0) and (1,0,1) 
+
 function matroid_space_eqns(n::Int, nonbases::Vector{Vector{Int}}) 
-	@var x[1:2,1:n] #variables are (x_{1,i},x_{2,i}) for each point
-	matrix = vcat([1 for i in 1:n]', x) 
-	eqns = [det(matrix[1:3,c]) for c in nonbases] #Computing equations #TCB: TODO: try a non-determinantal set of equations at some point. 
-	return(System(eqns,variables=vcat(x...)))	
+	bases = filter(x -> !(x in nonbases), collect(combinations(1:n,3))) #finding the bases
+	k = filter(x ->!(x in bases[1]), 1:n) #finding all points not in the first basis
+	j = 1 #initalizing counter
+	m = zeros(3,n) #initalizing matrix of all zeros 
+	X = [] #initalizing list of variables 
+		
+	for i in 1:n 
+		if i in k 
+			@var x[1:2,i]
+			X = push!(X,x)
+			m = hcat(m[:, 1:(i-1)], vcat(1,x), m[:, (i+1):end])
+		end 
+			
+		if i in bases[1]
+			M = [1 1 1;-1 1 0; 0 0 1]
+			m = hcat(m[:, 1:(i-1)], M[:,j], m[:, (i+1):end])
+			j = j+1 
+		end 
+	end
+	
+	eqns = [det(m[1:3,c]) for c in nonbases] #Computing equations #TCB: TODO: try a non-determinantal set of equations at some point. 
+	return(System(eqns, variables=vcat(X...)), m)
 end 
 
 
@@ -78,7 +98,6 @@ function matroid_space_eqns(Matr::Matroid)
 	return(matroid_space_eqns(n, NB))
 end 
 
-
 #Function : solution_to_matrix 
 #Input: points = vector of point entries  
 #		d = dimension of space points lie in
@@ -87,7 +106,8 @@ end
 function points_to_matrix(points::Union{Vector{Float64},Vector{ComplexF64}}, d::Int) 
 	n = div(length(points),d) #Number of columns 
  	M = reshape(points, d, n)  #Matrix of points
-	return(M)
+	M_with_ones = vcat([1 for i in 1:n]', M)
+	return(M_with_ones)
  end 
 
 #Function : matrix_to_nonbases 
@@ -117,7 +137,8 @@ end
 #Input: n= number of points, nonbases = points we want collinear/ nonbases of a matrix  
 #Output: matroidwitnessresults = Witness set of a matroid
 function matroid_realization_space(n::Int,nonbases::Vector{Vector{Int}})  
-	matroid_variety = Variety(matroid_space_eqns(n, nonbases))
+	eqns = matroid_space_eqns(n, nonbases)
+	matroid_variety = Variety(eqns[1])
 	NID = nid(matroid_variety)
 	sorted_nonbases = sort([sort(m) for m in nonbases])
 	WS = witness_sets(NID)
@@ -131,7 +152,7 @@ function matroid_realization_space(n::Int,nonbases::Vector{Vector{Int}})
 		for j in 1:number_components_dim_i #Scroll through each of the components of that dimension
 
 			solution = sample(WS[i][j]) #sample a point on that component
-			matrix_solution = vcat([1 for i in 1:n]', points_to_matrix(solution, 2)) #turn that point into a matrix (projective)
+			matrix_solution = HomotopyContinuation.evaluate(eqns[2], variables(eqns[2])=> solution) 
 			nonbases_component = matrix_to_nonbases(matrix_solution) #compute the corresponding matroid
 			sorted_nonbases_component= sort([sort(m) for m in nonbases_component])
                  
@@ -168,7 +189,7 @@ end
 #Function : find_real_points
 #Input: V = variety, N = number of real points to find   
 #Output: Nrealpts = list containing N real points from V
-function find_real_points(V::Variety,N::Int; limit = 100)
+function find_N_real_points(V::Variety,N::Int; limit = 100)
 	D = ambient_dimension(V) 
 	d = D -Pandora.dim(V) #dimension of linear subspace is codim of variety
 	W = witness_set(V) 
@@ -195,60 +216,50 @@ function random_real_linear_space(d::Int,D::Int)
 	return(L)
 end
      
+#SC : scores a set of matroid solutions (scores a fiber) 
+function SC(F :: Tuple{Result,Vector{Float64}}) #scoring the variety 
+	R = F[1] #Results over random parameters
+	P = F[2]#The random parameters 
+	S = solutions(R) #you should also check that R has real numbers!
+	real_sols= filter(Pandora.is_real, S) #real solutions 
+       
+	if real_sols != []
+		N = length(real_sols) #number of real solutions 
+		dict = Dict(i => sc(real_sols[i]) for i in 1:N) #dictionary of solutions and their scores 
+		record_min = minimum(values(dict)) #finding the minimum value stored
+	else 
+       		println("there are no real solutions") #will this happen? And what should I put?
+	end
+	return(record_min)
+end
+       
 
-#Function : matrix_repersentative 
-#Input: n = number of points, d = dimension of space, nobases = nonbases of matroid  
-#Output: M = matrix repersentative of matroid 
-function matrix_repersentative(n::Int, d::Int, nonbases::Vector{Vector{Int}})
-	V = matroid_realization_space(n,nonbases)
-	if V == nothing
-		println("There is no matrix repersentative for this matroid.") 
-		return(nothing)
-	
-	else
-		pt= find_real_points(V,1)
-		M = points_to_matrix(pt[1],d)
-		return(M)
-	end 
+#sc: scores a matroid solution -- what if they choose a different initialized basis than [0,1], [-1,0], [0,1]     
+function sc(S)		
+	m = reshape(S, 2, convert(Int, length(S)/2))
+	M = hcat(m, [0,1], [-1,0], [0,1]) #putting the solution s in a matrix, along with points set for a basis 
+	n = size(M,2) #the number of points
+	point_pairs = collect(combinations(1:n,2)) 
+	record_min = Inf
+	for j in 1:length(point_pairs) 	
+		p = M[:,(point_pairs[j][1])]
+		q = M[:,(point_pairs[j][2])]
+		x = norm(p-q) #norm between the 2 points in pair j 
+		s =  -(1/1.851)*(x-0.1)*(x-2*sqrt(2)) #scoring that distance (I have no idea how big a marker is)
+		
+		if s < record_min
+			record_min = s #recording the minimum distance 
+		end
+	end   
+	return(record_min)    
 end
 
+function mygt(a,b)
+           a>b
+ end
+ 
+Matroid_score = Score(SC, mygt)
 
 
-#These are some score functions I wrote, I'm still working on assigning a specific score to the matroid, instead of just computing data about it 
-#(e.g. slopes or distances). I will put it all under one master score function later. 
-function distance_score(M::Matrix{Float64})
-	n = size(M,2) #number of points (columns of matrix)
-	point_pairs = collect(combinations(1:n, 2)) #all point pair combinations
-	d = []
 
-	for j in 1:length(point_pairs) 	
-		u = M[:,(point_pairs[j][1])]
-		v = M[:,(point_pairs[j][2])]
-		push!(d, distance(u, v, EuclideanNorm())) #putting the distance between all pairs of points into a vector
-	end 						
-	return(maximum(abs,d), minimum(abs,d)) #returning the largest and smallest distance between a pair of points 
-end 
 
-function slope_score(M::Matrix{Float64}, nonbases::Vector{Vector{Int}})
-	x = M[1,:] 
-	y = M[2,:]
-	for i in 1:size(M,2) 
-		point = i 
-		NB_with_i = filter(x -> point in x, nonbases) #list of all nonbases with point i in it 
-		slopes = [] #initializing vector of slopes of lines all going through point i 
-
-		for j in 1:length(NB_with_i)
-			slopes = push!(slopes, (y[NB_with_i[j][2]] - y[NB_with_i[j][1]]) / (x[NB_with_i[j][2]] - x[NB_with_i[j][1]])) #add slopes of each line to list
-			line_pairs = collect(combinations(1:length(NB_with_i))) 
-
-			for k in length(line_pairs)
-				u = slopes[line_pairs[k][1]]
-				v = slopes[line_pairs[k][2]]
-				d = u-v 
-			end 
-
-		end 
-
-	end
-
-end 
