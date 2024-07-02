@@ -225,7 +225,7 @@ function SC(F :: Tuple{Result,Vector{Float64}}) #scoring the variety
        
 	if real_sols != []
 		N = length(real_sols) #number of real solutions 
-		dict = Dict(i => sc(real_sols[i]) for i in 1:N) #dictionary of solutions and their scores 
+		dict = Dict(i => sc(real_sols[i]) for i in 1:N) #dictionary of solutions and theiropscores 
 		record_min = minimum(values(dict)) #finding the minimum value stored
 	else 
        		println("there are no real solutions") #will this happen? And what should I put?
@@ -241,7 +241,7 @@ function sc(S)
 	n = size(M,2) #the number of points
 	point_pairs = collect(combinations(1:n,2)) 
 	record_min = Inf
-	for j in 1:length(point_pairs) 	
+	for j in 1:(length(point_pairs)-3)	
 		p = M[:,(point_pairs[j][1])]
 		q = M[:,(point_pairs[j][2])]
 		x = norm(p-q) #norm between the 2 points in pair j 
