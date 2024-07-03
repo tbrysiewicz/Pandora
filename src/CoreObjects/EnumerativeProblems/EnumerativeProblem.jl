@@ -225,7 +225,7 @@ end
 
 
 
-function VarietyToEnumerativeProblem(X::Variety)
+function EnumerativeProblem(X::Variety)
 #Insert check to see if the variety is actually set up (witness set computed)
 	F = system(X)
 	V = variables(F)

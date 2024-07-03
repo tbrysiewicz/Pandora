@@ -17,7 +17,7 @@ function draw_matroid_representative(M::Matrix{Float64},nonbases::Vector{Vector{
 			slope = (y[nonbases[j][2]] - y[nonbases[j][1]]) / (x[nonbases[j][2]] - x[nonbases[j][1]])
 			b = y[nonbases[j][1]] - slope*x[nonbases[j][1]]
 			f(x) = slope*x + b
-			plot!(f,xaxis = false, yaxis = false, xlims = (-2,2), ylims = (-2,2), linecolor=:blue, z_order=:back)
+			plot!(f, xaxis = false, yaxis = false, xlims = (minimum(x)-1 , maximum(x) + 1), ylims = (minimum(y)-1, maximum(y) + 1), linecolor=:blue, z_order=:back)
 		end 
 	return(visualization)
 	end

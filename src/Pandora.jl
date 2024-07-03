@@ -65,6 +65,7 @@ include("Examples/BasicEnumerativeExamples.jl")
 include("Examples/FamousEnumerativeExamples.jl")
 include("Examples/BasicVarietyExamples.jl")
 include("Examples/MatroidRealizations.jl")
+include("Visualization/MatroidVisualization.jl")
 
 
 include("Exploration/Explore.jl")

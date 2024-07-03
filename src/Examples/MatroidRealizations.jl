@@ -4,7 +4,9 @@ export
 	matrix_to_nonbases,
 	find_real_points,
 	random_real_linear_space, 
-	matroid_realization_space
+	matroid_realization_space,
+	Matroid_score
+	best_realizable_matroid
 
 
 #TODO List
@@ -218,30 +220,27 @@ end
      
 #SC : scores a set of matroid solutions (scores a fiber) 
 function SC(F :: Tuple{Result,Vector{Float64}}) #scoring the variety 
-	R = F[1] #Results over random parameters
-	P = F[2]#The random parameters 
-	S = solutions(R) #you should also check that R has real numbers!
-	real_sols= filter(Pandora.is_real, S) #real solutions 
+	real_sols= HomotopyContinuation.real_solutions(F[1]) #real solutions in fibre
        
 	if real_sols != []
-		N = length(real_sols) #number of real solutions 
-		dict = Dict(i => sc(real_sols[i]) for i in 1:N) #dictionary of solutions and theiropscores 
-		record_min = minimum(values(dict)) #finding the minimum value stored
+		N = length(real_sols) #nurandommber of real solutions 
+		record_max = maximum([sc(real_sols[i]) for i in 1:N]) #Take maximum score
 	else 
        		println("there are no real solutions") #will this happen? And what should I put?
+			return(-Inf)
 	end
-	return(record_min)
+	return(record_max)
 end
        
 
 #sc: scores a matroid solution -- what if they choose a different initialized basis than [0,1], [-1,0], [0,1]     
 function sc(S)		
 	m = reshape(S, 2, convert(Int, length(S)/2))
-	M = hcat(m, [0,1], [-1,0], [0,1]) #putting the solution s in a matrix, along with points set for a basis 
+	M = hcat(m, [0,1], [-1,0], [0,-1]) #putting the solution s in a matrix, along with points set for a basis 
 	n = size(M,2) #the number of points
 	point_pairs = collect(combinations(1:n,2)) 
 	record_min = Inf
-	for j in 1:(length(point_pairs)-3)	
+	for j in 1:(length(point_pairs))	
 		p = M[:,(point_pairs[j][1])]
 		q = M[:,(point_pairs[j][2])]
 		x = norm(p-q) #norm between the 2 points in pair j 
@@ -259,6 +258,26 @@ function mygt(a,b)
  end
  
 Matroid_score = Score(SC, mygt)
+
+#Function : best_realizable_matroid
+#Input: n = number of points, nonbases = nonbases of matroid, N = number of steps optimization function will take   
+#Output: A planar graph of the matroid with the best point configuration for visual appeal 
+
+function best_realizable_matroid(n:: Int64, nonbases:: Vector{Vector{Int64}}, N:: Int64)
+
+	V = matroid_realization_space(n, nonbases) #variety associated to matroid space equations
+	E = EnumerativeProblem(V) #Turning V into an ennumerative problem 
+	OE = optimize_enumerative(E, Matroid_score, N, TS = Pandora.no_taboo) #finding the set of solutions with the best configuration of points 
+	S = HomotopyContinuation.real_solutions(OE.RecordFibre[1]) #taking the real solutions from the results 
+	scores = [Pandora.sc(S[i]) for i in 1:length(S)] #vector of sc scores of all solutions in S
+	index_of_max = argmax(scores) #getting the index of the solution with the best score 
+	m = matroid_space_eqns(n, nonbases)[2] #matrix of variables and set basis 
+	M = HomotopyContinuation.evaluate(m, variables(m)=> S[index_of_max])[2:3, :] #matrix m evaluated at the best scored point in s 
+	P = draw_matroid_representative(M, nonbases)
+	R = OE.Record 
+	title!("Score:$R")
+	return(P)
+end 
 
 
 

@@ -216,6 +216,10 @@ function first_score_taboo(sol::Tuple{Result,Vector{Float64}},SC::Score,k)
 	end
 end
 
+function no_taboo(sols::Vector{Tuple{Result,Vector{Float64}}},SC::Score,OD::OptimizerData)
+	return(0.7)
+end
+
 function first_score_taboo_proportion(sols::Vector{Tuple{Result,Vector{Float64}}},SC::Score,OD::OptimizerData)
 	taboo_counter = 0
 	for sol in sols
@@ -262,12 +266,12 @@ function optimizer_data_updater(OD::OptimizerData, SC:: Score, sols; PROG = last
 end
 
 ## The general optimize function.
-function optimize_enumerative(E::EnumerativeProblem, SC::Score, N; bucket_size=100,update_base_fibre = false,fibre_update_point=5)#base_fibre_condition=OD.BaseFibreCounter==5)
+function optimize_enumerative(E::EnumerativeProblem, SC::Score, N; bucket_size=100,update_base_fibre = false,fibre_update_point=5, TS = first_score_taboo)#base_fibre_condition=OD.BaseFibreCounter==5)
 	##First, do a really random brute force search to find a good starting point
 	OD = default_data(E, SC)
 	for i in 1:N
 		println("Step: ", i)
-		make_better(E,OD,SC;bucket_size=bucket_size)
+		make_better(E,OD,SC;bucket_size=bucket_size, TS = TS)
 		if update_base_fibre
 		base_fibre_updater(E, OD;base_fibre_condition = OD.BaseFibreCounter==fibre_update_point)#, base_fibre_condition)
 		end
