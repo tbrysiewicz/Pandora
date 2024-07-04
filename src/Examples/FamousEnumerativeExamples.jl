@@ -55,6 +55,34 @@ function TwentySevenLines()
 end
 
 
+function SymmetricTwentySevenLines()
+    @var x,y,z,w
+    @var a[1:4,1:4,1:4]
+    terms = []
+    for i in 0:3
+        for j in i:3
+            for k in j:3
+                if i+j+k<=3
+                    push!(terms,[i,j,k])
+                end
+            end
+        end
+    end
+    f = sum([a[sort([c[1]+1,c[2]+1,c[3]+1])...]*x^c[1]*y^c[2]*z^c[3]*w^(3-c[1]-c[2]-c[3]) for c in terms])
+    Params = unique([a[sort([c[1]+1,c[2]+1,c[3]+1])...] for c in terms])
+
+    @var t,b[1:2],c[1:2]
+
+    lx = t
+    ly = b[1]*t+b[2]
+    lz = c[1]*t+c[2]
+
+    g = HomotopyContinuation.subs(f,[x,y,z]=>[lx,ly,lz])
+    Eqs = HomotopyContinuation.coefficients(g,[t])
+
+    F = System(Eqs,variables=[b[1],b[2],c[1],c[2]],parameters=Params)
+    E = EnumerativeProblem(F)
+end
 
 ##Code taken from https://mathrepo.mis.mpg.de/circlesTangentConics/
 
