@@ -1,6 +1,6 @@
 #using Random
 
-using DelaunayTriangulation, Statistics
+using DelaunayTriangulation
 
 export
 	visualize_discriminant
