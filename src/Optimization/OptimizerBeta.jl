@@ -126,12 +126,26 @@ mutable struct Optimizer
     #sampling_ellipsoid is a matrix which represents a linear transformation
     #  the sampling is the image of the normal distribution N(0,1) under this transformation
     sampling_ellipsoid::Matrix{Float64}
+
+    goal::Union{Function,Nothing} #This is the goal function. Optimization will stop if goal is reached
 end
 
 function Base.show(io::IO, O::Optimizer)
+    println("---------------------------------------------------------------------------")
     println("Optimizer for an enumerative problem with ",degree(O.EP), " many solutions.")
-    println("  Current barrier-weighted fibre score: ",O.current_score)
-    println("  Record barrier-weighted fibre score: ", O.record_score)
+    println("  Current barrier-weighted objective function: ",O.current_score)
+    println("   Record barrier-weighted objective function: ", O.record_score)
+    goal_passed = O.goal(O)
+    if typeof(O.goal)==Nothing
+        println("  Goal:  n/a")
+    else
+        if  goal_passed==true
+            println("  Goal: Reached")
+        else
+            println("  Goal: Not Reached")
+        end
+    end
+    println("---------------------------------------------------------------------------")
 end
 
 
@@ -139,7 +153,8 @@ end
 function initialize_optimizer(EP::EnumerativeProblem,SC::Function;
                                 taboo_score=x->0,
                                 barrier_score=x->0,
-                                barrier_weight=0.1)
+                                barrier_weight=0.1,
+                                goal = nothing)
     history = Dict{Fibre,Any}()
     !(is_populated(EP)) && populate_base_fibre(EP)
     solver_fibre = base_fibre(EP)
@@ -154,10 +169,7 @@ function initialize_optimizer(EP::EnumerativeProblem,SC::Function;
     record_score = current_score
     sampling_ellipsoid = Matrix{Float64}(LinearAlgebra.I,n_parameters(EP),n_parameters(EP))
     history[record_fibre]=record_score
-    data = (EP, history, current_fibre, current_score, record_fibre, record_score, solver_fibre, SC, taboo_score, barrier_score, barrier_weight, sampling_ellipsoid)
-    for d in data
-        println(d)
-    end
+    data = (EP, history, current_fibre, current_score, record_fibre, record_score, solver_fibre, SC, taboo_score, barrier_score, barrier_weight, sampling_ellipsoid,goal)
     Optimizer(data...)
 end
 
@@ -208,16 +220,26 @@ function improve!(O::Optimizer; bucket_size=10)
     return((length(sols),length(non_taboo),status))
 end
 
-function optimize(O::Optimizer;N = 10)
-    for i in 1:N
+function optimize!(O::Optimizer; n_trials = 10)
+    trials = 0
+    println(O)
+    while trials<n_trials && O.goal(O)==false
+        trials = trials+1
+        println("-----------------------------------------------Trial: ",trials)
         improve!(O)
-        println(O)
     end
+    return(O)
 end
 
-function optimize_real(EP::EnumerativeProblem)
-    O = initialize_optimizer(EP,cts_real;taboo_score = cts_real_taboo, barrier_score = cts_real_barrier);
+function all_real_goal(O::Optimizer)
+    degree(O.EP) == length(HomotopyContinuation.real_solutions(O.record_fibre[1]))
+end
+
+function optimize_real(EP::EnumerativeProblem; n_trials = Inf)
+    O = initialize_optimizer(EP,cts_real;taboo_score = cts_real_taboo, barrier_score = cts_real_barrier, goal = all_real_goal);
     trials = 0
+    O = optimize!(O; n_trials = n_trials)
+    #=
     while O.record_score[1]<degree(EP)
         trials = trials + 1
         (s,nt,stat) = improve!(O)
@@ -237,4 +259,5 @@ function optimize_real(EP::EnumerativeProblem)
         end
         println(O)
     end
+    =#
 end
