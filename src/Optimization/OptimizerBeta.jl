@@ -182,17 +182,19 @@ end
 #  6) update history
 #  7) return the data from steps 2,3,4,5 for the meta_strategy to adjust the optimizer settings
 
-function improve!(O::Optimizer; bucket_size=10)
+function improve!(O::Optimizer; n_samples=10)
+    improvement_info = Dict{Any,Any}()
+
     status = ""
     #1)
-    samples = [b+O.current_fibre[2] for b in map(x->O.sampling_ellipsoid*x,[randn(Float64,n_parameters(O.EP)) for i in 1:bucket_size])]
+    samples = [b+O.current_fibre[2] for b in map(x->O.sampling_ellipsoid*x,[randn(Float64,n_parameters(O.EP)) for i in 1:n_samples])]
     #2)
     sols = solve_over_params(O.EP,samples; start_fibre = O.solver_fibre)
     taboo_level = O.taboo_score(O.current_fibre)
     println("Taboo level: ",taboo_level)
     #3)
     non_taboo = filter(x->taboo_level>=O.taboo_score(x),sols)
-    println("Proportion that are taboo: ", (bucket_size-length(non_taboo))/bucket_size)
+    println("Proportion that are taboo: ", (n_samples-length(non_taboo))/n_samples)
     if length(non_taboo)>0
         #4)
         (record,record_fibre) = max_score(non_taboo,O.objective_score,O.barrier_score,O.barrier_weight)
