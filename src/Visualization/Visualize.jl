@@ -17,6 +17,11 @@ export
 #       a new enumerative problem which is EP restricted to the affine (n-1)-dimensional space
 #       spanned by the parameters in P
 
+function restrict_enumerative_problem(EP::EnumerativeProblem)
+	P = [randn(Float64,n_parameters(EP)) for i in 1:3]
+	return(restrict_enumerative_problem(EP,P))
+end
+
 function restrict_enumerative_problem(EP::EnumerativeProblem,P::Vector{Vector{Float64}})
 	F = system(EP)
 	xv = variables(F)

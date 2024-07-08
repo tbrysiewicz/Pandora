@@ -55,6 +55,41 @@ function TwentySevenLines()
     E = EnumerativeProblem(F)
 end
 
+function QuinticThreefolds()
+    @var x[1:5]
+    @var a[1:2],b[1:2],c[1:2],d[1:2],e[1:2]
+    @var a50000,a41000,a32000,a31100,a22100,a21110,a11111
+    f1 = [x[i]^5 for i in 1:5]
+    f2 = [x[i[1]]^4*x[i[2]] for i in combinations(1:5,2)]
+    f3 = [x[i[1]]^3*x[i[2]]^2 for i in combinations(1:5,2)]
+    f4 = [x[i[1]]^3*x[i[2]]*x[i[3]] for i in combinations(1:5,3)]
+    f5 = [x[i[1]]^2*x[i[2]]^2*x[i[3]] for i in combinations(1:5,3)]
+    f6 = [x[i[1]]^2*x[i[2]]*x[i[3]]*x[i[4]] for i in combinations(1:5,4)]
+    f7 = [x[1]*x[2]*x[3]*x[4]*x[5]]
+    fparts = [f1,f2,f3,f4,f5,f6,f7]
+    params = [a50000,a41000,a32000,a31100,a22100,a21110,a11111]
+    F = sum([sum(a) for a in fparts.*params])
+
+
+    @var t,a[1:2],b[1:2],c[1:2],d[1:2]
+
+    lx = a[1]*t+a[2] #represent lines in this form t=>[lx,ly,lz,lw]
+    ly = b[1]*t+b[2]
+    lz = c[1]*t+c[2]
+    lw = d[1]*t+d[2]
+    lv = e[1]*t+e[2]
+    vars = [a[1],b[1],c[1],d[1],a[2],b[2],c[2],d[2],e[1],e[2]]
+    #Gr(2,5) has dimension 2*3 = 6
+
+    g = HomotopyContinuation.subs(F,x=>[lx,ly,lz,lw,lv])
+    Eqs = HomotopyContinuation.coefficients(g,[t])
+    for i in 1:4
+        push!(Eqs,sum(randn(Float64,10).*vars)-1.0)
+    end
+
+    Fsystem = System(Eqs,variables=vars,parameters=params)
+    E = EnumerativeProblem(Fsystem)
+end
 
 function SymmetricTwentySevenLines()
     @var x,y,z,w

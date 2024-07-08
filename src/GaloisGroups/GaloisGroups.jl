@@ -40,8 +40,8 @@ export
  51840
  ```
  """
-function galois_group(E::EnumerativeProblem; nloops = 20)
-    S = sample_monodromy_elements(E,nloops)
+function galois_group(E::EnumerativeProblem; nloops = 20, radius=1)
+    S = sample_monodromy_elements(E,nloops; radius=radius)
     return(permutation_group(degree(E),S))
 end
 
@@ -79,8 +79,8 @@ end
  51840
  ```
  """
-function monodromy_group(E::EnumerativeProblem; nloops = 20)
-    S = sample_monodromy_elements(E,nloops)
+function monodromy_group(E::EnumerativeProblem; nloops = 20, radius = 1)
+    S = sample_monodromy_elements(E,nloops; radius = radius)
     return(permutation_group(degree(E),S))
 end
 
