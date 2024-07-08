@@ -22,22 +22,25 @@ function solve_over_param(E::EnumerativeProblem,P; monodromy_recover=false)
 end
 
 
-function solve_over_params(E::EnumerativeProblem,P; monodromy_recover=false, checks=[degree_check, real_parity_check],retry=false)
+function solve_over_params(E::EnumerativeProblem,P; start_fibre = nothing, monodromy_recover=false, checks=[degree_check, real_parity_check],retry=false, verbose=false)
     #Consider implementing special solvers when
     #  there is decomposability
     if is_populated(E)==false
         populate_base_fibre(E)
     end
-    S = HomotopyContinuation.solve(system(E),base_solutions(E); start_parameters= base_parameters(E), target_parameters = P)
-    println("Total number of fibres computed:",length(S))
+    if start_fibre == nothing
+        start_fibre = base_fibre(E)
+    end
+    S = HomotopyContinuation.solve(system(E),start_fibre[1]; start_parameters= start_fibre[2], target_parameters = P)
+    verbose && println("Total number of fibres computed:",length(S))
     for f in checks
         B=filter(s->f(E,solutions(s[1]))==false,S)
         S = setdiff(S,B)
 
         #S=filter!(s->f(E,solutions(s[1])),S)
-        println(string(length(S)),"/",length(P)," satisfies ",f)
+        verbose && println(string(length(S)),"/",length(P)," satisfies ",f)
         if retry==true && length(B)>0
-            println("Retrying some failed runs")
+            verbose && println("Retrying some failed runs")
             newS = solve_over_params(E,[b[2] for b in B]; checks=checks, retry=false)
             S=vcat(S,newS)
         end
