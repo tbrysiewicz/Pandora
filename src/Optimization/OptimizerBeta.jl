@@ -70,11 +70,11 @@ function cts_real(RP::Fibre)
     return((nreal(RP[1]),-non_real_min_norm(RP[1])))
 end
 
-function cts_real_taboo(RP::Fibre)
+function real_taboo(RP::Fibre)
     return(-length(HomotopyContinuation.real_solutions(RP[1])))
 end
 
-function cts_real_barrier(RP::Fibre)
+function real_barrier(RP::Fibre)
     return(0,1/real_min_dist(RP[1]))
 end
 
@@ -100,7 +100,7 @@ mutable struct Optimizer
     EP::EnumerativeProblem
 
     #If history is enabled, this tracks the history of record fibres and their record scores
-    history::Dict{Fibre,Any}  
+    history::Vector{Tuple{Fibre,Any}}
 
     #current_fibre is the current fibre
     current_fibre::Fibre
@@ -155,7 +155,7 @@ function initialize_optimizer(EP::EnumerativeProblem,SC::Function;
                                 barrier_score=x->0,
                                 barrier_weight=0.1,
                                 goal = nothing)
-    history = Dict{Fibre,Any}()
+    history = Vector{Tuple{Fibre,Any}}([])
     !(is_populated(EP)) && populate_base_fibre(EP)
     solver_fibre = base_fibre(EP)
     objective_score = SC
@@ -168,9 +168,18 @@ function initialize_optimizer(EP::EnumerativeProblem,SC::Function;
     current_score = objective_score(current_fibre)
     record_score = current_score
     sampling_ellipsoid = Matrix{Float64}(LinearAlgebra.I,n_parameters(EP),n_parameters(EP))
-    history[record_fibre]=record_score
+    push!(history,(record_fibre,record_score))
     data = (EP, history, current_fibre, current_score, record_fibre, record_score, solver_fibre, SC, taboo_score, barrier_score, barrier_weight, sampling_ellipsoid,goal)
     Optimizer(data...)
+end
+
+function non_taboo_fibres(O::Optimizer,F::Vector{RealFibre})
+    taboo_level = current_taboo_level(O)
+    filter(x->taboo_level>=O.taboo_score(x),F)
+end
+
+function current_taboo_level(O::Optimizer)
+    O.taboo_score(O.current_fibre)
 end
 
 #improve will
@@ -182,19 +191,30 @@ end
 #  6) update history
 #  7) return the data from steps 2,3,4,5 for the meta_strategy to adjust the optimizer settings
 
-function improve!(O::Optimizer; n_samples=10)
+function improve!(O::Optimizer; n_samples=nothing)
     improvement_info = Dict{Any,Any}()
+    improvement_info["n_samples"] = n_samples
 
     status = ""
     #1)
-    samples = [b+O.current_fibre[2] for b in map(x->O.sampling_ellipsoid*x,[randn(Float64,n_parameters(O.EP)) for i in 1:n_samples])]
+    if n_samples==nothing
+        n_samples = floor(3*n_parameters(O.EP))
+    end
+    search_vectors = map(x->O.sampling_ellipsoid*x,[randn(Float64,n_parameters(O.EP)) for i in 1:ceil(n_samples/2)])
+    search_vectors = vcat(search_vectors,map(x->-x,search_vectors))
+    samples = [b+O.current_fibre[2] for b in search_vectors]
     #2)
     sols = solve_over_params(O.EP,samples; start_fibre = O.solver_fibre)
-    taboo_level = O.taboo_score(O.current_fibre)
-    println("Taboo level: ",taboo_level)
+    improvement_info["fibres"] = sols
+    improvement_info["n_fibres"] = length(sols)
+    println("Number of samples: ",n_samples)
+    println("Number of successful tracks: ",length(sols))
+
+    taboo_level = current_taboo_level(O)
     #3)
-    non_taboo = filter(x->taboo_level>=O.taboo_score(x),sols)
-    println("Proportion that are taboo: ", (n_samples-length(non_taboo))/n_samples)
+    non_taboo = non_taboo_fibres(O,sols)
+    improvement_info["n_non_taboo"] = length(non_taboo)
+    improvement_info["non_taboo_fibres"] = non_taboo
     if length(non_taboo)>0
         #4)
         (record,record_fibre) = max_score(non_taboo,O.objective_score,O.barrier_score,O.barrier_weight)
@@ -204,7 +224,7 @@ function improve!(O::Optimizer; n_samples=10)
             O.current_score = record
             O.current_fibre = record_fibre
             #6)
-            O.history[record_fibre] = record
+            push!(O.history,(record_fibre,record))
             if record>O.record_score
                 status = "Improved Record Score"
                 O.record_score = record
@@ -215,20 +235,23 @@ function improve!(O::Optimizer; n_samples=10)
         end
     else
         status = "All Are Taboo"
-        println("Taboo Scores:")
-        println([O.taboo_score(x) for x in sols])
     end
     println("Current Score: ",O.current_score)
-    return((length(sols),length(non_taboo),status))
+    return(improvement_info)
 end
 
 function optimize!(O::Optimizer; n_trials = 10)
     trials = 0
-    println(O)
     while trials<n_trials && O.goal(O)==false
         trials = trials+1
         println("-----------------------------------------------Trial: ",trials)
-        improve!(O)
+        information = improve!(O)
+        println(information["n_fibres"])
+        println(information["n_non_taboo"])
+        update_sampler_radius!(O,information)
+        if trials%10 == 0
+            update_solver_fibre!(O)
+        end
     end
     return(O)
 end
@@ -238,7 +261,7 @@ function all_real_goal(O::Optimizer)
 end
 
 function optimize_real(EP::EnumerativeProblem; n_trials = Inf)
-    O = initialize_optimizer(EP,cts_real;taboo_score = cts_real_taboo, barrier_score = cts_real_barrier, goal = all_real_goal);
+    O = initialize_optimizer(EP,cts_real;taboo_score = real_taboo, barrier_score = real_barrier, goal = all_real_goal);
     trials = 0
     O = optimize!(O; n_trials = n_trials)
     #=

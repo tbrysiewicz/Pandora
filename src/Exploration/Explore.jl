@@ -62,7 +62,8 @@ function explore(E::EnumerativeProblem,L; sampler = nothing, real_parameters=tru
     else
         P = complex_sampler(n_samples,n_parameters(E))
     end
-    BigSolve = solve_over_params(E,P)
+    BigSolve = solve_over_params(E,P; show_progress=true, verbose = true)
+    println("LENGTH OF SOLS:",length(BigSolve))
     AllData = []
     for l in L
         Data = []
@@ -71,5 +72,5 @@ function explore(E::EnumerativeProblem,L; sampler = nothing, real_parameters=tru
         end
     push!(AllData,Data)
     end
-    return([Labels,AllData])
+    return([P,Labels,AllData])
 end

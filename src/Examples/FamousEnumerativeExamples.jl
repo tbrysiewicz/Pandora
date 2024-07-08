@@ -1,6 +1,7 @@
 export
     TwentySevenLines,
-    TangentCircles
+    TangentCircles,
+    SymmetricTwentySevenLines
 
 
 
@@ -57,30 +58,28 @@ end
 
 function SymmetricTwentySevenLines()
     @var x,y,z,w
-    @var a[1:4,1:4,1:4]
-    terms = []
-    for i in 0:3
-        for j in i:3
-            for k in j:3
-                if i+j+k<=3
-                    push!(terms,[i,j,k])
-                end
-            end
-        end
-    end
-    f = sum([a[sort([c[1]+1,c[2]+1,c[3]+1])...]*x^c[1]*y^c[2]*z^c[3]*w^(3-c[1]-c[2]-c[3]) for c in terms])
-    Params = unique([a[sort([c[1]+1,c[2]+1,c[3]+1])...] for c in terms])
+    @var a3000,a2100,a1110 #symmetric cubics form a 3-dimensional space
+    f = a3000*(x^3+y^3+z^3+w^3) + a2100*(x^2*y+x*y^2+x^2*z+x*z^2+x^2*w+w^2*x+y^2*z+z^2*y+y^2*w+w^2*y+z^2*w+w^2*z) + a1110*(x*y*z+x*y*w+x*z*w+y*z*w) #they look like this
+    #change_of_coords = [sum(randn(Float64,4).*[x,y,z,w]) for i in 1:4] #this is a random real change of coords so lines are not generically hiding at infinity
+    #f = subs(f,[x,y,z,w]=>change_of_coords)
+    f = subs(f,a3000=>1.0)
+    #Params = [a3000,a2100,a1110]
+    Params = [a2100,a1110]
+    @var t,a[1:2],b[1:2],c[1:2],d[1:2]
 
-    @var t,b[1:2],c[1:2]
-
-    lx = t
+    lx = a[1]*t+a[2] #represent lines in this form t=>[lx,ly,lz,lw]
     ly = b[1]*t+b[2]
     lz = c[1]*t+c[2]
+    lw = d[1]*t+d[2]
+    vars = [a[1],b[1],c[1],d[1],a[2],b[2],c[2],d[2]]
 
-    g = HomotopyContinuation.subs(f,[x,y,z]=>[lx,ly,lz])
+    g = HomotopyContinuation.subs(f,[x,y,z,w]=>[lx,ly,lz,lw])
     Eqs = HomotopyContinuation.coefficients(g,[t])
+    for i in 1:4
+        push!(Eqs,sum(randn(Float64,8).*vars)-1.0)
+    end
 
-    F = System(Eqs,variables=[b[1],b[2],c[1],c[2]],parameters=Params)
+    F = System(Eqs,variables=[a[1],b[1],c[1],d[1],a[2],b[2],c[2],d[2]],parameters=Params)
     E = EnumerativeProblem(F)
 end
 

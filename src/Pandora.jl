@@ -84,6 +84,7 @@ include("GaloisGroups/CoordinateSymmetryGroup.jl")
 #include("Optimization/CoreObjects.jl")
 #include("Optimization/Optimizer.jl")
 include("Optimization/OptimizerBeta.jl")
+include("Optimization/OptimizerUpdaters.jl")
 
 
 include("Statistics/Tally.jl")
