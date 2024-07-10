@@ -2,10 +2,15 @@ export
     optimize_real,
     improve!,
     optimize,
-    initialize_optimizer
+    initialize_optimizer,
+    Experimenter
 
 const Fibre = Union{Tuple{Result,Vector{ComplexF64}},Tuple{Result,Vector{Float64}}}
 const RealFibre = Tuple{Result,Vector{Float64}}
+
+function TrivialScore(x)
+    return(0.0)
+end
 
 function is_score(f::Function)
     RT = Base.return_types(f)
@@ -65,6 +70,20 @@ function real_min_dist(R::Result)
     
 
 
+    function non_real_total_norm(R::Result)
+        total = 0.0                #Here, record ans record_fibre are just variable names, not parts of the struct OptimizerData.
+        for r in R
+            if HomotopyContinuation.is_real(r)==false
+                total=total+norm(imag(r.solution))
+            end
+        end
+        return(total)
+    end
+
+
+function cts_real_total(RP::Fibre)
+    return(-non_real_total_norm(RP[1]))
+ end
 
 function cts_real(RP::Fibre)
     return((nreal(RP[1]),-non_real_min_norm(RP[1])))
@@ -130,6 +149,7 @@ mutable struct Optimizer
     goal::Union{Function,Nothing} #This is the goal function. Optimization will stop if goal is reached
 end
 
+
 function Base.show(io::IO, O::Optimizer)
     println("---------------------------------------------------------------------------")
     println("Optimizer for an enumerative problem with ",degree(O.EP), " many solutions.")
@@ -149,12 +169,13 @@ function Base.show(io::IO, O::Optimizer)
 end
 
 
+
 #(history, current_fibre, current_score, record_fibre, record_score, solver_fibre, objective_score, taboo_score, barrier_score, barrier_weight, sampling_ellipsoid)
 function initialize_optimizer(EP::EnumerativeProblem,SC::Function;
-                                taboo_score=x->0,
-                                barrier_score=x->0,
+                                taboo_score=TrivialScore,
+                                barrier_score=TrivialScore,
                                 barrier_weight=0.1,
-                                goal = nothing)
+                                goal = x->false)
     history = Vector{Tuple{Fibre,Any}}([])
     !(is_populated(EP)) && populate_base_fibre(EP)
     solver_fibre = base_fibre(EP)
@@ -198,10 +219,18 @@ function improve!(O::Optimizer; n_samples=nothing)
     status = ""
     #1)
     if n_samples==nothing
-        n_samples = floor(3*n_parameters(O.EP))
+        n_samples = floor(2*n_parameters(O.EP))
+    end
+    previous_vector = [0.0 for i in 1:n_parameters(O.EP)]
+    if length(O.history)>3
+        previous_vector = (O.history[end][1][2]-O.history[end-1][1][2])
     end
     search_vectors = map(x->O.sampling_ellipsoid*x,[randn(Float64,n_parameters(O.EP)) for i in 1:ceil(n_samples/2)])
     search_vectors = vcat(search_vectors,map(x->-x,search_vectors))
+    println(length(O.history))
+    println(size(previous_vector))
+    println(size(O.sampling_ellipsoid))
+    search_vectors = map(x->x.+O.sampling_ellipsoid*previous_vector,search_vectors)
     samples = [b+O.current_fibre[2] for b in search_vectors]
     #2)
     sols = solve_over_params(O.EP,samples; start_fibre = O.solver_fibre)
@@ -215,14 +244,17 @@ function improve!(O::Optimizer; n_samples=nothing)
     non_taboo = non_taboo_fibres(O,sols)
     improvement_info["n_non_taboo"] = length(non_taboo)
     improvement_info["non_taboo_fibres"] = non_taboo
+    improvement = 0.0
     if length(non_taboo)>0
         #4)
         (record,record_fibre) = max_score(non_taboo,O.objective_score,O.barrier_score,O.barrier_weight)
         #5)
         if record>O.current_score
             status = "Improved Current Score"
+            old_score = O.current_score
             O.current_score = record
             O.current_fibre = record_fibre
+            improvement = O.current_score.-old_score
             #6)
             push!(O.history,(record_fibre,record))
             if record>O.record_score
@@ -232,24 +264,28 @@ function improve!(O::Optimizer; n_samples=nothing)
             end
         else
             status = "No Improvement"
+            improvement = 0.0.*O.current_score
         end
     else
         status = "All Are Taboo"
     end
     println("Current Score: ",O.current_score)
+    improvement_info["Status: "] = status
+    println("     Status: ",status)
+    println("     Improvement: ",improvement)
     return(improvement_info)
 end
 
-function optimize!(O::Optimizer; n_trials = 10)
+function optimize!(O::Optimizer; n_trials = 10, n_samples = nothing)
     trials = 0
     while trials<n_trials && O.goal(O)==false
         trials = trials+1
         println("-----------------------------------------------Trial: ",trials)
-        information = improve!(O)
-        println(information["n_fibres"])
-        println(information["n_non_taboo"])
+        information = improve!(O; n_samples = n_samples)
+        println("Number of fibres computed:", information["n_fibres"])
+        println("Number of non-taboo fibres:", information["n_non_taboo"])
         update_sampler_radius!(O,information)
-        if trials%10 == 0
+        if trials%4 == 0
             update_solver_fibre!(O)
         end
     end
@@ -260,10 +296,51 @@ function all_real_goal(O::Optimizer)
     degree(O.EP) == length(HomotopyContinuation.real_solutions(O.record_fibre[1]))
 end
 
-function optimize_real(EP::EnumerativeProblem; n_trials = Inf)
-    O = initialize_optimizer(EP,cts_real;taboo_score = real_taboo, barrier_score = real_barrier, goal = all_real_goal);
-    trials = 0
-    O = optimize!(O; n_trials = n_trials)
+function optimize_real(EP::EnumerativeProblem; n_trials = 50, Strategy = :normal, Objective = :onebyone)
+    obj_fun = cts_real
+    if Objective == :alltogether
+        obj_fun = cts_real_total
+    end
+
+    if Strategy == :normal   
+        O = initialize_optimizer(EP,obj_fun;taboo_score = real_taboo, barrier_score = real_barrier, goal = all_real_goal);
+        O = optimize!(O; n_trials = n_trials)
+        return(O)
+    elseif Strategy == :shotgun
+        println("------------------Shotgun Hill-Climb-------------------")
+        runs = []
+        for i in 1:10
+            println("----------------------------------Shotgun: ",i)
+            O = initialize_optimizer(EP,obj_fun;taboo_score = real_taboo, barrier_score = real_barrier, goal = all_real_goal);
+            scale_sampler_radius!(O,10)
+            improve!(O;n_samples = 10000)
+            O = optimize!(O; n_trials = 20, n_samples = 100)
+            push!(runs,O)
+        end
+        return(runs)
+    elseif Strategy == :global_local
+        O = initialize_optimizer(EP,cts_real_total; goal = all_real_goal);
+        scale_sampler_radius!(O,0.1)
+        improve!(O;n_samples =200)
+        scale_sampler_radius!(O,10)
+        improve!(O;n_samples =200)
+        scale_sampler_radius!(O,2)
+        improve!(O;n_samples =200)
+        scale_sampler_radius!(O,2)
+        improve!(O;n_samples =200)
+        scale_sampler_radius!(O,2)
+        improve!(O;n_samples =1000)
+        scale_sampler_radius!(O,0.1)
+        O = optimize!(O; n_trials = 30, n_samples = 10)
+        O.objective_score = cts_real
+        O.barrier_score = real_barrier
+        O.taboo_score = real_taboo
+        O.record_score = cts_real(O.record_fibre)
+        O.current_score = cts_real(O.current_fibre)
+        println("-------***Switching to one-by-one***--------")
+        O = optimize!(O; n_trials = 1000, n_samples = 10)
+  
+    end
     #=
     while O.record_score[1]<degree(EP)
         trials = trials + 1
@@ -286,3 +363,24 @@ function optimize_real(EP::EnumerativeProblem; n_trials = Inf)
     end
     =#
 end
+
+
+
+
+function Experimenter(E::EnumerativeProblem;name="",runs=10)
+    for i in 1:runs
+        mkpath(pwd()*"/Experiments/"*name)
+        mysummary = open(pwd()*"/Experiments/"*name*"/"*name*"_summary.txt", "a")
+        myfile =  open(pwd()*"/Experiments/"*name*"/"*name*"_real_optimizer_"*string(i)*".txt","a")
+        write(myfile, "Enumerative Problem: "*name*"\n");
+        write(myfile, "Run: "*string(i)*"\n");
+        O = optimize_real(E; Strategy = :global_local);
+        write(myfile, string(O.record_score)*"\n");
+        write(mysummary, string(O.record_score)*"\n");
+        write(myfile, string(O.record_fibre[2])*"\n");
+        close(myfile);
+        close(mysummary);
+    end
+end
+
+

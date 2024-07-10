@@ -37,14 +37,14 @@ function solve_over_param(E::EnumerativeProblem,P; monodromy_recover=false, show
 end
 
 
-function solve_over_params(E::EnumerativeProblem,P; start_fibre = nothing, monodromy_recover=false, checks=[degree_check, real_parity_check],retry=false, show_progress=true, verbose=false)
+function solve_over_params(E::EnumerativeProblem,P; start_fibre = nothing, monodromy_recover=false, checks=[degree_check],retry=false, show_progress=true, verbose=false)
     if is_populated(E)==false
         populate_base_fibre(E)
     end
     if start_fibre == nothing
         start_fibre = base_fibre(E)
     end
-    S = HomotopyContinuation.solve(system(E),start_fibre[1]; start_parameters= start_fibre[2], target_parameters = P,show_progress=show_progress)
+    S = HomotopyContinuation.solve(system(E),base_solutions(E); start_parameters= base_parameters(E), target_parameters = P,show_progress=show_progress)
     verbose && println("Total number of fibres computed:",length(S))
     for f in checks
         B=filter(s->f(E,solutions(s[1]))==false,S)

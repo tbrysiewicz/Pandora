@@ -67,6 +67,7 @@ include("Examples/BasicVarietyExamples.jl")
 #include("Examples/MatroidRealizations.jl")
 #include("Visualization/MatroidVisualization.jl")
 include("Examples/AltBurmester.jl")
+include("Examples/CCEquations.jl")
 
 
 include("Exploration/Explore.jl")
