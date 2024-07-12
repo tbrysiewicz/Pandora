@@ -6,15 +6,15 @@ export
 	visualize_discriminant
 
 #General visualize_discriminant function that allows you to use different strategies: "Delaunay", "Triforce", "Barycenter"
-function visualize_discriminant(EP::EnumerativeProblem, strategy; fibre_function = x->HomotopyContinuation.nreal(x[1]), xlims = [-2,2], ylims = [-2,2], resolution = 1000, depth = 4, automatic = false, total_resolution = 8*resolution, scatter = false, label = true, edges = false, continuous = false, plot_proportion = 0.7)
+function visualize_discriminant(EP::EnumerativeProblem, strategy; fibre_function = x->HomotopyContinuation.nreal(x[1]), xlims = [-2,2], ylims = [-2,2], resolution = 1000, depth = 4, automatic = false, total_resolution = 8*resolution, scatter = false, label = true, edges = false, continuous = false, plot_proportion = 0.7, plotAllTriangles = true, goesToInfinity = true)
 	if strategy == "Delaunay"
-		return Delaunay_visualization(EP, xlims = xlims, ylims = ylims, fibre_function = fibre_function, depth = depth, resolution = resolution, total_resolution = total_resolution, automatic = automatic, scatter = scatter, edges = edges, label = label, continuous = continuous, plot_proportion = plot_proportion)
+		return Delaunay_visualization(EP, xlims = xlims, ylims = ylims, fibre_function = fibre_function, depth = depth, resolution = resolution, total_resolution = total_resolution, automatic = automatic, scatter = scatter, edges = edges, label = label, continuous = continuous, plot_proportion = plot_proportion, plotAllTriangles = plotAllTriangles, goesToInfinity = goesToInfinity)
 	elseif strategy == "Triforce"
-		return triforce_visualization(EP, xlims = xlims, ylims = ylims, fibre_function = fibre_function, depth = depth, resolution = resolution, total_resolution = total_resolution, automatic = automatic, scatter = scatter, edges = edges, label = label, continuous = continuous, plot_proportion = plot_proportion)
+		return triforce_visualization(EP, xlims = xlims, ylims = ylims, fibre_function = fibre_function, depth = depth, resolution = resolution, total_resolution = total_resolution, automatic = automatic, scatter = scatter, edges = edges, label = label, continuous = continuous, plot_proportion = plot_proportion, plotAllTriangles = plotAllTriangles, goesToInfinity = goesToInfinity)
 	elseif strategy == "Barycenter"
-		return Barycenter_visualization(EP, xlims = xlims, ylims = ylims, fibre_function = fibre_function, depth = depth, resolution = resolution, totalResolution = total_resolution, automatic = automatic, scatter = scatter, label = label, edges = edges, continuous = continuous, plot_proportion = plot_proportion)
+		return Barycenter_visualization(EP, xlims = xlims, ylims = ylims, fibre_function = fibre_function, depth = depth, resolution = resolution, totalResolution = total_resolution, automatic = automatic, scatter = scatter, label = label, edges = edges, continuous = continuous, plot_proportion = plot_proportion, plotAllTriangles = plotAllTriangles, goesToInfinity = goesToInfinity)
 	elseif strategy == "Delaunay2"
-		return Delaunay_visualization_with_Ruppert_refinement(EP, xlims = xlims, ylims = ylims, fibre_function = fibre_function, depth = depth, resolution = resolution, total_resolution = total_resolution, automatic = automatic, scatter = scatter, label = label, edges = edges, continuous = continuous, plot_proportion = plot_proportion)
+		return Delaunay_visualization_with_Ruppert_refinement(EP, xlims = xlims, ylims = ylims, fibre_function = fibre_function, depth = depth, resolution = resolution, total_resolution = total_resolution, automatic = automatic, scatter = scatter, label = label, edges = edges, continuous = continuous, plot_proportion = plot_proportion, plotAllTriangles = plotAllTriangles, goesToInfinity = goesToInfinity)
 	else
 		println("Invalid strategy inputted. Valid strategies include:")
 		println("Delaunay")
