@@ -43,10 +43,13 @@ Input:
 		range of fibre_function values across a triangle is calculated (range across the values of the three vertices) and this range is used to determine if the triangle will be refined. For example,
 		if plot_proportion is 0.7, the 70th percentile of triangle value ranges is used as the threshold for refinement; any triangle with a value range greater than the 70th percentile will be refined. 
 		When refinement is complete, any triangle with a value range less than the 70th percentile will be plotted.
+		plotAllTriangles - in the case that fibre_function is continuous, used to indicate whether all triangles should be plotted or just those that 
+		have a range value less than the plotting_standard
+		goesToInfinity - in the case that a continuous fibre_function can get infinitely large, the natural logarithm of fibre_function values is plotted instead 
 Output:
 		myplot - A plot of the mesh following all stages of refinement
 =#
-function Barycenter_visualization(EP;depth = 4, resolution=1000, totalResolution = 8*resolution, xlims=[-2,2],ylims=[-2,2],fibre_function = x->HomotopyContinuation.nreal(x[1]), automatic = true, scatter = false, label = true, edges = false, continuous = false, plot_proportion = 0.7)
+function Barycenter_visualization(EP;depth = 4, resolution=1000, totalResolution = 8*resolution, xlims=[-2,2],ylims=[-2,2],fibre_function = x->HomotopyContinuation.nreal(x[1]), automatic = true, scatter = false, label = true, edges = false, continuous = false, plot_proportion = 0.7, plotAllTriangles = true, goesToInfinity = true)
     V, T, L = initial_triangular_mesh(EP; fibre_function = fibre_function, xlims = xlims, ylims = ylims, resolution = resolution)
 	if automatic == false
 		if continuous == true
@@ -81,7 +84,7 @@ function Barycenter_visualization(EP;depth = 4, resolution=1000, totalResolution
 		end
 	end
 	if continuous == true
-		myplot = draw_triangular_mesh(V,T, scatter1 = scatter, label = label, edges = edges, continuous = true, plotting_standard = refinement_standard)
+		myplot = draw_triangular_mesh(V,T, scatter1 = scatter, label = label, edges = edges, continuous = true, plotting_standard = refinement_standard, plotAllTriangles = plotAllTriangles, goesToInfinity = goesToInfinity)
 	else
     	myplot = draw_triangular_mesh(V,T, scatter1 = scatter, label = label, edges = edges)
 	end
@@ -235,44 +238,85 @@ input:
 		continuous - indicate whether fibre_function is discrete or continuous
 		plotting_standard - in the case that fibre_function is continuous plotting_standard is the threshold for triangle value ranges
 		used to determine whether a triangle is to be plotted. This value is produced by standard_for_continuous_function_refinement
+		plotAllTriangles - in the case that fibre_function is continuous, used to indicate whether all triangles should be plotted or just those that 
+		have a range value less than the plotting_standard
+		goesToInfinity - in the case that a continuous fibre_function can get infinitely large, the natural logarithm of fibre_function values is plotted instead
 output:
 		returns plot of parameter space
 =#
-function draw_triangular_mesh(value_dict::Dict,Triangles::Vector;xlims = [-2,2],ylims=[-2,2], continuous = false, scatter1 = true, label = true, edges = false, plotting_standard = 0.0)
+function draw_triangular_mesh(value_dict::Dict,Triangles::Vector;xlims = [-2,2],ylims=[-2,2], continuous = false, scatter1 = true, label = true, edges = false, plotting_standard = 0.0, plotAllTriangles = true, goesToInfinity = false)
     if continuous == true
-        myplot = plot(xlims=xlims, ylims=ylims, colorbar = true)
-        triangle_value_ranges = Dict()
-        vertices = []
-        for T in Triangles
-            max_value = max([value_dict[x] for x in T]...)
-            min_value = min([value_dict[x] for x in T]...)
-            triangle_value_ranges[T] = max_value - min_value
+		myplot = plot(xlims=xlims, ylims=ylims, colorbar = true)
+		if plotAllTriangles == false
+			triangle_value_ranges = Dict() #Dictionary that will contain the range of fibre function values across each triangle
+			verticesToPlot = []
+            trianglesWithoutErrors = []
+			for T in Triangles
+                if value_dict[T[1]] == false || value_dict[T[2]] == false || value_dict[T[3]] == false
+                    continue
+                end
+				max_value = max([value_dict[x] for x in T]...)
+				min_value = min([value_dict[x] for x in T]...)
+				triangle_value_ranges[T] = max_value - min_value
+                push!(trianglesWithoutErrors, T)
+			end
+			trianglesToPlot = filter(x->triangle_value_ranges[x]<=plotting_standard, trianglesWithoutErrors)
+			triangle_plotting_values = Dict() #Dictionary that will contain the value to plot for each triangle, i.e., the mean of the three vertex values for the triangle
+			for T in trianglesToPlot
+                if goesToInfinity == false
+				    triangle_plotting_values[T] = mean([value_dict[x] for x in T])
+                else
+                    triangle_plotting_values[T] = mean([log(value_dict[x]) for x in T])
+                end
+				for x in T
+					push!(verticesToPlot, x)
+				end
+			end
+		else
+			triangle_plotting_values = Dict()
+			verticesToPlot = []
+			for T in Triangles
+                if value_dict[T[1]] == false || value_dict[T[2]] == false || value_dict[T[3]] == false
+                    continue
+                end
+                if goesToInfinity == false
+				    triangle_plotting_values[T] = mean([value_dict[x] for x in T])
+                else
+                    triangle_plotting_values[T] = mean([log(value_dict[x]) for x in T])
+                end
+				for i in T
+					push!(verticesToPlot, i)
+				end
+			end
         end
-        trianglesToPlot = filter(x->triangle_value_ranges[x]<=plotting_standard, Triangles)
-        triangle_plotting_values = Dict()
-        for T in trianglesToPlot
-            triangle_plotting_values[T] = Statistics.mean([value_dict[x] for x in T])
-            for x in T
-                push!(vertices, x)
-            end
-        end
-        plotting_max = max([value_dict[x] for x in vertices]...)
-        plotting_min = min([value_dict[x] for x in vertices]...)
-        if scatter1 == true
-            scatter!([a[1] for a in vertices], [a[2] for a in vertices], zcolor = [value_dict[a] for a in vertices], color =:thermal, markershape =:rect, markerstrokewidth = 0, labels = false, markersize = 0.2)
+        if goesToInfinity == false
+			plotting_max = max([value_dict[x] for x in verticesToPlot]...)
+			plotting_min = min([value_dict[x] for x in verticesToPlot]...)
         else
-            scatter!([a[1] for a in vertices], [a[2] for a in vertices], zcolor = [value_dict[a] for a in vertices], color =:thermal, markershape =:rect, markerstrokewidth = 0, labels = false, markersize = 0)
+            plotting_max = max([log(value_dict[x]) for x in verticesToPlot]...)
+            plotting_min = min([log(value_dict[x]) for x in verticesToPlot]...)
         end
-
-        for T in trianglesToPlot
-            shape1 = Shape([(t[1],t[2]) for t in T])
-            color_value = (triangle_plotting_values[T]-plotting_min)/(plotting_max-plotting_min)
-            if edges == true
-                plot!(shape1, fillcolor = cgrad(:thermal, rev = false)[color_value], linecolor =:black, linewidth = 0.2, labels = false)
+		if scatter1 == true
+            if goesToInfinity == false
+				scatter!([a[1] for a in verticesToPlot], [a[2] for a in verticesToPlot], zcolor = [value_dict[a] for a in verticesToPlot], color =:thermal, markershape =:rect, markerstrokewidth = 0, labels = false, markersize = 0.2)
             else
-                plot!(shape1, fillcolor = cgrad(:thermal, rev = false)[color_value], linecolor = cgrad(:thermal, rev = false)[color_value], linewidth = 0, labels = false)
+                scatter!([a[1] for a in verticesToPlot], [a[2] for a in verticesToPlot], zcolor = [log(value_dict[a]) for a in verticesToPlot], color =:thermal, markershape =:rect, markerstrokewidth = 0, labels = false, markersize = 0.2)
             end
-        end
+		else
+            if goesToInfinity == false
+				scatter!([a[1] for a in verticesToPlot], [a[2] for a in verticesToPlot], zcolor = [value_dict[a] for a in verticesToPlot], color =:thermal, markershape =:rect, markerstrokewidth = 0, labels = false, markersize = 0)
+            else
+                scatter!([a[1] for a in verticesToPlot], [a[2] for a in verticesToPlot], zcolor = [log(value_dict[a]) for a in verticesToPlot], color =:thermal, markershape =:rect, markerstrokewidth = 0, labels = false, markersize = 0)
+            end
+		end
+		for T in keys(triangle_plotting_values)
+			color_value = (triangle_plotting_values[T]-plotting_min)/(plotting_max-plotting_min)
+			if edges == true
+                draw_triangle!(T, color_value, edges = true)
+			else
+                draw_triangle!(T, color_value)
+			end
+		end
     else
         M = max(values(value_dict)...)
         myplot = plot(xlims=xlims,ylims=ylims,legend=true)
@@ -405,11 +449,13 @@ input:
 		range of fibre_function values across a triangle is calculated (range across the values of the three vertices) and this range is used to determine if the triangle will be refined. For example,
 		if plot_proportion is 0.7, the 70th percentile of triangle value ranges is used as the threshold for refinement; any triangle with a value range greater than the 70th percentile will be refined. 
 		When refinement is complete, any triangle with a value range less than the 70th percentile will be plotted.
-
+		plotAllTriangles - in the case that fibre_function is continuous, used to indicate whether all triangles should be plotted or just those that 
+		have a range value less than the plotting_standard
+		goesToInfinity - in the case that a continuous fibre_function can get infinitely large, the natural logarithm of fibre_function values is plotted instead 
 output:
 		myplot - A plot of the mesh following all stages of refinement
 =#
-function triforce_visualization(EP;depth = 4, resolution=1000, total_resolution = 8*resolution, xlims=[-2,2],ylims=[-2,2],fibre_function = x->HomotopyContinuation.nreal(x[1]), continuous = false, scatter = false, automatic = true, edges = false, label = true, plot_proportion = 0.7)
+function triforce_visualization(EP;depth = 4, resolution=1000, total_resolution = 8*resolution, xlims=[-2,2],ylims=[-2,2],fibre_function = x->HomotopyContinuation.nreal(x[1]), continuous = false, scatter = false, automatic = true, edges = false, label = true, plot_proportion = 0.7, plotAllTriangles = true, goesToInfinity = true)
 	V, T, L = initial_triangular_mesh(EP, fibre_function = fibre_function, xlims = xlims, ylims = ylims, resolution = resolution)
 	if automatic == true
 		total_resolution -= L
@@ -444,7 +490,7 @@ function triforce_visualization(EP;depth = 4, resolution=1000, total_resolution 
         end
 	end
     if continuous == true
-        myplot = draw_triangular_mesh(V, T, xlims = xlims, ylims = ylims, scatter1 = scatter, edges = edges, label = label, continuous = true, plotting_standard = refinement_standard)
+        myplot = draw_triangular_mesh(V, T, xlims = xlims, ylims = ylims, scatter1 = scatter, edges = edges, label = label, continuous = true, plotting_standard = refinement_standard, plotAllTriangles = plotAllTriangles, goesToInfinity = goesToInfinity)
     else
         myplot = draw_triangular_mesh(V, T, xlims = xlims, ylims = ylims, scatter1 = scatter, edges = edges, label = label, continuous = false)
     end
@@ -494,10 +540,13 @@ input:
 		range of fibre_function values across a triangle is calculated (range across the values of the three vertices) and this range is used to determine if the triangle will be refined. For example,
 		if plot_proportion is 0.7, the 70th percentile of triangle value ranges is used as the threshold for refinement; any triangle with a value range greater than the 70th percentile will be refined. 
 		When refinement is complete, any triangle with a value range less than the 70th percentile will be plotted.
+		plotAllTriangles - in the case that fibre_function is continuous, used to indicate whether all triangles should be plotted or just those that 
+		have a range value less than the plotting_standard
+		goesToInfinity - in the case that a continuous fibre_function can get infinitely large, the natural logarithm of fibre_function values is plotted instead 
 output:
 		myplot - A plot of the mesh following all stages of refinement
 =#
-function Delaunay_visualization(EP::EnumerativeProblem; xlims = [-2,2], ylims = [-2,2], fibre_function = x->HomotopyContinuation.nreal(x[1]), depth = 4, resolution = 1000, total_resolution = 8*resolution, automatic = true, scatter = false, edges = false, label = true, continuous = false, plot_proportion = 0.7)
+function Delaunay_visualization(EP::EnumerativeProblem; xlims = [-2,2], ylims = [-2,2], fibre_function = x->HomotopyContinuation.nreal(x[1]), depth = 4, resolution = 1000, total_resolution = 8*resolution, automatic = true, scatter = false, edges = false, label = true, continuous = false, plot_proportion = 0.7, plotAllTriangles = true, goesToInfinity = true)
 	V, T, L = initial_triangular_mesh(EP, fibre_function = fibre_function, xlims = xlims, ylims = ylims, resolution = resolution)
 	if automatic == false
 		if continuous == true
@@ -536,7 +585,7 @@ function Delaunay_visualization(EP::EnumerativeProblem; xlims = [-2,2], ylims = 
 		end
 	end
 	if continuous == true
-		myplot = draw_triangular_mesh(V, T, xlims = xlims, ylims = ylims, scatter1 = scatter, label = label, edges = edges, continuous = true, plotting_standard = refinement_standard)
+		myplot = draw_triangular_mesh(V, T, xlims = xlims, ylims = ylims, scatter1 = scatter, label = label, edges = edges, continuous = true, plotting_standard = refinement_standard, plotAllTriangles = plotAllTriangles, goesToInfinity = goesToInfinity)
 	else
 		myplot = draw_triangular_mesh(V, T, xlims = xlims, ylims = ylims, scatter1 = scatter, label = label, edges = edges, continuous = false)
 	end
@@ -631,10 +680,13 @@ input:
 		range of fibre_function values across a triangle is calculated (range across the values of the three vertices) and this range is used to determine if the triangle will be refined. For example,
 		if plot_proportion is 0.7, the 70th percentile of triangle value ranges is used as the threshold for refinement; any triangle with a value range greater than the 70th percentile will be refined. 
 		When refinement is complete, any triangle with a value range less than the 70th percentile will be plotted.
+		plotAllTriangles - in the case that fibre_function is continuous, used to indicate whether all triangles should be plotted or just those that 
+		have a range value less than the plotting_standard
+		goesToInfinity - in the case that a continuous fibre_function can get infinitely large, the natural logarithm of fibre_function values is plotted instead 
 output:
 		myplot - A plot of the mesh following all stages of refinement
 =#
-function Delaunay_visualization_with_Ruppert_refinement(EP::EnumerativeProblem; xlims = [-2,2], ylims = [-2,2], fibre_function = x->HomotopyContinuation.nreal(x[1]), depth = 4, resolution = 1000, total_resolution = 8*resolution, automatic = true, scatter = false, edges = false, label = true, continuous = false, plot_proportion = 0.7)
+function Delaunay_visualization_with_Ruppert_refinement(EP::EnumerativeProblem; xlims = [-2,2], ylims = [-2,2], fibre_function = x->HomotopyContinuation.nreal(x[1]), depth = 4, resolution = 1000, total_resolution = 8*resolution, automatic = true, scatter = false, edges = false, label = true, continuous = false, plot_proportion = 0.7, plotAllTriangles = true, goesToInfinity = true)
 	V, T, L = initial_triangular_mesh(EP, fibre_function = fibre_function, xlims = xlims, ylims = ylims, resolution = resolution)
 	if automatic == false
 		if continuous == true
@@ -673,7 +725,7 @@ function Delaunay_visualization_with_Ruppert_refinement(EP::EnumerativeProblem; 
 		end
 	end
 	if continuous == true
-		myplot = draw_triangular_mesh(V, T, xlims = xlims, ylims = ylims, scatter1 = scatter, label = label, edges = edges, continuous = true, plotting_standard = refinement_standard)
+		myplot = draw_triangular_mesh(V, T, xlims = xlims, ylims = ylims, scatter1 = scatter, label = label, edges = edges, continuous = true, plotting_standard = refinement_standard, plotAllTriangles = plotAllTriangles, goesToInfinity = goesToInfinity)
 	else
 		myplot = draw_triangular_mesh(V, T, xlims = xlims, ylims = ylims, scatter1 = scatter, label = label, edges = edges, continuous = false)
 	end
@@ -697,6 +749,25 @@ function standard_for_continuous_function_refinement(value_dict::Dict, triangles
         triangle_range = max_value - min_value
         triangle_value_ranges[T] = triangle_range
     end
-    standard_for_refinement = Statistics.quantile(values(triangle_value_ranges), plot_proportion)
+	triangle_ranges = []
+	for i in values(triangle_value_ranges)
+		push!(triangle_ranges, i)
+	end
+	standard_for_refinement = finiteDataSetPercentile(triangle_ranges, plot_proportion*100)
     return standard_for_refinement
+end
+
+#=function: finiteDataSetPercentile
+input:
+		dataSet - a set or vector of continuous data values
+		percentile - the desired percentile of dataSet
+output:
+		sortedDataSet[percentileIndex] - the value from the dataSet corresponding to the inputted percentile. For example, if percentile = 70, the function will return the first value from the 
+		dataSet that is greater than or equal to 70% of the values.
+=#
+function finiteDataSetPercentile(dataSet, percentile)
+    sortedDataSet = sort(dataSet)
+    dataSetSize = length(dataSet)
+    percentileIndex = findfirst(x->x/dataSetSize >= percentile/100, 1:dataSetSize)
+    return sortedDataSet[percentileIndex]
 end
