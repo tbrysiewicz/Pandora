@@ -16,6 +16,7 @@ function update_sampler_radius!(O::Optimizer,information::Dict{Any,Any}; desired
             #there are sufficiently many non-taboo
             if non_taboo_proportion<desired_interval[2]
                 #non_taboo proportion is within the desired interval - do nothing
+                println("                                                                 radius is good")
             else
                 #there are too many non-taboo
                 scale_sampler_radius!(O,2+rand(Float64))

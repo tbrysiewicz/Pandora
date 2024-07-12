@@ -1,9 +1,11 @@
 export
     optimize_real,
     improve!,
-    optimize,
+    optimize!,
     initialize_optimizer,
-    Experimenter
+    Experimenter,
+    real_barrier,
+    real_taboo
 
 const Fibre = Union{Tuple{Result,Vector{ComplexF64}},Tuple{Result,Vector{Float64}}}
 const RealFibre = Tuple{Result,Vector{Float64}}
@@ -174,15 +176,23 @@ end
 function initialize_optimizer(EP::EnumerativeProblem,SC::Function;
                                 taboo_score=TrivialScore,
                                 barrier_score=TrivialScore,
-                                barrier_weight=0.1,
-                                goal = x->false)
+                                barrier_weight=0.01,
+                                goal = x->false,
+                                current_parameter = [])
+    
     history = Vector{Tuple{Fibre,Any}}([])
     !(is_populated(EP)) && populate_base_fibre(EP)
     solver_fibre = base_fibre(EP)
     objective_score = SC
-    S = solve_over_params(EP,[randn(Float64,n_parameters(EP)) for i in 1:10])
-    if length(S)==0 #if solving over real parameters failed, return nothing
-        return(nothing)
+    S = nothing
+    if current_parameter == []
+       S = solve_over_params(EP,[randn(Float64,n_parameters(EP)) for i in 1:10])
+        if length(S)==0 #if solving over real parameters failed, return nothing
+            println("Solving over real parameters failed")
+            return(nothing)
+        end
+    else
+        S = solve_over_params(EP, [current_parameter])
     end
     current_fibre = S[1]
     record_fibre = current_fibre
@@ -191,7 +201,8 @@ function initialize_optimizer(EP::EnumerativeProblem,SC::Function;
     sampling_ellipsoid = Matrix{Float64}(LinearAlgebra.I,n_parameters(EP),n_parameters(EP))
     push!(history,(record_fibre,record_score))
     data = (EP, history, current_fibre, current_score, record_fibre, record_score, solver_fibre, SC, taboo_score, barrier_score, barrier_weight, sampling_ellipsoid,goal)
-    Optimizer(data...)
+    O = Optimizer(data...)
+    return(O)
 end
 
 function non_taboo_fibres(O::Optimizer,F::Vector{RealFibre})
@@ -227,9 +238,7 @@ function improve!(O::Optimizer; n_samples=nothing)
     end
     search_vectors = map(x->O.sampling_ellipsoid*x,[randn(Float64,n_parameters(O.EP)) for i in 1:ceil(n_samples/2)])
     search_vectors = vcat(search_vectors,map(x->-x,search_vectors))
-    println(length(O.history))
-    println(size(previous_vector))
-    println(size(O.sampling_ellipsoid))
+
     search_vectors = map(x->x.+O.sampling_ellipsoid*previous_vector,search_vectors)
     samples = [b+O.current_fibre[2] for b in search_vectors]
     #2)
@@ -325,20 +334,14 @@ function optimize_real(EP::EnumerativeProblem; n_trials = 50, Strategy = :normal
         scale_sampler_radius!(O,10)
         improve!(O;n_samples =200)
         scale_sampler_radius!(O,2)
-        improve!(O;n_samples =200)
-        scale_sampler_radius!(O,2)
-        improve!(O;n_samples =200)
-        scale_sampler_radius!(O,2)
-        improve!(O;n_samples =1000)
-        scale_sampler_radius!(O,0.1)
-        O = optimize!(O; n_trials = 30, n_samples = 10)
+        O = optimize!(O; n_trials = 50, n_samples = 30)
         O.objective_score = cts_real
         O.barrier_score = real_barrier
         O.taboo_score = real_taboo
         O.record_score = cts_real(O.record_fibre)
         O.current_score = cts_real(O.current_fibre)
         println("-------***Switching to one-by-one***--------")
-        O = optimize!(O; n_trials = 1000, n_samples = 10)
+        O = optimize!(O; n_trials = 2500, n_samples = 30)
   
     end
     #=
@@ -362,6 +365,7 @@ function optimize_real(EP::EnumerativeProblem; n_trials = 50, Strategy = :normal
         println(O)
     end
     =#
+    return(O)
 end
 
 
