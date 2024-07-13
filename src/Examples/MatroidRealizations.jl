@@ -3,7 +3,6 @@ export
 	points_to_matrix,
 	matrix_to_nonbases,
 	find_real_points,
-	random_real_linear_space, 
 	matroid_realization_space,
 	Matroid_score,
 	best_realizable_matroid
@@ -93,17 +92,15 @@ export
 	#return(System(eqns, variables=vcat(X...)), m)
 #end 
 
-function matroid_space_eqns(n, nonbases) 
+function matroid_space_eqns(n::Int64, nonbases::Vector{Vector{Int64}}) 
 	@var x[1:2,1:n]
 	matrix = vcat([1 for i in 1:n]', x) 
 	eqns = [det(matrix[1:3,c]) for c in nonbases] #Computing equations 
 	return (System(eqns, variables = vcat(x...)), matrix)	
 end
-
-
-function matroid_space_eqns(Matr::Matroid)
-	NB = Vector{Vector{Int}}(nonbases(Matr))
-	n = length(Matr)
+function matroid_space_eqns(M::Matroid)
+	NB = Vector{Vector{Int}}(nonbases(M))
+	n = length(M.groundset)
 	return(matroid_space_eqns(n, NB))
 end 
 
@@ -112,11 +109,13 @@ end
 #		d = dimension of space points lie in
 #Output: m = matrix where columns are the points 
 #TODO: generalize this function. What if the solution corresponds to a differently shaped matrix?
-function points_to_matrix(points::Union{Vector{Float64},Vector{ComplexF64}}, d::Int) 
+function points_to_matrix(points::Union{Vector{Float64},Vector{ComplexF64}}, d::Int; projective=true) 
 	n = div(length(points),d) #Number of columns 
  	M = reshape(points, d, n)  #Matrix of points
-	M_with_ones = vcat([1 for i in 1:n]', M)
-	return(M_with_ones)
+	if projective == true
+		M = vcat([1 for i in 1:n]', M)
+	end
+	return(M)
  end 
 
 #Function : matrix_to_nonbases 
@@ -125,7 +124,7 @@ function points_to_matrix(points::Union{Vector{Float64},Vector{ComplexF64}}, d::
 #TODO: Eventually switch to a reliable function from /AlgebraicMatroids
 function matrix_to_nonbases(matrix::Union{Matrix{Float64},Matrix{ComplexF64}}; tol = 10000) 
 	nonbases= []
-	r = rank(matrix,0.0001)
+	r = rank(matrix,1.0/tol)
 	n = size(matrix, 2) #number of columns
 	C = collect(combinations(1:n, r)) #collection of all possible bases 
 	
@@ -207,7 +206,7 @@ function find_N_real_points(V::Variety,N::Int; limit = 100)
 
 	while i < limit 
 
-		L = random_real_linear_space(d, D) #random linear subspace
+		L = rand_subspace(D, dim=d, real = true, affine = true)
 		newW = witness_set(W,L) #witness set of W using a random linear subspace
 		realpts = vcat(realpts, HomotopyContinuation.real_solutions(results(newW))) #list of real points off of NewW
 		length(realpts)>= N && break #break if we have found at least N real points 
@@ -217,22 +216,16 @@ function find_N_real_points(V::Variety,N::Int; limit = 100)
 	return(Nrealpts)
 end 
 
-#Function : random_real_linear_space
-#Input: d = dimension of linear space, D = dimension of ambient space 
-#Output: L = random affine linear space of dimension d
-function random_real_linear_space(d::Int,D::Int)
-	L = rand_subspace(D, dim=d, real = true, affine = true)
-	return(L)
-end
+
      
-#SC : scores a set of matroid solutions (scores a fiber) 
+#matroid_fibre_visual_appeal : scores a set of matroid solutions (scores a fiber) 
 #input: F = ()
-function SC(F :: Tuple{Result,Vector{Float64}}) #scoring the variety 
+function matroid_fibre_visual_appeal(F :: Tuple{Result,Vector{Float64}}) #scoring the variety 
 	real_sols= HomotopyContinuation.real_solutions(F[1]) #real solutions in fibre
        
 	if real_sols != []
 		N = length(real_sols) #N of real solutions 
-		record_max = maximum([sc(real_sols[i]) for i in 1:N]) #Take maximum score
+		record_max = maximum([matroid_visual_appeal(real_sols[i]) for i in 1:N]) #Take maximum score
 	else 
        		println("there are no real solutions") #will this happen? And what should I put?
 			return(-Inf)
@@ -245,7 +238,7 @@ end
 # Reshapes the solution S into a matrix M. Then scrolls through all possible point pairs and calculated the
 #norm between each pair of points and scores that norm on the function s. The minimum score across all point pairs is the
 #score of our matrix
-function sc(S)		
+function matroid_visual_appeal(S)		
 	m = reshape(S, 2, convert(Int, length(S)/2)) #reshapes solution vector s into a matrix
 	M = hcat(m, [0,1], [-1,0], [0,-1]) #adds set bases vectors to m 
 	n = size(M,2) #the number of elements in our matroid
@@ -264,29 +257,23 @@ function sc(S)
 	return(record_min)    
 end
 
-function mygt(a,b)
-           a>b
- end
- 
-Matroid_score = Score(SC, mygt)
 
 #Function : best_realizable_matroid
 #Input: n = number of points, nonbases = nonbases of matroid, N = number of steps optimization function will take   
 #Output: A planar graph of the matroid with the best point configuration for visual appeal 
 
-function best_realizable_matroid(n:: Int64, nonbases:: Vector{Vector{Int64}}, N:: Int64)
+function best_realizable_matroid(n:: Int64, nonbases:: Vector{Vector{Int64}}; n_trials::Int64 = 50, n_samples::Int64 = 10)
 
 	V = matroid_realization_space(n, nonbases) #variety associated to matroid space equations
 	if !isnothing(V) #if the matroid has a realization space
 		E = EnumerativeProblem(V) #Turning V into an ennumerative problem 
-		OE = optimize_enumerative(E, Matroid_score, N, TS = Pandora.no_taboo) #finding the set of solutions with the best configuration of points 
-		S = HomotopyContinuation.real_solutions(OE.RecordFibre[1]) #taking the real solutions from the results 
+		OE = initialize_optimizer(E,matroid_fibre_visual_appeal)
+		OE = optimize!(OE;n_trials=n_trials, n_samples=n_samples) #finding the set of solutions with the best configuration of points 
+		S = HomotopyContinuation.real_solutions(OE.record_fibre[1]) #taking the real solutions from the results 
 		if !is_empty(S) #if the optimizer returns a real solution
-			scores = [Pandora.sc(S[i]) for i in 1:length(S)] #vector of sc scores of all solutions in S
-			index_of_max = argmax(scores) #getting the index of the solution with the best score 
-			m = matroid_space_eqns(n, nonbases)[2] #matrix of variables and set basis 
-			M = HomotopyContinuation.evaluate(m, variables(m)=> S[index_of_max])[2:3, :] #matrix m evaluated at the best scored point in s 
-			P = draw_matroid_representative(M, nonbases)
+			best_matroid_in_fibre = S[argmax([matroid_visual_appeal(s) for s in S])] #vector of  scores of all solutions in S
+			best_matroid_as_matrix = points_to_matrix(best_matroid_in_fibre,2;projective=false)
+			P = draw_matroid_representative(best_matroid_as_matrix, nonbases)
 			return(P)
 		else 
 			println("There are no real solutions")
@@ -298,10 +285,11 @@ function best_realizable_matroid(n:: Int64, nonbases:: Vector{Vector{Int64}}, N:
 	end 
 end 
 
-function best_realizable_matroid(Matr:: Matroid, N::Int64)
-	n = length(Matr)
-	NB = nonbases(Matr)
-	return(best_realizable_matroid(n,NB,N))
-end 
+function best_realizable_matroid(M::Matroid; n_trials = 50, n_samples=10)
+	NB = Vector{Vector{Int}}(nonbases(M))
+	n = length(M.groundset)
+	best_realizable_matroid(n,NB;n_trials=n_trials,n_samples=n_samples)
+end
+
 
 
