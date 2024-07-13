@@ -68,30 +68,37 @@ export
 #Output: Eqns = determinant equations defining a matroid 
 #		 m = matrix repersenting the realization space, with 3 columns forming a basis set as triangle (1,1,0),(1,-1,0) and (1,0,1) 
 
-function matroid_space_eqns(n::Int, nonbases::Vector{Vector{Int}}) 
-	bases = filter(x -> !(x in nonbases), collect(combinations(1:n,3))) #finding the bases
-	k = filter(x ->!(x in bases[1]), 1:n) #finding all points not in the first basis
-	j = 1 #initalizing counter
-	m = zeros(3,n) #initalizing matrix of all zeros 
-	X = [] #initalizing list of variables 
+#function matroid_space_eqns(n::Int, nonbases::Vector{Vector{Int}}) 
+	#bases = filter(x -> !(x in nonbases), collect(combinations(1:n,3))) #finding the bases
+	#k = filter(x ->!(x in bases[1]), 1:n) #finding all points not in the first basis
+	#j = 1 #initalizing counter
+	#m = zeros(3,n) #initalizing matrix of all zeros 
+	#X = [] #initalizing list of variables 
 		
-	for i in 1:n 
-		if i in k 
-			@var x[1:2,i]
-			X = push!(X,x)
-			m = hcat(m[:, 1:(i-1)], vcat(1,x), m[:, (i+1):end])
-		end 
+	#for i in 1:n 
+		#if i in k 
+			#@var x[1:2,i]
+			#X = push!(X,x)
+			#m = hcat(m[:, 1:(i-1)], vcat(1,x), m[:, (i+1):end])
+		#end 
 			
-		if i in bases[1]
-			M = [1 1 1;-1 1 0; 0 0 1]
-			m = hcat(m[:, 1:(i-1)], M[:,j], m[:, (i+1):end])
-			j = j+1 
-		end 
-	end
+		#if i in bases[1]
+			#M = [1 1 1;-1 1 0; 0 0 1]
+			#m = hcat(m[:, 1:(i-1)], M[:,j], m[:, (i+1):end])
+			#j = j+1 
+		#end 
+	#end
 	
-	eqns = [det(m[1:3,c]) for c in nonbases] #Computing equations #TCB: TODO: try a non-determinantal set of equations at some point. 
-	return(System(eqns, variables=vcat(X...)), m)
-end 
+	#eqns = [det(m[1:3,c]) for c in nonbases] #Computing equations #TCB: TODO: try a non-determinantal set of equations at some point. 
+	#return(System(eqns, variables=vcat(X...)), m)
+#end 
+
+function matroid_space_eqns(n, nonbases) 
+	@var x[1:2,1:n]
+	matrix = vcat([1 for i in 1:n]', x) 
+	eqns = [det(matrix[1:3,c]) for c in nonbases] #Computing equations 
+	return (System(eqns, variables = vcat(x...)), matrix)	
+end
 
 
 function matroid_space_eqns(Matr::Matroid)
@@ -219,11 +226,12 @@ function random_real_linear_space(d::Int,D::Int)
 end
      
 #SC : scores a set of matroid solutions (scores a fiber) 
+#input: F = ()
 function SC(F :: Tuple{Result,Vector{Float64}}) #scoring the variety 
 	real_sols= HomotopyContinuation.real_solutions(F[1]) #real solutions in fibre
        
 	if real_sols != []
-		N = length(real_sols) #nurandommber of real solutions 
+		N = length(real_sols) #N of real solutions 
 		record_max = maximum([sc(real_sols[i]) for i in 1:N]) #Take maximum score
 	else 
        		println("there are no real solutions") #will this happen? And what should I put?
@@ -233,16 +241,19 @@ function SC(F :: Tuple{Result,Vector{Float64}}) #scoring the variety
 end
        
 
-#sc: scores a matroid solution -- what if they choose a different initialized basis than [0,1], [-1,0], [0,1]     
+#sc: scores a matroid solution -- what if they choose a different initialized basis than [0,1], [-1,0], [0,1]  
+# Reshapes the solution S into a matrix M. Then scrolls through all possible point pairs and calculated the
+#norm between each pair of points and scores that norm on the function s. The minimum score across all point pairs is the
+#score of our matrix
 function sc(S)		
-	m = reshape(S, 2, convert(Int, length(S)/2))
-	M = hcat(m, [0,1], [-1,0], [0,-1]) #putting the solution s in a matrix, along with points set for a basis 
-	n = size(M,2) #the number of points
-	point_pairs = collect(combinations(1:n,2)) 
-	record_min = Inf
-	for j in 1:(length(point_pairs))	
-		p = M[:,(point_pairs[j][1])]
-		q = M[:,(point_pairs[j][2])]
+	m = reshape(S, 2, convert(Int, length(S)/2)) #reshapes solution vector s into a matrix
+	M = hcat(m, [0,1], [-1,0], [0,-1]) #adds set bases vectors to m 
+	n = size(M,2) #the number of elements in our matroid
+	point_pairs = collect(combinations(1:n,2)) #all possible combinations of pairs of points
+	record_min = Inf 
+	for j in 1:(length(point_pairs)) #scrolls through all possible point pairs 	
+		p = M[:,(point_pairs[j][1])] #first point in the pair
+		q = M[:,(point_pairs[j][2])] #second point in the pair
 		x = norm(p-q) #norm between the 2 points in pair j 
 		s =  -(1/1.851)*(x-0.1)*(x-2*sqrt(2)) #scoring that distance (I have no idea how big a marker is)
 		
@@ -266,19 +277,31 @@ Matroid_score = Score(SC, mygt)
 function best_realizable_matroid(n:: Int64, nonbases:: Vector{Vector{Int64}}, N:: Int64)
 
 	V = matroid_realization_space(n, nonbases) #variety associated to matroid space equations
-	E = EnumerativeProblem(V) #Turning V into an ennumerative problem 
-	OE = optimize_enumerative(E, Matroid_score, N, TS = Pandora.no_taboo) #finding the set of solutions with the best configuration of points 
-	S = HomotopyContinuation.real_solutions(OE.RecordFibre[1]) #taking the real solutions from the results 
-	scores = [Pandora.sc(S[i]) for i in 1:length(S)] #vector of sc scores of all solutions in S
-	index_of_max = argmax(scores) #getting the index of the solution with the best score 
-	m = matroid_space_eqns(n, nonbases)[2] #matrix of variables and set basis 
-	M = HomotopyContinuation.evaluate(m, variables(m)=> S[index_of_max])[2:3, :] #matrix m evaluated at the best scored point in s 
-	P = draw_matroid_representative(M, nonbases)
-	R = OE.Record 
-	title!("Score:$R")
-	return(P)
+	if !isnothing(V) #if the matroid has a realization space
+		E = EnumerativeProblem(V) #Turning V into an ennumerative problem 
+		OE = optimize_enumerative(E, Matroid_score, N, TS = Pandora.no_taboo) #finding the set of solutions with the best configuration of points 
+		S = HomotopyContinuation.real_solutions(OE.RecordFibre[1]) #taking the real solutions from the results 
+		if !is_empty(S) #if the optimizer returns a real solution
+			scores = [Pandora.sc(S[i]) for i in 1:length(S)] #vector of sc scores of all solutions in S
+			index_of_max = argmax(scores) #getting the index of the solution with the best score 
+			m = matroid_space_eqns(n, nonbases)[2] #matrix of variables and set basis 
+			M = HomotopyContinuation.evaluate(m, variables(m)=> S[index_of_max])[2:3, :] #matrix m evaluated at the best scored point in s 
+			P = draw_matroid_representative(M, nonbases)
+			return(P)
+		else 
+			println("There are no real solutions")
+			return(nothing)
+		end 
+
+	else 
+		return(nothing)
+	end 
 end 
 
-
+function best_realizable_matroid(Matr:: Matroid, N::Int64)
+	n = length(Matr)
+	NB = nonbases(Matr)
+	return(best_realizable_matroid(n,NB,N))
+end 
 
 

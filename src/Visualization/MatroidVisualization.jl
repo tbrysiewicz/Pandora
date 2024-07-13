@@ -8,9 +8,9 @@ export
 function draw_matroid_representative(M::Matrix{Float64},nonbases::Vector{Vector{Int}})
 	x = M[1,:] 
 	y = M[2,:]
-	visualization = scatter(x, y, markersize =8, markercolor=:black, legend = false) #scatter plot with columns of M as points
+	visualization = scatter(x, y, markersize =4, markercolor=:black, legend = false) #scatter plot with columns of M as points
 		for i in 1:size(M,2)
-    			annotate!(x[i], y[i], text("$i", 8, :white, :center)) #labelling each point by number
+    			annotate!(x[i], y[i], text("$i", 4, :white, :center)) #labelling each point by number
 		end
 	
 		for j in 1:length(nonbases)  #plotting lines the points lie on
@@ -26,3 +26,46 @@ function draw_matroid_representative(M::Matrix{Float64},nonbases::Vector{Vector{
 		NB = nonbases(Matr)
 		return(draw_matroid_representative(M,NB))
 	end
+
+
+#Function: plot_first_n_matroids- generates the first n simple matroids from the ploymake database that are realizable and do not have repeated nonbases, and plots them 
+#input : n = interval of matroids to plot, N = number of steps taken by the optimizer for each matroid, l = layout of the combined plot
+#output : combine_plot = a combined plot of all of the matroids, with layout l 
+
+function  plot_first_n_matroids(n:: Tuple{Int64, Int64}, N:: Int64, l:: Tuple{Int64, Int64})
+	matroidsnb = [] #empty list of the nonbases of the matroids 
+	plot_vector = Vector{Plots.Plot}() #empty vector of plots  
+	p = 1 #number of elements the matroid has 
+	
+	
+	db = Polymake.Polydb.get_db();
+	collection = db["Matroids.Small"]; #generating the database 
+		
+	while length(matroidsnb) < n[2]	#while the number of matroids added to list is less than n[2]
+		query = Dict("RANK"=>3,"N_ELEMENTS"=>p,"SIMPLE"=>true) #query for generating all matroids with p elements from the database 
+		results1 = Polymake.Polydb.find(collection, query) 
+		oscar_matroids = [Matroid(pm) for pm in results1] #list of all matroids with p elements 
+		
+		for i in 2:length(oscar_matroids) #searching through all matroids in oscar_matroids and generating nonbases and output of best_realizable_matroid (skip the first matroid, as nb = [])
+				   nb = nonbases(oscar_matroids[i])
+				   mat_plot = best_realizable_matroid(oscar_matroids[i], N) #outputs either a plot of oscar_matroid[i] or nothing if matroid is not realizable/ has no real solutions
+			   
+				   if !(nb in matroidsnb) && !isnothing(mat_plot)  #filtering out all matroids that have the same nonbases as another matroids in the list matroidsnb and filtering out matroids that are not realizable and have no real solutions
+					   push!(matroidsnb, nb)
+
+					   if length(matroidsnb) >= n[1]
+					   		push!(plot_vector, mat_plot)
+
+					   		if length(matroidsnb) == n[2] #break if there is n matroids in the list 
+						   		break 
+					   		end
+						end 
+				   end 
+		end
+		p =p + 1 #updating to generate another query 
+	end 
+	combined_plot = plot(plot_vector..., layout = l, left_margins= -10*Plots.mm, top_margins= -10*Plots.mm, bottoms_margins= -10*Plots.mm) #creating the combined plot of the n matroids 
+	
+	return(combined_plot)
+	
+	end 
