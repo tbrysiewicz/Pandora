@@ -4,8 +4,9 @@ export
 	matrix_to_nonbases,
 	find_real_points,
 	matroid_realization_space,
-	Matroid_score,
-	best_realizable_matroid
+	best_realizable_matroid,
+	matroid_fibre_visual_appeal,
+	matroid_visual_appeal
 
 
 #TODO List
