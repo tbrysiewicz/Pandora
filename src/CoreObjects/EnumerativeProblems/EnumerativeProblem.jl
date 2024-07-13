@@ -212,13 +212,14 @@ function populate_base_fibre(E::EnumerativeProblem; Method="Explicit")
     if Method == "Explicit"
         P = randn(ComplexF64,n_parameters(E))
         S = solve(F,target_parameters=P)
+        S = solutions(S)
     elseif Method == "Monodromy"
         println("Using monodromy")
         M = monodromy_solve(F)
         P = parameters(M)
         S = solutions(M)
-        S = solve(F,S,start_parameters=P,target_parameters=P)
     end
+    S = solve(F,S,start_parameters=P,target_parameters=P)
     E.BaseFibre=(S,P)
 end
 

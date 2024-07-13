@@ -109,7 +109,7 @@ function initial_triangular_mesh(EP::EnumerativeProblem;fibre_function = x->Homo
     delta = (xrange[2]-xrange[1])/2
     Triangles = []
     P = [[i-isodd(findfirst(x->x==j,yrange))*delta,j] for i in xrange for j in yrange]
-    S = solve_over_params(EP,P; checks = [])
+    S = solve_over_params(EP,P; checks = [], retry=true)
     value_dict=Dict{Any,Any}()
     for s in S
         value_dict[s[2]]=fibre_function(s)
@@ -188,7 +188,7 @@ function refine_triangular_mesh(EP::EnumerativeProblem,value_dict::Dict,Triangle
         push!(newTriangles,[T[2],T[3],barycenter])
         push!(newParameters,barycenter)
     end
-    S = solve_over_params(EP,newParameters; checks = [])
+    S = solve_over_params(EP,newParameters; checks = [], retry=true)
     for s in S
         value_dict[s[2]]=fibre_function(s)
         if length(solutions(s[1]))!=degree(EP) || nsingular(s[1])!=0
@@ -419,7 +419,7 @@ function triforce_refinement(EP::EnumerativeProblem, value_dict::Dict, triangles
 		push!(newParameters, midpoint2)
 		push!(newParameters, midpoint3)
 	end
-	S = solve_over_params(EP, newParameters, checks = [])
+	S = solve_over_params(EP, newParameters, checks = [], retry=true)
 	for i in S
 		if length(solutions(i[1]))!=degree(EP) || nsingular(i[1])!=0
         	value_dict[i[2]] = false
@@ -646,7 +646,7 @@ function Delaunay_triangulation_with_Ruppert_refinement(EP::EnumerativeProblem, 
 		end
 	end
 	println("Number of vertices added by Ruppert refinement: ", length(vertices_added_by_refinement))
-	S = solve_over_params(EP, vertices_added_by_refinement, checks = [])
+	S = solve_over_params(EP, vertices_added_by_refinement, checks = [], retry= true)
 	for s in S
         if length(solutions(s[1]))!=degree(EP) || nsingular(s[1])!=0
         	value_dict[s[2]] = false #parameters are given false value if they produce an "error"

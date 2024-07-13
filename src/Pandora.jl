@@ -49,7 +49,7 @@ end
 
 include("CoreObjects/Varieties/Variety.jl")
 include("CoreObjects/EnumerativeProblems/EnumerativeProblem.jl")
-include("Fibres/Scores.jl")
+#include("Fibres/Scores.jl")
 
 #This needs to be fixed in several ways.
 #include("AlgebraicMatroid/AlgebraicMatroid.jl")
@@ -64,9 +64,10 @@ include("Enumeration/DegreeBounds.jl")
 include("Examples/BasicEnumerativeExamples.jl")
 include("Examples/FamousEnumerativeExamples.jl")
 include("Examples/BasicVarietyExamples.jl")
-include("Examples/MatroidRealizations.jl")
-include("Visualization/MatroidVisualization.jl")
+#include("Examples/MatroidRealizations.jl")
+#include("Visualization/MatroidVisualization.jl")
 include("Examples/AltBurmester.jl")
+include("Examples/CCEquations.jl")
 
 
 include("Exploration/Explore.jl")
@@ -81,8 +82,10 @@ include("GaloisGroups/GaloisSampling.jl")
 include("GaloisGroups/GaloisGroups.jl")
 include("GaloisGroups/CoordinateSymmetryGroup.jl")
 
-include("Optimization/CoreObjects.jl")
-include("Optimization/Optimizer.jl")
+#include("Optimization/CoreObjects.jl")
+#include("Optimization/Optimizer.jl")
+include("Optimization/OptimizerBeta.jl")
+include("Optimization/OptimizerUpdaters.jl")
 
 
 include("Statistics/Tally.jl")
