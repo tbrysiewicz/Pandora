@@ -10,33 +10,6 @@ export
 #      and suggest restricting
 
 
-#Input: 
-#		EP - an enumerative problem 
-#		P  - a collection of (n) parameter values of EP
-#Output:
-#       a new enumerative problem which is EP restricted to the affine (n-1)-dimensional space
-#       spanned by the parameters in P
-
-function restrict_enumerative_problem(EP::EnumerativeProblem)
-	P = [randn(Float64,n_parameters(EP)) for i in 1:3]
-	return(restrict_enumerative_problem(EP,P))
-end
-
-function restrict_enumerative_problem(EP::EnumerativeProblem,P::Vector{Vector{Float64}})
-	F = system(EP)
-	xv = variables(F)
-	xp = parameters(F)
-	n = length(P)
-	@var t[1:n-1]
-	affine_span = P[n]+sum([t[i].*(P[i]-P[n]) for i in 1:n-1])
-	NewEquations = [subs(f,xp=>affine_span) for f in expressions(F)]
-	return(EnumerativeProblem(System(NewEquations,variables=xv,parameters=t)))
-end
-#=
-EP = TwentySevenLines()
-MyPlots = visualizationWithRefinement(restrict_enumerative_problem(EP,[randn(Float64,20) for i in 1:3]),[-1,1],[-1,1],100,5)
-=#
-
 
 #Input:
 #		xlims - x parameter interval
