@@ -1,5 +1,4 @@
 export
-    visualize_discriminant,
     restrict_enumerative_problem_to_plane
 
 
