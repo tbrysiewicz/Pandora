@@ -95,7 +95,7 @@ include("Statistics/Tally.jl")
 
 #include("Visualization/Visualize.jl")
 include("Visualization/Triangulate.jl")
-#include("Visualization/Visualize_Discriminant.jl")
+include("Visualization/Visualize_Discriminant.jl")
 
 
 
