@@ -240,8 +240,7 @@ end
 #norm between each pair of points and scores that norm on the function s. The minimum score across all point pairs is the
 #score of our matrix
 function matroid_visual_appeal(S)		
-	m = reshape(S, 2, convert(Int, length(S)/2)) #reshapes solution vector s into a matrix
-	M = hcat(m, [0,1], [-1,0], [0,-1]) #adds set bases vectors to m 
+	M = reshape(S, 2, convert(Int, length(S)/2)) #reshapes solution vector s into a matrix
 	n = size(M,2) #the number of elements in our matroid
 	point_pairs = collect(combinations(1:n,2)) #all possible combinations of pairs of points
 	record_min = Inf 
@@ -268,14 +267,19 @@ function best_realizable_matroid(n:: Int64, nonbases:: Vector{Vector{Int64}}; n_
 	V = matroid_realization_space(n, nonbases) #variety associated to matroid space equations
 	if !isnothing(V) #if the matroid has a realization space
 		E = EnumerativeProblem(V) #Turning V into an ennumerative problem 
+
+		path_solutions = HomotopyContinuation.solutions(E.BaseFibre[1]) #all solutions from each pathresult of the base fibre
+		best_path_solution = path_solutions[argmax([matroid_visual_appeal(s) for s in path_solutions])] #finding the solution (matroid) in path_solutions that has the highest score
+		P = base_parameters(E)
+		NewR = solve(system(E), best_path_solution; start_parameters = P, target_parameters =P) #converting best_path_solution to a result 
+		E.BaseFibre = (NewR, P) #Changing base fibre of E so that it only tracks the path associated to best_path_solution
+
 		OE = initialize_optimizer(E,matroid_fibre_visual_appeal)
 		OE = optimize!(OE;n_trials=n_trials, n_samples=n_samples) #finding the set of solutions with the best configuration of points 
 		S = HomotopyContinuation.real_solutions(OE.record_fibre[1]) #taking the real solutions from the results 
 		if !is_empty(S) #if the optimizer returns a real solution
-			best_matroid_in_fibre = S[argmax([matroid_visual_appeal(s) for s in S])] #vector of  scores of all solutions in S
-			best_matroid_as_matrix = points_to_matrix(best_matroid_in_fibre,2;projective=false)
-			P = draw_matroid_representative(best_matroid_as_matrix, nonbases)
-			return(P)
+			best_matroid_as_matrix = points_to_matrix(S[1],2;projective=false)
+			return(best_matroid_as_matrix)
 		else 
 			println("There are no real solutions")
 			return(nothing)
