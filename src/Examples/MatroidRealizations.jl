@@ -1,98 +1,43 @@
 export 
-	matroid_space_eqns,
-	points_to_matrix,
 	matrix_to_nonbases,
-	find_real_points,
 	matroid_realization_space,
-	best_realizable_matroid,
-	matroid_fibre_visual_appeal,
-	matroid_visual_appeal
+	best_realizable_matroid
 
 
 #TODO List
-#-Take an oscar matroid as input 		
-#		Alex: this is done
-#-Put types in the inputs 
-#		Alex: this is done 
-#-Run tests (make another file with queries whose answers you know)
-#		Alex: I would like to run a few more tests to really make sure it's solid 
-#-Make sure the names of functions are exactly what they do 								
-#            (e.g. solution to matrix is a general function name which does something
-#                  very specific: it makes a 2xn matrix.)
-#-Can you upgrade this to handle matroids of points in higher-dimensional spaces (other than the plane?)
-#		Alex: I renamed solution_to_matrix and I did update this function, so it takes an 	
-#			  input d::the dimension of space the points are in. I'm thinking I should change matroid_space_eqns and matroid_realization_space
-#			  to also take points that are not just in the plane. 
+#matroid_space_eqns
+#	- Should I generalize this so it works for matroids of different rank? 
 #
-#-Write a function which is called													
-#   function find_real_points(V::Variety,N::Int; limit = 100)
-#  which will compute (at most) "limit" - many witness sets over real linear spaces
-#  and collect the real points along the way until N real points have been found. 
-#-You will need to figure out a way to make a "random" linear space. Make that into a function
-#  too: function random_linear_space(d::Int,D::Int) # make random linear space of dimension d in an ambient space of dimension D
-#  use the HomotopyContinuation.jl type "LinearSpace"  				
-#	Alex: This function is written. HomotopyContinuation had a bulit in function to produce a random linear space but I still wrote the random
-#		  linearspace function using it. I'm not sure if I should just delete this since it only uses HomotopyContinuation's built in function?
+#points_to_matrix 
 #
-# -Continue writing the function which scores the 'visual appeal' of a 2xn matrix (along w/ dependencies of interest) 
-#          whose cols correspond to points
-#	Alex: I'm working away at this. 
+#matroid_realization_space
+#	- Should I generalize this so it works for matroids of different rank?
+#	- How to deal with the matroid given by nonbases = []. As the code errors out since the NID cannot be computed. 
+#	- Discuss the issue of a trace test failure when the NID is computed with Taylor. (Motivated by the matroid that Taylor #	  emailed to me)
+#	- Discuss what Taylor is referring to in the last block of code that has println("ERROR: This code needs to be written")
+#	
+#find_N_real_points 
+#	- Maybe delete?? No longer used in my code.
 #
-#- Write a function which draw the point and lines
-# function draw_matroid_representative(M::Matrix{Float64},nonbases=Vector{Vector{Int}})
-#  use scatter and use plot. Put it in the visualization folder in a file called
-#   MatroidVisualization.jl
-#	Alex: this is done
+#matroid_fibre_visual_appeal
+#	- Comment it
+#	- Now that I have changed best_realizable_matroid so that the base fibre of E so only tracks the path associated to #	 best_path_solution, so the fibre only has one matroid solution, should I delete this?? I would have to change the code #	 of best_realizable_matroid to use matroid_visual_appeal as a score. 
+#	
+#matroid_visual_appeal
+#	- Add type for the input 
+#	- If I delete matroid_fibre_visual_appeal, I would need to change this up, specifcally add a message if the solution isn't real. 
 #
-# -After writting this, you can write something like
-# function draw_matroid_representative(M::Matrix{Float64},Matr::Matroid)
-#    NB = nonbases(Matr)
-#    return(draw_matroid_representative(M,NB))
-# end
-#	Alex: this is done
+#best_realizable_matroid 
+#	- Should I change my documentation example? 
+#	
+#- For the matroid Taylor emailed me, it was sent as M = [[3,8,9],[4,7,8],[1,2,6,8],[8,11,12],[5,6,10],[9,10,11],[2,4,5,9],[1,9,12],[1,3,5,7],[3,10,12]]. There was a nonbases of 4 elements, should I #make a function that breaks this up, and then call it in my other functions?? As currently, my functions won't take this input as the nonbases are not the same length.
 #
+#- If time, implement code for oriented matroids 
 #
-# -Together, by the end of the week it would  be great to have a function which samples 1000
-#   real configurations representing a matroid, and picks the one that "looks" the best and
-#   plots it. 
-# -It would be nice if all of the relevant functions which one could reasonably expect
-#  to call on an object of type "Oscar.Matroid" can be called in that way. 
-# -If you really want to push hard this week, take a look at Optimization/CoreObjects at the "Score"
-#   constructions there. 
 
-
-
-#Function: matroid_space_eqns  
-#Input: n = number of points,
-#       NonBases = points we want collinear/ nonbases of matroid  
-#Output: Eqns = determinant equations defining a matroid 
-#		 m = matrix repersenting the realization space, with 3 columns forming a basis set as triangle (1,1,0),(1,-1,0) and (1,0,1) 
-
-#function matroid_space_eqns(n::Int, nonbases::Vector{Vector{Int}}) 
-	#bases = filter(x -> !(x in nonbases), collect(combinations(1:n,3))) #finding the bases
-	#k = filter(x ->!(x in bases[1]), 1:n) #finding all points not in the first basis
-	#j = 1 #initalizing counter
-	#m = zeros(3,n) #initalizing matrix of all zeros 
-	#X = [] #initalizing list of variables 
-		
-	#for i in 1:n 
-		#if i in k 
-			#@var x[1:2,i]
-			#X = push!(X,x)
-			#m = hcat(m[:, 1:(i-1)], vcat(1,x), m[:, (i+1):end])
-		#end 
-			
-		#if i in bases[1]
-			#M = [1 1 1;-1 1 0; 0 0 1]
-			#m = hcat(m[:, 1:(i-1)], M[:,j], m[:, (i+1):end])
-			#j = j+1 
-		#end 
-	#end
-	
-	#eqns = [det(m[1:3,c]) for c in nonbases] #Computing equations #TCB: TODO: try a non-determinantal set of equations at some point. 
-	#return(System(eqns, variables=vcat(X...)), m)
-#end 
-
+#Function: matroid_space_eqns
+#Input: n = number of elements in a matroid, nonbases = nonbases of a rank 3 matroid
+#Output: A tuple containing the equations of describing a matroid space and a general matrix from which the equations are derived from. 
 function matroid_space_eqns(n::Int64, nonbases::Vector{Vector{Int64}}) 
 	@var x[1:2,1:n]
 	matrix = vcat([1 for i in 1:n]', x) 
@@ -105,11 +50,10 @@ function matroid_space_eqns(M::Matroid)
 	return(matroid_space_eqns(n, NB))
 end 
 
-#Function : solution_to_matrix 
+#Function : solution_to_matrix
 #Input: points = vector of point entries  
 #		d = dimension of space points lie in
-#Output: m = matrix where columns are the points 
-#TODO: generalize this function. What if the solution corresponds to a differently shaped matrix?
+#Output: m = matrix where columns are the points. If projective = true, a row of ones is added to the top of the matrix. 
 function points_to_matrix(points::Union{Vector{Float64},Vector{ComplexF64}}, d::Int; projective=true) 
 	n = div(length(points),d) #Number of columns 
  	M = reshape(points, d, n)  #Matrix of points
@@ -119,11 +63,27 @@ function points_to_matrix(points::Union{Vector{Float64},Vector{ComplexF64}}, d::
 	return(M)
  end 
 
-#Function : matrix_to_nonbases 
-#Input: matrix = matirx   
-#Output: nonbases = Non-Bases of matrix
-#TODO: Eventually switch to a reliable function from /AlgebraicMatroids
-function matrix_to_nonbases(matrix::Union{Matrix{Float64},Matrix{ComplexF64}}; tol = 10000) 
+
+ #TODO: (for matrix_to_nonbases) Eventually switch to a reliable function from /AlgebraicMatroids
+ @doc raw"""
+ 	matrix_to_nonbases(matrix::Union{Matrix{Int64},Matrix{Float64},Matrix{ComplexF64}}; tol = 10000) 
+ 
+Returns the corresponding nonbases of $matrix$. 
+# Examples
+```jldoctest
+julia> M = [1 0 1 4; 0 1 1 5; 0 0 0 6]
+3×4 Matrix{Int64}:
+1  0  1  4
+0  1  1  5
+0  0  0  6
+
+julia> matrix_to_nonbases(M)
+1-element Vector{Any}:
+[1, 2, 3]
+
+```
+"""
+function matrix_to_nonbases(matrix::Union{Matrix{Int64},Matrix{Float64},Matrix{ComplexF64}}; tol = 10000) 
 	nonbases= []
 	r = rank(matrix,1.0/tol)
 	n = size(matrix, 2) #number of columns
@@ -142,9 +102,31 @@ function matrix_to_nonbases(matrix::Union{Matrix{Float64},Matrix{ComplexF64}}; t
 end 
  
 
-#Function : matroid_realization_space
-#Input: n= number of points, nonbases = points we want collinear/ nonbases of a matrix  
-#Output: matroidwitnessresults = Witness set of a matroid
+@doc raw"""
+    matroid_realization_space(n::Int,nonbases::Vector{Vector{Int}}) 
+    matroid_realization_space(Matr::Matroid)
+    
+Returns the variety of the realization space of a rank three matroid over the complex numbers. If the matroid is not realizable over the complex numbers, nothing will be returned. 
+# Examples
+ ```jldoctest
+ julia> matroid_realization_space(7, [[1,2,3],[1,4,5],[1,6,7]])
+✓ Decomposing 1 witness sets    Time: 0:00:01
+  Current status:                    
+  Degrees of components of dim. 11:  8
+There are 1 many component(s) of the realization space.
+They are all 11-dimensional          1
+Assigning the corresponding witness (superset) to the witness slot of the variety
+A variety in C^14 of degree 8 and dimension 11.
+
+julia> matroid_realization_space(fano_matroid())
+✓ Decomposing 2 witness sets    Time: 0:00:01
+  Current status:                   
+  Degrees of components of dim. 9:  6
+  Degrees of components of dim. 7:  2,2,2,2,2,2,2,2,2,2,2,2,2,2
+Matroid is not realizable
+
+```
+"""
 function matroid_realization_space(n::Int,nonbases::Vector{Vector{Int}})  
 	eqns = matroid_space_eqns(n, nonbases)
 	matroid_variety = Variety(eqns[1])
@@ -188,7 +170,6 @@ function matroid_realization_space(n::Int,nonbases::Vector{Vector{Int}})
 	end
 end
 
-
 function matroid_realization_space(Matr::Matroid)
 	NB = Vector{Vector{Int}}(nonbases(Matr))
 	n = length(Matr)
@@ -216,11 +197,8 @@ function find_N_real_points(V::Variety,N::Int; limit = 100)
 	Nrealpts = vcat(realpts[1:N]) #collecting N real points off of witness set
 	return(Nrealpts)
 end 
-
-
-     
+    
 #matroid_fibre_visual_appeal : scores a set of matroid solutions (scores a fiber) 
-#input: F = ()
 function matroid_fibre_visual_appeal(F :: Tuple{Result,Vector{Float64}}) #scoring the variety 
 	real_sols= HomotopyContinuation.real_solutions(F[1]) #real solutions in fibre
        
@@ -228,7 +206,7 @@ function matroid_fibre_visual_appeal(F :: Tuple{Result,Vector{Float64}}) #scorin
 		N = length(real_sols) #N of real solutions 
 		record_max = maximum([matroid_visual_appeal(real_sols[i]) for i in 1:N]) #Take maximum score
 	else 
-       		println("there are no real solutions") #will this happen? And what should I put?
+       		println("there are no real solutions") 
 			return(-Inf)
 	end
 	return(record_max)
@@ -248,20 +226,70 @@ function matroid_visual_appeal(S)
 		p = M[:,(point_pairs[j][1])] #first point in the pair
 		q = M[:,(point_pairs[j][2])] #second point in the pair
 		x = norm(p-q) #norm between the 2 points in pair j 
-		s =  -(1/1.851)*(x-0.1)*(x-2*sqrt(2)) #scoring that distance (I have no idea how big a marker is)
+		s =  -(1/1.851)*(x-0.1)*(x-2*sqrt(2)) #scoring that norm
 		
 		if s < record_min
-			record_min = s #recording the minimum distance 
+			record_min = s #recording the minimum norm 
 		end
 	end   
 	return(record_min)    
 end
 
 
-#Function : best_realizable_matroid
-#Input: n = number of points, nonbases = nonbases of matroid, N = number of steps optimization function will take   
-#Output: A planar graph of the matroid with the best point configuration for visual appeal 
+@doc raw"""
+    best_realizable_matroid(n:: Int64, nonbases:: Vector{Vector{Int64}}; n_trials::Int64 = 50, n_samples::Int64 = 10)
+    best_realizable_matroid(M::Matroid; n_trials = 50, n_samples=10)
+    
+Returns a real matrix repersentative of a rank three matroid. This matrix repersentative has the best visual appeal when drawing the matroid in the plane. If the matroid is not realizable or if there are no real matrix repersentatives, then nothing is returned.  
 
+Matrices are sampled from the realization space of the matroid, and then optimized based on a visual appeal score. n_trials corresponds to the number of trials the optmizer will take and n_samples corresponds to the number of samples the optmizer will take on each trial. 
+# Examples
+ ```jldoctest
+julia> best_realizable_matroid(non_fano_matroid(), n_trials = 2)
+✓ Decomposing 2 witness sets    Time: 0:00:00
+  Current status:                   
+  Degrees of components of dim. 9:  6
+  Degrees of components of dim. 8:  3,3,22,3,1
+There are 1 many component(s) of the realization space.
+They are all 8-dimensional
+Assigning the corresponding witness (superset) to the witness slot of the variety
+-----------------------------------------------Trial: 1
+Number of samples: 10
+Number of successful tracks: 10
+there are no real solutions
+there are no real solutions
+there are no real solutions
+there are no real solutions
+there are no real solutions
+there are no real solutions
+there are no real solutions
+there are no real solutions
+Current Score: -0.6008297846505287
+     Status: Improved Record Score
+     Improvement: 15.952363197997954
+Number of fibres computed:10
+Number of non-taboo fibres:10
+-----------------------------------------------Trial: 2
+Number of samples: 10
+Number of successful tracks: 10
+there are no real solutions
+there are no real solutions
+there are no real solutions
+there are no real solutions
+there are no real solutions
+there are no real solutions
+there are no real solutions
+Current Score: 0.08141457545739453
+     Status: Improved Record Score
+     Improvement: 0.6822443601079232
+Number of fibres computed:10
+Number of non-taboo fibres:10
+2×7 Matrix{Float64}:
+ -0.71116   0.162516  0.420361  -0.691239  -0.700836  0.439747  0.937398
+  0.669725  1.11295   1.24375    0.23219    0.44298   1.39895   1.71426
+
+```
+"""
 function best_realizable_matroid(n:: Int64, nonbases:: Vector{Vector{Int64}}; n_trials::Int64 = 50, n_samples::Int64 = 10)
 
 	V = matroid_realization_space(n, nonbases) #variety associated to matroid space equations
@@ -281,7 +309,7 @@ function best_realizable_matroid(n:: Int64, nonbases:: Vector{Vector{Int64}}; n_
 			best_matroid_as_matrix = points_to_matrix(S[1],2;projective=false)
 			return(best_matroid_as_matrix)
 		else 
-			println("There are no real solutions")
+			println("There are no real matrix repersentatives.")
 			return(nothing)
 		end 
 
