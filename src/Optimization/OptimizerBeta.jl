@@ -279,7 +279,7 @@ function improve!(O::Optimizer; n_samples=nothing)
         status = "All Are Taboo"
     end
     println("Current Score: ",O.current_score)
-    improvement_info["Status: "] = status
+    improvement_info["status"] = status
     println("     Status: ",status)
     println("     Improvement: ",improvement)
     return(improvement_info)

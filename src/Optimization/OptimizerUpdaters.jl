@@ -5,6 +5,10 @@ end
 #This function will scale the sampler based on how many samples were taboo
 function update_sampler_radius!(O::Optimizer,information::Dict{Any,Any}; desired_interval =[0.7,0.8])
     if O.taboo_score == TrivialScore
+        if get(information,"status",0.0)=="No Improvement"
+            scale_sampler_radius!(O,0.9)            
+            println("                                               no improvement - radius down: ",eigmax(O.sampling_ellipsoid))
+        end
         return()
     end
     n_fibres = get(information,"n_fibres","na")
