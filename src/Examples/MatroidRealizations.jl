@@ -13,15 +13,14 @@ export
 #matroid_realization_space
 #	- Should I generalize this so it works for matroids of different rank?
 #	- How to deal with the matroid given by nonbases = []. As the code errors out since the NID cannot be computed. 
-#	- Discuss the issue of a trace test failure when the NID is computed with Taylor. (Motivated by the matroid that Taylor #	  emailed to me)
+#	- Discuss the issue of a trace test failure when the NID is computed with Taylor. (Motivated by the matroid that Taylor emailed to me)
 #	- Discuss what Taylor is referring to in the last block of code that has println("ERROR: This code needs to be written")
 #	
 #find_N_real_points 
 #	- Maybe delete?? No longer used in my code.
 #
 #matroid_fibre_visual_appeal
-#	- Comment it
-#	- Now that I have changed best_realizable_matroid so that the base fibre of E so only tracks the path associated to #	 best_path_solution, so the fibre only has one matroid solution, should I delete this?? I would have to change the code #	 of best_realizable_matroid to use matroid_visual_appeal as a score. 
+#	- Now that I have changed best_realizable_matroid so that the base fibre of E so only tracks the path associated to best_path_solution, so the fibre only has one matroid solution, should I delete this?? I would have to change the code of best_realizable_matroid to use matroid_visual_appeal as a score. 
 #	
 #matroid_visual_appeal
 #	- Add type for the input 
@@ -30,7 +29,7 @@ export
 #best_realizable_matroid 
 #	- Should I change my documentation example? 
 #	
-#- For the matroid Taylor emailed me, it was sent as M = [[3,8,9],[4,7,8],[1,2,6,8],[8,11,12],[5,6,10],[9,10,11],[2,4,5,9],[1,9,12],[1,3,5,7],[3,10,12]]. There was a nonbases of 4 elements, should I #make a function that breaks this up, and then call it in my other functions?? As currently, my functions won't take this input as the nonbases are not the same length.
+#- For the matroid Taylor emailed me, it was sent as M = [[3,8,9],[4,7,8],[1,2,6,8],[8,11,12],[5,6,10],[9,10,11],[2,4,5,9],[1,9,12],[1,3,5,7],[3,10,12]]. There was a nonbases of 4 elements, should I make a function that breaks this up, and then call it in my other functions?? As currently, my functions won't take this input as the nonbases are not the same length.
 #
 #- If time, implement code for oriented matroids 
 #
@@ -290,21 +289,31 @@ Number of non-taboo fibres:10
 
 ```
 """
-function best_realizable_matroid(n:: Int64, nonbases:: Vector{Vector{Int64}}; n_trials::Int64 = 50, n_samples::Int64 = 10)
+function best_realizable_matroid(n:: Int64, nonbases:: Vector{Vector{Int64}}; n_trials::Int64 = 50, n_samples::Int64 = 10, shot_gun_hill_climb::Int64 = 3)
 
 	V = matroid_realization_space(n, nonbases) #variety associated to matroid space equations
 	if !isnothing(V) #if the matroid has a realization space
 		E = EnumerativeProblem(V) #Turning V into an ennumerative problem 
-
 		path_solutions = HomotopyContinuation.solutions(E.BaseFibre[1]) #all solutions from each pathresult of the base fibre
 		best_path_solution = path_solutions[argmax([matroid_visual_appeal(s) for s in path_solutions])] #finding the solution (matroid) in path_solutions that has the highest score
 		P = base_parameters(E)
 		NewR = solve(system(E), best_path_solution; start_parameters = P, target_parameters =P) #converting best_path_solution to a result 
 		E.BaseFibre = (NewR, P) #Changing base fibre of E so that it only tracks the path associated to best_path_solution
 
-		OE = initialize_optimizer(E,matroid_fibre_visual_appeal)
-		OE = optimize!(OE;n_trials=n_trials, n_samples=n_samples) #finding the set of solutions with the best configuration of points 
-		S = HomotopyContinuation.real_solutions(OE.record_fibre[1]) #taking the real solutions from the results 
+		best_score = -inf #Intializng best score for shot-gun hill climb
+		S =  [] #initalizing S 
+
+		for i in 1:shot_gun_hill_climb
+			OE = initialize_optimizer(E, Pandora.matroid_fibre_visual_appeal)
+			OE = optimize!(OE;n_trials=n_trials, n_samples=n_samples) #finding the set of solutions with the best configuration of points 
+			current_score = OE.record_score 
+			i = i +1 
+			if current_score > best_score 
+				best_score = current_score #updating the best score to be the current score 
+				S = HomotopyContinuation.real_solutions(OE.record_fibre[1]) #taking the real solutions from the results 
+			end 
+		end 
+
 		if !is_empty(S) #if the optimizer returns a real solution
 			best_matroid_as_matrix = points_to_matrix(S[1],2;projective=false)
 			return(best_matroid_as_matrix)
