@@ -223,7 +223,7 @@ end
 #  6) update history
 #  7) return the data from steps 2,3,4,5 for the meta_strategy to adjust the optimizer settings
 
-function improve!(O::Optimizer; n_samples=nothing)
+function improve!(O::Optimizer; n_samples=nothing, verbose = true)
     improvement_info = Dict{Any,Any}()
     improvement_info["n_samples"] = n_samples
 
@@ -245,8 +245,8 @@ function improve!(O::Optimizer; n_samples=nothing)
     sols = solve_over_params(O.EP,samples; start_fibre = O.solver_fibre)
     improvement_info["fibres"] = sols
     improvement_info["n_fibres"] = length(sols)
-    println("Number of samples: ",n_samples)
-    println("Number of successful tracks: ",length(sols))
+    verbose && println("Number of samples: ",n_samples)
+    verbose && println("Number of successful tracks: ",length(sols))
 
     taboo_level = current_taboo_level(O)
     #3)
@@ -278,24 +278,24 @@ function improve!(O::Optimizer; n_samples=nothing)
     else
         status = "All Are Taboo"
     end
-    println("Current Score: ",O.current_score)
+    verbose && println("Current Score: ",O.current_score)
     improvement_info["status"] = status
-    println("     Status: ",status)
-    println("     Improvement: ",improvement)
+    verbose && println("     Status: ",status)
+    verbose && println("     Improvement: ",improvement)
     return(improvement_info)
 end
 
-function optimize!(O::Optimizer; n_trials = 10, n_samples = nothing)
+function optimize!(O::Optimizer; n_trials = 10, n_samples = nothing, verbose=true)
     trials = 0
     while trials<n_trials && O.goal(O)==false
         trials = trials+1
-        println("-----------------------------------------------Trial: ",trials)
-        information = improve!(O; n_samples = n_samples)
-        println("Number of fibres computed:", information["n_fibres"])
-        println("Number of non-taboo fibres:", information["n_non_taboo"])
-        update_sampler_radius!(O,information)
+        verbose && println("-----------------------------------------------Trial: ",trials)
+        information = improve!(O; n_samples = n_samples, verbose = verbose)
+        verbose && println("Number of fibres computed:", information["n_fibres"])
+        verbose && println("Number of non-taboo fibres:", information["n_non_taboo"])
+        update_sampler_radius!(O,information; verbose = verbose)
         if trials%4 == 0
-            update_solver_fibre!(O)
+            update_solver_fibre!(O; verbose=verbose)
         end
     end
     return(O)

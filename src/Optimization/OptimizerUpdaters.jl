@@ -3,15 +3,15 @@ function scale_sampler_radius!(O::Optimizer,k)
 end
 
 #This function will scale the sampler based on how many samples were taboo
-function update_sampler_radius!(O::Optimizer,information::Dict{Any,Any}; desired_interval =[0.7,0.8])
+function update_sampler_radius!(O::Optimizer,information::Dict{Any,Any}; desired_interval =[0.7,0.8], verbose = false)
     if O.taboo_score == TrivialScore
         if get(information,"status",0.0)=="No Improvement"
             scale_sampler_radius!(O,0.9)            
-            println("                                               no improvement - radius down: ",eigmax(O.sampling_ellipsoid))
+            verbose &&  println("                                               no improvement - radius down: ",eigmax(O.sampling_ellipsoid))
         end
         if get(information,"status",0.0)=="Improved Current Score"
             scale_sampler_radius!(O,1.11)            
-            println("                                               Improved Current Score - radius up: ",eigmax(O.sampling_ellipsoid))
+            verbose &&  println("                                               Improved Current Score - radius up: ",eigmax(O.sampling_ellipsoid))
         end
         return()
     end
@@ -40,15 +40,15 @@ function update_sampler_radius!(O::Optimizer,information::Dict{Any,Any}; desired
     end
 end
 
-function update_solver_fibre!(O::Optimizer)
-    println("Updating solver fibre")
+function update_solver_fibre!(O::Optimizer; verbose = true)
+    verbose && println("Updating solver fibre")
     new_parameters = [O.current_fibre[2]+im*randn(Float64,n_parameters(O.EP)) for i in 1:3]
     sols  = solve_over_params(O.EP,new_parameters)
     #println(sols)
     if length(sols)==0
-        println("Failed to update solver fibre")
+        verbose && println("Failed to update solver fibre")
     else
-        println("Solver fibre updated")
+        verbose && println("Solver fibre updated")
         O.solver_fibre = sols[1]
     end
 end
