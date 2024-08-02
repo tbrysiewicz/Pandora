@@ -4,7 +4,7 @@ export
 	best_realizable_matroid
 
 
-#TODO List
+#TODO List (of functions)
 #matroid_space_eqns
 #	- Should I generalize this so it works for matroids of different rank? 
 #
@@ -25,14 +25,21 @@ export
 #matroid_visual_appeal
 #	- Add type for the input 
 #	- If I delete matroid_fibre_visual_appeal, I would need to change this up, specifcally add a message if the solution isn't real. 
+#	- This needs to be edited for including the scoring of intersection points 
 #
 #best_realizable_matroid 
-#	- Should I change my documentation example? 
+#
+#RECENTLY ADDED FUNCTIONS:
+#intersection_point_of_lines
+#
+#matroid_lines_nonbases
+#
+#line_intersection_points_of_matroid
 #	
+#GENERAL COMMENTS 
 #- For the matroid Taylor emailed me, it was sent as M = [[3,8,9],[4,7,8],[1,2,6,8],[8,11,12],[5,6,10],[9,10,11],[2,4,5,9],[1,9,12],[1,3,5,7],[3,10,12]]. There was a nonbases of 4 elements, should I make a function that breaks this up, and then call it in my other functions?? As currently, my functions won't take this input as the nonbases are not the same length.
 #
-#- If time, implement code for oriented matroids 
-#
+
 
 #Function: matroid_space_eqns
 #Input: n = number of elements in a matroid, nonbases = nonbases of a rank 3 matroid
@@ -218,6 +225,27 @@ end
 #score of our matrix
 function matroid_visual_appeal(S)		
 	M = reshape(S, 2, convert(Int, length(S)/2)) #reshapes solution vector s into a matrix
+	line_intersection_points = line_intersection_points_of_matroid(M)
+	new_M = hcat(M, line_intersection_points...) #Matrix with matroid points and line intersection points
+	n = size(new_M,2) #the number of elements in our matroid
+	point_pairs = collect(combinations(1:n,2)) #all possible combinations of pairs of points
+	record_min = Inf 
+	for j in 1:(length(point_pairs)) #scrolls through all possible point pairs 	
+		p = new_M[:,(point_pairs[j][1])] #first point in the pair
+		q = new_M[:,(point_pairs[j][2])] #second point in the pair
+		x = norm(p-q) #norm between the 2 points in pair j 
+		s =  -(1/1.851)*(x-0.1)*(x-2*sqrt(2)) #scoring that norm
+		
+		if s < record_min
+			record_min = s #recording the minimum norm 
+		end
+	end   
+	return(record_min)    
+end
+
+#This function is left in for me to compare how old score function without intersection points compares to the new one. 
+function old_matroid_visual_appeal(S)		
+	M = reshape(S, 2, convert(Int, length(S)/2)) #reshapes solution vector s into a matrix
 	n = size(M,2) #the number of elements in our matroid
 	point_pairs = collect(combinations(1:n,2)) #all possible combinations of pairs of points
 	record_min = Inf 
@@ -332,6 +360,70 @@ function best_realizable_matroid(M::Matroid; n_trials = 50, n_samples=10)
 	n = length(M.groundset)
 	best_realizable_matroid(n,NB;n_trials=n_trials,n_samples=n_samples)
 end
+
+
+#Finds the intersection point of 2 lines in the plane, where line 1 is given by points p1 and p2, and line 2 is given by points p3 and p4. 
+function intersection_point_of_lines(p1, p2, p3, p4)
+	a = (p2[2] - p1[2]) / (p2[1] - p1[1]) #slope of the first line given by p1 and p2
+	b = (p4[2] - p3[2]) / (p4[1] - p3[1]) #slope of the second line given by p3 and p4
+	x = (1 / (a - b)) * (p3[2] - p1[2] + (a * p1[1]) - (b * p3[1])) #x coordinate of the intersection point
+	y =  (a*(x-p1[1])) + p1[2] #y coordinate of the intersection point 
+	intersection_point = vcat(x,y)
+	return(intersection_point)
+end 
+
+#Outputs a vector of vectors where each vector contains all points that lie on a single line in the matroid 
+function matroid_lines_nonbases(nonbases) 
+	L = [] #collection of lines describing the matroid  
+	
+	for i in 1:length(nonbases) 
+		nb = nonbases[i]
+		l = nb #vector that has points that lie on a line with the points in nb (initializing with nb)
+		nonbases_without_nb = filter(x -> x != nb, nonbases)
+	
+		for j in 1:length(nonbases_without_nb)
+			common_elements = intersect(nb, nonbases_without_nb[j])
+			
+			if length(common_elements) == 2 
+				l = sort(unique(vcat(l, nonbases_without_nb[j]))) #adding any elements not already in l but in nonbases_without_nb and sorting it 
+			end 
+		end
+		
+		if !(l in L) && !(isempty(l)) #adding any unique lines to the collection of lines L
+			push!(L,l)
+		end 
+	end 
+	return(L)	
+end 
+
+#Finds all intersection points of the lines of a matroid drawing in the plane, where intersection points that already corresond to points of the matroid are not included in output. 
+function line_intersection_points_of_matroid(M)
+	n = size(M,2) #the number of elements in our matroid
+	projective_M = vcat([1 for i in 1:n]', M) 
+	nb = matrix_to_nonbases(projective_M) #nonbases of the matrix 
+	lines_as_nonbases = matroid_lines_nonbases(nb) #lines of matroid described by nonbases 
+	k = length(lines_as_nonbases)
+	line_pairs = collect(combinations(1:k,2)) #all possible line pairs 
+	intersection_points = []
+
+	for i in 1:length(line_pairs)
+		first_nb_in_line_pair = lines_as_nonbases[line_pairs[i][1]]
+		second_nb_in_line_pair = lines_as_nonbases[line_pairs[i][2]]
+		common_elements = intersect(first_nb_in_line_pair, second_nb_in_line_pair) #Checking if a point in matroid is an intersection of line pairs 
+
+		if isempty(common_elements) 
+			p1 = M[:,first_nb_in_line_pair[1]] #column vector of M corresponding to the first entry in the first nonbases in the line pair 
+			p2 = M[:,first_nb_in_line_pair[2]]
+			p3 = M[:,second_nb_in_line_pair[1]]
+			p4 = M[:,second_nb_in_line_pair[2]]
+			intersection_point = intersection_point_of_lines(p1,p2,p3,p4)
+			push!(intersection_points, intersection_point)
+			
+		end 
+	end 
+	return(intersection_points)
+end 
+
 
 
 
