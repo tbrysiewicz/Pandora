@@ -318,12 +318,12 @@ function optimize_real(EP::EnumerativeProblem; n_trials = 50, Strategy = :normal
     elseif Strategy == :shotgun
         println("------------------Shotgun Hill-Climb-------------------")
         runs = []
-        for i in 1:10
+        for i in 1:48
             println("----------------------------------Shotgun: ",i)
             O = initialize_optimizer(EP,obj_fun;taboo_score = real_taboo, barrier_score = real_barrier, goal = all_real_goal);
-            scale_sampler_radius!(O,10)
-            improve!(O;n_samples = 10000)
-            O = optimize!(O; n_trials = 20, n_samples = 100)
+            scale_sampler_radius!(O,2)
+            improve!(O;n_samples = 100)
+            O = optimize!(O; n_trials = 500, n_samples = 20)
             push!(runs,O)
         end
         return(runs)
