@@ -186,26 +186,55 @@ end
 #matroid_visual_appeal: scores a matroid based on its visual appeal   
 #  WARNING: this assumes the first row is all ones (see second line)
 # Reshapes the solution S into a matrix M
-function matroid_visual_appeal(S,matrix_format)
+function matroid_visual_appeal(S, matrix_format)
 	M_projective = HomotopyContinuation.evaluate(matrix_format, variables(matrix_format)=> S) 		
 	M = M_projective[2:3,:]
+	n = size(M,2) #the number of elements in our matroid
+	point_pairs_in_M = collect(combinations(1:n,2)) #all possible combinations of pairs of points in M 
+	point_score = point_pairs_distance_score(M, point_pairs_in_M) 
+	
 	line_intersection_points = line_intersection_points_of_matroid(M)
-	new_M = hcat(M, line_intersection_points...) #Matrix with matroid points and line intersection points
-	n = size(new_M,2) #the number of elements in our matroid
-	point_pairs = collect(combinations(1:n,2)) #all possible combinations of pairs of points
-	record_min = Inf 
+	intersection_points_in_window = []
+	
+	for i in 1:length(line_intersection_points) #filtering out instersection points not visualization window
+		p = line_intersection_points[i]
+		x = M[1,:] 
+		y = M[2,:]
+		if p[1] < minimum(x) -1 || p[1] > maximum(x) + 1 || p[2] < minimum(y) -1 || p[2] > maximum(y) + 1
+			push!(intersection_points_in_window, p)
+		end 
+	end 
+
+	if !(isempty(intersection_points_in_window))
+		Q = hcat(M, intersection_points_in_window...) #Matrix with matroid points and line intersection points
+		point_pairs_in_Q = collect(combinations(1:size(Q, 2), 2))
+		point_pairs_with_intersections = filter(x -> !(x in point_pairs_in_M), point_pairs_in_Q) #all point pairs containing an intersection point 
+		intersection_score = point_pairs_distance_score(Q, point_pairs_with_intersections)
+		s = (1/2)*(point_score) + (1-(1/2))*(intersection_score)
+
+	else
+		s = point_score #if there are no intersection points in the window, return the point score 
+	end 
+
+	return(s) 
+end  
+	
+
+function point_pairs_distance_score(M, point_pairs)
+	record_min = Inf
 	for j in 1:(length(point_pairs)) #scrolls through all possible point pairs 	
-		p = new_M[:,(point_pairs[j][1])] #first point in the pair
-		q = new_M[:,(point_pairs[j][2])] #second point in the pair
+		p = M[:,(point_pairs[j][1])] #first point in the pair
+		q = M[:,(point_pairs[j][2])] #second point in the pair
 		x = norm(p-q) #norm between the 2 points in pair j 
 		s =  -(1/1.851)*(x-0.1)*(x-2*sqrt(2)) #scoring that norm
 		
 		if s < record_min
 			record_min = s #recording the minimum norm 
 		end
-	end   
-	return(record_min)    
-end
+	end
+return(record_min)
+end 
+	
 
 #This function is left in for me to compare how old score function without intersection points compares to the new one. 
 function old_matroid_visual_appeal(S)		
@@ -283,6 +312,7 @@ function matroid_lines_nonbases(nonbases)
 	return(L)	
 end 
 
+#Edit matrix stuff to fit new format 
 #Finds all intersection points of the lines of a matroid drawing in the plane, where intersection points that already corresond to points of the matroid are not included in output. 
 function line_intersection_points_of_matroid(M)
 	n = size(M,2) #the number of elements in our matroid
