@@ -144,7 +144,7 @@ julia> matrix_to_nonbases(M)
 """
 function matrix_to_nonbases(matrix::Union{Matrix{Int64},Matrix{Float64},Matrix{ComplexF64}}; tol = 10000) 
 	nonbases= []
-	r = rank(matrix,1.0/tol)
+	r = size(matrix, 1)
 	n = size(matrix, 2) #number of columns
 	C = collect(combinations(1:n, r)) #collection of all possible bases 
 	
