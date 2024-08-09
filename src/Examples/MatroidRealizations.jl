@@ -416,6 +416,7 @@ function best_realizable_matroid(n:: Int64, nonbases:: Vector{Vector{Int64}}; n_
 
 		for i in 1:n_shotguns
 			OE = initialize_optimizer(E, matroid_fibre_visual_appeal)
+			scale_sampler_radius!(OE,0.05)
 			OE = optimize!(OE;n_trials=n_trials, n_samples=n_samples, verbose=verbose) #finding the set of solutions with the best configuration of points 
 			current_score = OE.record_score 
 

@@ -98,8 +98,14 @@ function first_n_simple_matroids(n:: Int64)
 
 				matr = matroid_from_nonbases(nb,n_elements_in_nb)
 			end
-
-			if in(matr,n_matroids)==false
+			new = true
+			for mm in n_matroids
+				if is_isomorphic(mm,matr)
+					new = false
+					break
+				end
+			end
+			if new==true
 				push!(n_matroids,matr)
 			end
 
