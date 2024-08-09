@@ -69,31 +69,43 @@ function draw_matroid_representative(M::Matrix{Float64},Matr::Matroid)
 end
 
 
-function first_n_matroids(n:: Int64; simple = false, realizable = false)
+function first_n_simple_matroids(n:: Int64)
 	n_matroids = [] #list of oscar matroids 
-	p = 1 #number of elements the matroid has 
+	p = 8 #number of elements the matroid has 
 	
 	db = Polymake.Polydb.get_db();
 	collection = db["Matroids.Small"]; #generating the database 
 		
 	while length(n_matroids) < n #while the number of matroids added to list is less than n[2]
-		query = Dict("RANK"=>3,"N_ELEMENTS"=>p) #query for generating all matroids with p elements from the database
-		if simple==true
-			query["SIMPLE"] = true
-		end 
-		results1 = Polymake.Polydb.find(collection, query) 
-		oscar_matroids = [Matroid(pm) for pm in results1] #list of all matroids with p elements 
+		println("Pulling matroids on ",p," elements")
+		query = Dict("RANK"=>3,"N_ELEMENTS"=>p, "SIMPLE"=>true) #query for generating all matroids with p elements from the database
+ 
+		polymake_matroids = collect(Polymake.Polydb.find(collection, query) )
+		println("Collected ",length(polymake_matroids)," many matroids")
 		
-		for i in 1:length(oscar_matroids) #searching through all matroids in oscar_matroids and generating nonbases
-				   nb = nonbases(oscar_matroids[i])
-				   elements_in_nb = unique(reduce(append!, nb, init = [])) #list of elements that appear in a nonbasis, without repeats 
-				   
-				   if length(elements_in_nb) == p #if all p elements appear in some nonbasis 
-					   push!(n_matroids, oscar_matroids[i])
-					   	if length(n_matroids) == n #break if there is n matroids in the list 
-						   	break 
-					   	end 
-				   end 
+		for i in 1:length(polymake_matroids) #searching through all matroids in oscar_matroids and generating nonbases
+			println("Checking if matroid has essentially been represented already on fewer elements")
+			oscar_matroid = Matroid(polymake_matroids[i])
+			
+			nb = nonbases(oscar_matroid)
+
+			matr = nothing
+
+			if length(nb)==0
+				matr = uniform_matroid(3,3)
+			else
+				n_elements_in_nb = length(unique(vcat(nb...))) #number of elements which are not free 
+
+				matr = matroid_from_nonbases(nb,n_elements_in_nb)
+			end
+
+			if in(matr,n_matroids)==false
+				push!(n_matroids,matr)
+			end
+
+			if length(n_matroids) == n #break if there is n matroids in the list 
+				break 
+			end 
 		end
 		p =p + 1 #updating to generate another query 
 	end 

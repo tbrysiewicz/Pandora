@@ -99,7 +99,7 @@ function matroid_realization_space(n::Int,nonbases::Vector{Vector{Int}}; reduced
 
 	if length(CorrectComponents)==0
 		println("Matroid is not realizable")
-		return(nothing)
+		return((nothing,nothing))
 	end
 
 	if length(unique([x[1] for x in CorrectComponents])) == 1 #If the correct components all belong to the same dimension
@@ -167,15 +167,15 @@ end
 
 #this uses the matrix_format of a matroid realization space to create a function which scores a
 #  matroid fibre's visual appeal by judging each matroids appeal in the fibre, and taking min
-function create_matroid_fibre_visual_appeal(matrix_format)
+function create_matroid_fibre_visual_appeal(matrix_format, mtrd)
 	function mfva(F ::Tuple{Result,Vector{Float64}})
 		real_sols= HomotopyContinuation.real_solutions(F[1]) #real solutions in fibre
        
 		if real_sols != []
 			N = length(real_sols) #N of real solutions 
-			record_max = maximum([matroid_visual_appeal(real_sols[i],matrix_format) for i in 1:N]) #Take maximum score
+			record_max = maximum([matroid_visual_appeal(real_sols[i],matrix_format,mtrd) for i in 1:N]) #Take maximum score
 		else 
-				   println("there are no real solutions") 
+				println("there are no real solutions") 
 				return(-Inf)
 		end
 		return(record_max)
@@ -186,50 +186,46 @@ end
 #matroid_visual_appeal: scores a matroid based on its visual appeal   
 #  WARNING: this assumes the first row is all ones (see second line)
 # Reshapes the solution S into a matrix M
-function matroid_visual_appeal(S, matrix_format)
+function matroid_visual_appeal(S, matrix_format, mtrd)
 	M_projective = HomotopyContinuation.evaluate(matrix_format, variables(matrix_format)=> S) 		
-	M = M_projective[2:3,:]
-	n = size(M,2) #the number of elements in our matroid
-	point_pairs_in_M = collect(combinations(1:n,2)) #all possible combinations of pairs of points in M 
-	point_score = point_pairs_distance_score(M, point_pairs_in_M) 
+	M = projective_to_affine(M_projective)
+	n = length(mtrd.groundset) #the number of elements in our matroid
+
+	#score every pair of columns
+	point_score = point_pairs_distance_score(collect(eachcol(M)), collect(combinations(1:n,2))) 
 	
-	line_intersection_points = line_intersection_points_of_matroid(M)
-	intersection_points_in_window = []
-
-	for i in 1:length(line_intersection_points) #filtering out instersection points not visualization window, when the points are real (if the points are complex, there is no window)
-		p = line_intersection_points[i]
-		if typeof(p) == Vector{ComplexF64}
-			push!(intersection_points_in_window, p)
-
-		else 
-			x = M[1,:] 
-			y = M[2,:]
-			if p[1] > (minimum(x) -1) && p[1] < (maximum(x) + 1) && p[2] > (minimum(y) -1) && p[2] < (maximum(y) + 1)
-				push!(intersection_points_in_window, p)
-			end 	
-		end
+	intersection_points = line_intersection_points_of_matroid(M,mtrd)
+	xm = min(M[1,:]...)
+	xM = max(M[1,:]...)
+	ym = min(M[2,:]...)
+	yM = max(M[2,:]...)
+	function inWindow(p)
+		return(xm<p[1]<xM && ym <p[2]<yM)
 	end
-	
-	if !(isempty(intersection_points_in_window))
-		Q = hcat(M, intersection_points_in_window...) #Matrix with matroid points and line intersection points
-		point_pairs_in_Q = collect(combinations(1:size(Q, 2), 2))
-		point_pairs_with_intersections = filter(x -> !(x in point_pairs_in_M), point_pairs_in_Q) #all point pairs containing an intersection point 
-		intersection_score = point_pairs_distance_score(Q, point_pairs_with_intersections)
-		s = (1/2)*(point_score) + (1-(1/2))*(intersection_score)
 
-	else
-		s = point_score #if there are no intersection points in the window, return the point score 
+	filter!(p->inWindow(p),intersection_points)
+
+	intersection_score = 0.0
+
+	if length(intersection_points)>0
+		Q = hcat(M, intersection_points...) #Matrix with matroid points and line intersection points
+		point_pairs_in_Q = collect(combinations(1:size(Q, 2), 2))
+		point_pairs_with_intersections = filter(x -> !(x in collect(combinations(1:n,2))), point_pairs_in_Q) #all point pairs containing an intersection point 
+		intersection_score = point_pairs_distance_score(collect(eachcol(Q)), point_pairs_with_intersections)
 	end 
+
+	point_score_weight = 0.9
+	s=(point_score_weight)*(point_score) + (1-point_score_weight)*(intersection_score)
 
 	return(s) 
 end  
 	
 
-function point_pairs_distance_score(M, point_pairs)
+function point_pairs_distance_score(P, point_pairs)
 	record_min = Inf
 	for j in 1:(length(point_pairs)) #scrolls through all possible point pairs 	
-		p = M[:,(point_pairs[j][1])] #first point in the pair
-		q = M[:,(point_pairs[j][2])] #second point in the pair
+		p = P[point_pairs[j][1]] #first point in the pair
+		q = P[point_pairs[j][2]] #second point in the pair
 		x = norm(p-q) #norm between the 2 points in pair j 
 		s =  -(1/1.851)*(x-0.1)*(x-2*sqrt(2)) #scoring that norm
 		
@@ -256,8 +252,9 @@ function projective_to_affine(M::Matrix; tol = 0.00001)
 			println("This matrix represents projective configuration with points at infinity")
 			return(nothing)
 		end
+		l = copy(M[1,i])
 		for j in 1:m
-			M[j,i]=M[j,i]/M[1,i]
+			M[j,i]=M[j,i]/l
 		end
 	end #After this step, the matrix has first row equal to the all ones vector
 	return(M[2:3,:])
@@ -265,6 +262,7 @@ end
 
 
 #Finds the intersection point of 2 lines in the plane, where line 1 is given by points p1 and p2, and line 2 is given by points p3 and p4. 
+#WARNING: don't call this unless p1p2 and p3p4 are distinct lines which are not vertical
 function intersection_point_of_lines(p1, p2, p3, p4)
 	a = (p2[2] - p1[2]) / (p2[1] - p1[1]) #slope of the first line given by p1 and p2
 	b = (p4[2] - p3[2]) / (p4[1] - p3[1]) #slope of the second line given by p3 and p4
@@ -274,6 +272,13 @@ function intersection_point_of_lines(p1, p2, p3, p4)
 	return(intersection_point)
 end 
 
+#Given nonbases of a matroid of rank 3, returns the rank 2 flats with at least 3 pts (i.e. the lines containing nonbases sets)
+function matroid_lines_nonbases(M)
+	return(filter(x->length(x)>2,flats(M,2)))
+end
+
+
+#=
 #Outputs a vector of vectors where each vector contains all points that lie on a single line in the matroid 
 function matroid_lines_nonbases(nonbases) 
 	L = [] #collection of lines describing the matroid  
@@ -297,28 +302,29 @@ function matroid_lines_nonbases(nonbases)
 	end 
 	return(L)	
 end 
+=#
 
 #Edit matrix stuff to fit new format 
 #Finds all intersection points of the lines of a matroid drawing in the plane, where intersection points that already corresond to points of the matroid are not included in output. 
-function line_intersection_points_of_matroid(M:: Union{Matrix{Int64}, Matrix{Float64}, Matrix{ComplexF64}})	
-	n = size(M,2) #the number of elements in our matroid
-	projective_M = vcat([1 for i in 1:n]', M) 
-	nb = matrix_to_nonbases(projective_M) #nonbases of the matrix 
-	lines_as_nonbases = matroid_lines_nonbases(nb) #lines of matroid described by nonbases 
-	k = length(lines_as_nonbases)
-	line_pairs = collect(combinations(1:k,2)) #all possible line pairs 
+function line_intersection_points_of_matroid(M:: Union{Matrix{Int64}, Matrix{Float64}, Matrix{ComplexF64}},mtrd)	
+	#n = length(mtrd.groundset)
+	#projective_M = vcat([1 for i in 1:n]', M) 
+	#nb = matrix_to_nonbases(projective_M) #nonbases of the matrix 
+	lines_as_nonbases = matroid_lines_nonbases(mtrd) #lines of matroid described by nonbases 
+	k = length(lines_as_nonbases) #number of lines
+	
 	intersection_points = []
 
-	for i in 1:length(line_pairs)
-		first_nb_in_line_pair = lines_as_nonbases[line_pairs[i][1]]
-		second_nb_in_line_pair = lines_as_nonbases[line_pairs[i][2]]
-		common_elements = intersect(first_nb_in_line_pair, second_nb_in_line_pair) #Checking if a point in matroid is an intersection of line pairs 
+	for c in collect(combinations(1:k,2))
+		first_line = lines_as_nonbases[c[1]]
+		second_line = lines_as_nonbases[c[2]]
+		common_elements = intersect(first_line,second_line) #Checking if a point in matroid is an intersection of line pairs 
 
 		if isempty(common_elements) 
-			p1 = M[:,first_nb_in_line_pair[1]] #column vector of M corresponding to the first entry in the first nonbases in the line pair 
-			p2 = M[:,first_nb_in_line_pair[2]]
-			p3 = M[:,second_nb_in_line_pair[1]]
-			p4 = M[:,second_nb_in_line_pair[2]]
+			p1 = M[:,first_line[1]] #column vector of M corresponding to the first entry in the first nonbases in the line pair 
+			p2 = M[:,first_line[2]]
+			p3 = M[:,second_line[1]]
+			p4 = M[:,second_line[2]]
 			intersection_point = intersection_point_of_lines(p1,p2,p3,p4)
 			push!(intersection_points, intersection_point)
 		end  
@@ -389,34 +395,39 @@ Number of non-taboo fibres:10
 
 ```
 """
-function best_realizable_matroid(n:: Int64, nonbases:: Vector{Vector{Int64}}; n_trials::Int64 = 50, n_samples::Int64 = 10, shotgun_hill_climb::Int64 = 3, verbose = true)
-
+function best_realizable_matroid(n:: Int64, nonbases:: Vector{Vector{Int64}}; n_trials::Int64 = 50, n_samples::Int64 = 10, n_shotguns::Int64 = 3, verbose = true)
+	mtrd = matroid_from_nonbases(nonbases,n)
 	(V,matrix_format) = matroid_realization_space(n, nonbases) #variety associated to matroid space equations
-	matroid_fibre_visual_appeal = create_matroid_fibre_visual_appeal(matrix_format)
+	matroid_fibre_visual_appeal = create_matroid_fibre_visual_appeal(matrix_format,mtrd)
 	if !isnothing(V) #if the matroid has a realization space
 		E = EnumerativeProblem(V) #Turning V into an ennumerative problem 
+		#=
 		path_solutions = HomotopyContinuation.solutions(E.BaseFibre[1]) #all solutions from each pathresult of the base fibre
 		best_path_solution = path_solutions[argmax([matroid_visual_appeal(s,matrix_format) for s in path_solutions])] #finding the solution (matroid) in path_solutions that has the highest score
 		P = base_parameters(E)
 		NewR = solve(system(E), best_path_solution; start_parameters = P, target_parameters =P) #converting best_path_solution to a result 
 		E.BaseFibre = (NewR, P) #Changing base fibre of E so that it only tracks the path associated to best_path_solution
 
-		best_score = -inf #Intializng best score for shot-gun hill climb
 		S =  [] #initalizing S 
+		=#
 
-		for i in 1:shotgun_hill_climb
+		S = nothing
+		best_score = -Inf #Intializng best score for shot-gun hill climb
+
+		for i in 1:n_shotguns
 			OE = initialize_optimizer(E, matroid_fibre_visual_appeal)
 			OE = optimize!(OE;n_trials=n_trials, n_samples=n_samples, verbose=verbose) #finding the set of solutions with the best configuration of points 
 			current_score = OE.record_score 
-			i = i +1 
+
 			if current_score > best_score 
 				best_score = current_score #updating the best score to be the current score 
 				S = HomotopyContinuation.real_solutions(OE.record_fibre[1]) #taking the real solutions from the results 
 			end 
 		end 
 
-		if !is_empty(S) #if the optimizer returns a real solution
-			best_matroid_as_matrix =HomotopyContinuation.evaluate(matrix_format, variables(matrix_format)=> S[1])
+		if length(S)>0 #if the optimizer returns a real solution
+			s = argmax([matroid_visual_appeal(s, matrix_format, mtrd) for s in S])
+			best_matroid_as_matrix =HomotopyContinuation.evaluate(matrix_format, variables(matrix_format)=> S[s])
 			return(projective_to_affine(best_matroid_as_matrix))
 		else 
 			println("During optimization, we found no real matrix repersentatives.")
@@ -429,8 +440,8 @@ function best_realizable_matroid(n:: Int64, nonbases:: Vector{Vector{Int64}}; n_
 	end 
 end 
 
-function best_realizable_matroid(M::Matroid; n_trials = 50, n_samples=10)
+function best_realizable_matroid(M::Matroid; n_trials = 50, n_samples=10, n_shotguns = 3)
 	NB = Vector{Vector{Int}}(nonbases(M))
 	n = length(M.groundset)
-	best_realizable_matroid(n,NB;n_trials=n_trials,n_samples=n_samples)
+	best_realizable_matroid(n,NB;n_trials=n_trials,n_samples=n_samples, n_shotguns=n_shotguns)
 end

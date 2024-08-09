@@ -6,11 +6,11 @@ end
 function update_sampler_radius!(O::Optimizer,information::Dict{Any,Any}; desired_interval =[0.7,0.8], verbose = false)
     if O.taboo_score == TrivialScore
         if get(information,"status",0.0)=="No Improvement"
-            scale_sampler_radius!(O,0.9)            
+            scale_sampler_radius!(O,0.7)            
             verbose &&  println("                                               no improvement - radius down: ",eigmax(O.sampling_ellipsoid))
         end
         if get(information,"status",0.0)=="Improved Current Score"
-            scale_sampler_radius!(O,1.11)            
+            scale_sampler_radius!(O,1.3)            
             verbose &&  println("                                               Improved Current Score - radius up: ",eigmax(O.sampling_ellipsoid))
         end
         return()
