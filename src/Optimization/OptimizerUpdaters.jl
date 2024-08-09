@@ -9,7 +9,7 @@ function update_sampler_radius!(O::Optimizer,information::Dict{Any,Any}; desired
             scale_sampler_radius!(O,0.7)            
             verbose &&  println("                                               no improvement - radius down: ",eigmax(O.sampling_ellipsoid))
         end
-        if get(information,"status",0.0)=="Improved Current Score"
+        if get(information,"status",0.0)=="Improved Current Score" || get(information,"status",0.0)=="Improved Record Score"
             scale_sampler_radius!(O,1.3)            
             verbose &&  println("                                               Improved Current Score - radius up: ",eigmax(O.sampling_ellipsoid))
         end
