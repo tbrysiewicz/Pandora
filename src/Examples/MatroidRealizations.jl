@@ -483,7 +483,7 @@ end
 
 
 #returns the dp (total force) vector on point p in the window defined by xwin and ywin
-function  dp(point_set, p, xwin, ywin; tol = 0.01)
+function  dp(point_set, p, xwin, ywin; tol = 0.00000001)
 
 	dpp = [0,0] #initalizing dp 
 	
@@ -502,24 +502,49 @@ function  dp(point_set, p, xwin, ywin; tol = 0.01)
 	#println("   ",boundary_force)
 
 	dpp = dpp + boundary_force #adding the boundary force to dp 
-	if norm(dpp)<tol
-		#println("Returned total force: ",[0.0,0.0])
-		return([0.0,0.0])
-	else
-		#println("Returned total force: ",dpp)
+#	if norm(dpp)<tol
+#		println("Returned total force: ",[0.0,0.0])
+#		return([0.0,0.0])
+#	else
+		println("Returned total force: ",dpp)
 		return(dpp)
-	end
+#	end
 end 
 
-#Returns the updated point positions of each point after the forces of the system acts on it for one time step t. , xwin and ywin is the window the points are in, t is the time step 
-function updated_point_set(point_set, xwin, ywin, t)
-	new_point_set = [] #initalizing new point set 
-	for p in point_set 
-		totalforce = dp(point_set, p, xwin, ywin) #calculate dp for each point p 
-		new_p_position = (p + (t*totalforce)) 
-		push!(new_point_set, new_p_position)
+mutable struct Particle
+	p::Vector{Vector{Float64}}
+	v::Vector{Vector{Float64}}
+	a::Vector{Vector{Float64}}
+end
+
+function point_set_data(point_set; xwin = [-1,1], ywin = [-1,1])
+	particles = Vector{Particle}([])
+	for p in point_set
+		P = [p]
+		V = [p-p]
+		A = [dp(point_set, p, xwin, ywin)]
+		push!(particles,Particle(P,V,A))
 	end
-	return(new_point_set)
+	return(particles)
+end
+
+#Returns the updated point positions of each point after the forces of the system acts on it for one time step t. , xwin and ywin is the window the points are in, t is the time step 
+function updated_point_set(particles::Vector{Particle}, t; xwin = [-1,1], ywin=[-1,1])
+	#First get new positions
+	for P in particles
+		push!(P.p,last(P.p)+t*last(P.v)+(1/2)*t^2*last(P.a))
+	end
+	#Now get new velocities
+	for P in particles
+		push!(P.v,P.p[end]-P.p[end-1])
+	end
+	#Now new accelerations thanks to Coulomb
+	new_point_set = [partic.p[end] for partic in particles]
+	for P in particles
+		push!(P.a,dp(new_point_set, P.p[end], xwin, ywin))
+	end
+
+	return(particles)
 end 
 
 #Returns the frame number i of the points for each time step t
@@ -537,18 +562,13 @@ function frame(point_set,xwin,ywin,i)
 end 
 
 #Returns the animation of the forces acting on the points for n frames, with time step t. 
-function force_directed_animation(point_set, xwin, ywin, t, n)
-	nn=n*10
-	tt=t/10
-	anim = @animate for i ∈ 0:n
-		for j in 1:10
-		new_point_set = updated_point_set(point_set, xwin, ywin, t*i)
-		point_set = new_point_set
-		end
-		println(point_set)
+function force_directed_animation(particles::Vector{Particle}, xwin, ywin)
+	n = length(particles[1].p)
+	anim = @animate for i ∈ 1:n
+		point_set = [parti.p[i] for parti in particles]
 		frame(point_set, xwin, ywin,  i)
 	end
-	return(gif(anim, "anim_fps15.gif", fps = 3))
+	return(gif(anim, "anim_fps15.gif", fps = 10))
 end 
 
 function window(M)
