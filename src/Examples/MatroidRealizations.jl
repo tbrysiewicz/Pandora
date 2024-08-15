@@ -446,3 +446,127 @@ function best_realizable_matroid(M::Matroid; n_trials = 50, n_samples=10, n_shot
 	n = length(M.groundset)
 	best_realizable_matroid(n,NB;n_trials=n_trials,n_samples=n_samples, n_shotguns=n_shotguns)
 end
+
+
+################################################################################################
+################################### FORCE DIRECTED DIAGRAMS ####################################
+################################################################################################
+
+function force_q_on_p(q,p)
+	r = norm(p-q) #distance of seperation between p and q 
+	fq = (1/(r^2))*((p-q)/r) #the force of q on p
+	return(fq)
+end 
+
+function boundary_forces_on_p(xwin, ywin, p)
+	
+	#left boundary 
+	r_left = abs(p[1] - xwin[1])
+	f_left = (1/(r_left^2))* [1,0]
+
+	#right boundary 
+	r_right = abs(p[1] - xwin[2])
+	f_right = (1/(r_right^2))* [-1,0]
+
+	#top boundary 
+	r_bottom = abs(p[2] - ywin[1])
+	f_bottom = (1/(r_bottom^2))* [0,1]
+
+	#bottom boundary 
+	r_top = abs(p[2] - ywin[2])
+	f_top = (1/(r_top^2))* [0,-1]
+
+	total_boundary_force = (f_left + f_right + f_bottom + f_top )
+
+	return(total_boundary_force)
+end 
+
+
+#returns the dp (total force) vector on point p in the window defined by xwin and ywin
+function  dp(point_set, p, xwin, ywin; tol = 0.01)
+
+	dpp = [0,0] #initalizing dp 
+	
+	all_Qs = filter(x-> !(x == p) , point_set) #pulling out p from the point set 
+	#println("Force on ",p)
+
+
+	for q in all_Qs #calculating the force of each point q has on p and adding it to dp
+		fq = force_q_on_p(q,p) 
+		#println("    ",fq)
+		dpp = dpp + fq 
+	end 
+
+	boundary_force = boundary_forces_on_p(xwin, ywin, p)
+	#println("    boundary: ")
+	#println("   ",boundary_force)
+
+	dpp = dpp + boundary_force #adding the boundary force to dp 
+	if norm(dpp)<tol
+		#println("Returned total force: ",[0.0,0.0])
+		return([0.0,0.0])
+	else
+		#println("Returned total force: ",dpp)
+		return(dpp)
+	end
+end 
+
+#Returns the updated point positions of each point after the forces of the system acts on it for one time step t. , xwin and ywin is the window the points are in, t is the time step 
+function updated_point_set(point_set, xwin, ywin, t)
+	new_point_set = [] #initalizing new point set 
+	for p in point_set 
+		totalforce = dp(point_set, p, xwin, ywin) #calculate dp for each point p 
+		new_p_position = (p + (t*totalforce)) 
+		push!(new_point_set, new_p_position)
+	end
+	return(new_point_set)
+end 
+
+#Returns the frame number i of the points for each time step t
+function frame(point_set,xwin,ywin,i)
+	x = [point[1] for point in point_set]
+	y = [point[2] for point in point_set]
+
+	frame = scatter(x,y, legend = false, xlims = (xwin[1] , xwin[2]), ylims = (ywin[1], ywin[2]))
+	title!("Frame $i")
+	hline!([ywin[1]], linecolor=:black, linewidth=1)
+	hline!([ywin[2]], linecolor=:black, linewidth =1)
+	vline!([xwin[2]], linecolor=:black, linewidth =1)
+	vline!([xwin[2]], linecolor=:black, linewidth =1)
+	return(frame)
+end 
+
+#Returns the animation of the forces acting on the points for n frames, with time step t. 
+function force_directed_animation(point_set, xwin, ywin, t, n)
+	nn=n*10
+	tt=t/10
+	anim = @animate for i ∈ 0:n
+		for j in 1:10
+		new_point_set = updated_point_set(point_set, xwin, ywin, t*i)
+		point_set = new_point_set
+		end
+		println(point_set)
+		frame(point_set, xwin, ywin,  i)
+	end
+	return(gif(anim, "anim_fps15.gif", fps = 3))
+end 
+
+function window(M)
+	x = M[1,:] 
+	y = M[2,:]
+
+	xm = minimum(x)
+	xM = maximum(x)
+	ym = minimum(y)
+	yM = maximum(y)
+	xlength = xM-xm
+	ylength = yM-ym
+	xbuffer = 0.1*xlength
+	ybuffer = 0.1*ylength
+
+	xwin = [xm-xbuffer , xM+xbuffer] 
+	ywin = [ym-ybuffer, yM+ybuffer]
+
+	return(xwin, ywin)
+
+end 

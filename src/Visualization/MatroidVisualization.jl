@@ -46,27 +46,52 @@ julia> draw_matroid_representative(M, non_fano_matroid())
 
 ```
 """
-function draw_matroid_representative(M::Union{Matrix{Int64},Matrix{Float64}},nonbases::Vector{Vector{Int}})
+function draw_matroid_representative(M::Union{Matrix{Int64},Matrix{Float64}},matr::Matroid)
+	#nonbases = nonbases(matr)
 	x = M[1,:] 
 	y = M[2,:]
-	visualization = scatter(x, y, markersize =8, markercolor=:black, legend = false, grid = false) #scatter plot with columns of M as points
+
+	xm = minimum(x)
+	xM = maximum(x)
+	ym = minimum(y)
+	yM = maximum(y)
+	xlength = xM-xm
+	ylength = yM-ym
+	xbuffer = 0.1*xlength
+	ybuffer = 0.1*ylength
+	visualization = scatter(x, y, markersize =20, markercolor=:black, legend = false, grid = false,xaxis = false, yaxis = false,xlims = (xm-xbuffer , xM+xbuffer), ylims = (ym-ybuffer, yM+ybuffer), widen=false) #scatter plot with columns of M as points
 		for i in 1:size(M,2)
-    			annotate!(x[i], y[i], text("$i", 8, :white, :center)) #labelling each point by number
+    			annotate!(x[i], y[i], text("$i", 20, :white, :center)) #labelling each point by number
 		end
-	
-		for j in 1:length(nonbases)  #plotting lines the points lie on
-			slope = (y[nonbases[j][2]] - y[nonbases[j][1]]) / (x[nonbases[j][2]] - x[nonbases[j][1]])
-			b = y[nonbases[j][1]] - slope*x[nonbases[j][1]]
+	n = length(x)
+	#Mat = matroid_from_nonbases(nonbases,  n)
+	Mat = matr
+	nonbases_lines = matroid_lines_nonbases(Mat)
+	if length(flats(Mat)) == 1
+		nonbases_lines = [[1,2]]
+	end
+
+		for j in 1:length(nonbases_lines)  #plotting lines the points lie on
+			slope = (y[nonbases_lines[j][2]] - y[nonbases_lines[j][1]]) / (x[nonbases_lines[j][2]] - x[nonbases_lines[j][1]])
+			b = y[nonbases_lines[j][1]] - slope*x[nonbases_lines[j][1]]
 			f(x) = slope*x + b
-			plot!(f, xaxis = false, yaxis = false, xlims = (minimum(x)-1 , maximum(x) + 1), ylims = (minimum(y)-1, maximum(y) + 1), linecolor=:blue, z_order=:back)
+			plot!(f, xaxis = false, yaxis = false, xlims = (xm-xbuffer , xM+xbuffer), ylims = (ym-ybuffer, yM+ybuffer), linecolor=:orange, z_order=:back, linewidth = 7, widen=false)
+			plot!([xm-xbuffer,xM+xbuffer],[yM+ybuffer,yM+ybuffer],color=:black, linewidth = 2)
+			plot!([xm-xbuffer,xM+xbuffer],[ym-ybuffer,ym-ybuffer],color=:black, linewidth = 2)
+			plot!([xM+xbuffer,xM+xbuffer],[ym-ybuffer,yM+ybuffer],color=:black, linewidth = 2)
+			plot!([xm-xbuffer,xm-xbuffer],[ym-ybuffer,yM+ybuffer],color=:black, linewidth = 2)
+			plot!(labels=:false)
+			println("hi")
 		end 
 	return(visualization)
 end 
 
+#=
 function draw_matroid_representative(M::Matrix{Float64},Matr::Matroid)
 	NB = nonbases(Matr)
 	return(draw_matroid_representative(M,NB))
 end
+=#
 
 
 function first_n_simple_matroids(n:: Int64)
