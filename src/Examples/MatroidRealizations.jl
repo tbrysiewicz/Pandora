@@ -590,3 +590,34 @@ function window(M)
 	return(xwin, ywin)
 
 end 
+
+
+#Takes a Variety V, and a point on V called p and finds a point on V in the direction of the vector v 
+#Note that p must be a smooth point on V 
+function move_and_project(V, p, v)
+	F = system(V)
+	JF = jacobian(F, p) #Jacobian matrix of F evaluated at point p
+	#Getting a linear space in the rowspace of the Jacobian 
+	N = nullspace(JF) #Basis for the nullspace of JF- which is a basis for the tangent space of V 
+	T = transpose(N) 
+	M = convert(Matrix{Float64}, T) #Converting T so it is compatible with LinearSubspace
+	b = zeros(Float64, size(M,1))
+	L = LinearSubspace(M, b) #This is the nullspace of the transpose of N aka the orthognal compliment of N aka the rowspace of JF 
+	
+	#Translating L so that it goes through p and then is translated by v
+	C = [] #translation vector 
+	for r in eachrow(M) #Calculating the verticle translation value 
+		c = dot(r, p + v)
+		push!(C, c)
+	end 
+	
+	translated_L = HomotopyContinuation.translate(L, -C) #Translated L from orgin to p, then further by v
+	
+	#Finding new point that lies on intersection of witness set and translated_L
+	D = ambient_dimension(V) - rank(JF) #Dimension of the tangent space aka dimension of V 
+	W = witness_set(V, dim = D)
+	new_W = witness_set(W, translated_L)
+	new_p = HomotopyContinuation.real_solutions(results(new_W))
+	
+	return(new_p)
+end 
