@@ -126,6 +126,7 @@ function AltBurmester(M,N)
 
     F=System(polys,variables=vars,parameters=params)
     E = EnumerativeProblem(F)
+    return(E)
     degree(E;Method="Monodromy")
     return(E)
 end

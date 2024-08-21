@@ -94,7 +94,9 @@ end
 function SymmetricTwentySevenLines()
     @var x,y,z,w
     @var a3000,a2100,a1110 #symmetric cubics form a 3-dimensional space
-    f = a3000*(x^3+y^3+z^3+w^3) + a2100*(x^2*y+x*y^2+x^2*z+x*z^2+x^2*w+w^2*x+y^2*z+z^2*y+y^2*w+w^2*y+z^2*w+w^2*z) + a1110*(x*y*z+x*y*w+x*z*w+y*z*w) #they look like this
+    f = a3000*(x^3+y^3+z^3+w^3) + 
+         a2100*(x^2*y+x*y^2+x^2*z+x*z^2+x^2*w+w^2*x+y^2*z+z^2*y+y^2*w+w^2*y+z^2*w+w^2*z) + 
+             a1110*(x*y*z+x*y*w+x*z*w+y*z*w) #they look like this
     #change_of_coords = [sum(randn(Float64,4).*[x,y,z,w]) for i in 1:4] #this is a random real change of coords so lines are not generically hiding at infinity
     #f = subs(f,[x,y,z,w]=>change_of_coords)
     f = subs(f,a3000=>1.0)

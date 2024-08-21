@@ -4,7 +4,8 @@ import Oscar.galois_group
 export
     galois_group,
     is_decomposable,
-    monodromy_group
+    monodromy_group,
+    local_monodromy_group
 
 @doc raw"""
     galois_group(E::EnumerativeProblem; nloops = 20)
@@ -81,6 +82,12 @@ end
  """
 function monodromy_group(E::EnumerativeProblem; nloops = 20, radius = 1)
     S = sample_monodromy_elements(E,nloops; radius = radius)
+    return(permutation_group(degree(E),S))
+end
+
+
+function local_monodromy_group(E::EnumerativeProblem,p; nloops = 20)
+    S = sample_monodromy_elements(E,nloops; radius = 0.01, base_parameter=p+randn(ComplexF64,length(p))*0.0001)
     return(permutation_group(degree(E),S))
 end
 
