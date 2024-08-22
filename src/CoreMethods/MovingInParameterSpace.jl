@@ -21,7 +21,7 @@ end
 
 #####Basic moving in parameter space
 
-function solve_over_param(E::EnumerativeProblem,P; monodromy_recover=false, show_progress=true)
+function solve_over_param(E::EnumerativeProblem,P; monodromy_recover=false, show_progress=false)
     #Consider implementing special solvers when
     #  there is decomposability
     if is_populated(E)==false
@@ -37,7 +37,7 @@ function solve_over_param(E::EnumerativeProblem,P; monodromy_recover=false, show
 end
 
 
-function solve_over_params(E::EnumerativeProblem,P; start_fibre = nothing, monodromy_recover=false, checks=[degree_check],retry=false, show_progress=true, verbose=false)
+function solve_over_params(E::EnumerativeProblem,P; start_fibre = nothing, monodromy_recover=false, checks=[degree_check],retry=false, show_progress=false, verbose=false)
     if is_populated(E)==false
         populate_base_fibre(E)
     end

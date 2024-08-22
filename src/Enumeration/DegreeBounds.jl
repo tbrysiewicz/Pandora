@@ -45,6 +45,14 @@ end
  ```
  """
 function bkk(E::EnumerativeProblem)
-    HomotopyContinuation.mixed_volume(system(E))
+    P = randn(Float64,n_parameters(E))
+    HomotopyContinuation.mixed_volume(specialized_system(E))
 end
 
+function specialized_system(E::EnumerativeProblem; P = nothing)
+    if P==nothing   
+        P = randn(Float64,length(parameters(system(E))))
+    end
+    F = system(E)
+    return(System(HomotopyContinuation.evaluate(expressions(F), parameters(F)=>P)))
+end

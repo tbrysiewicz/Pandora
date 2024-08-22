@@ -47,6 +47,8 @@ function __init__()
 		printstyled(" $VERSION_NUMBER ", color = :green)
 end
 
+
+
 include("CoreObjects/Varieties/Variety.jl")
 include("CoreObjects/EnumerativeProblems/EnumerativeProblem.jl")
 #include("Fibres/Scores.jl")
@@ -100,6 +102,7 @@ include("Visualization/Visualize_Discriminant.jl")
 
 include("Sampling/Sampling.jl")
 
+include("Automation/Automate.jl")
 
 end # module Pandora
 

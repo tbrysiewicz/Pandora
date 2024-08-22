@@ -271,9 +271,9 @@ end
  Returns the  dimension of the variety $V$.
 
  """
-function dim(V::Variety; dim = nothing, codim = nothing)
+function dim(V::Variety; dimm = nothing, codimm = nothing)
     if is_populated(V)==false
-        populate_witness!(V; dim = dim, codim = codim)
+        populate_witness!(V; dim = dimm, codim = codimm)
         return(dim(V))
     end
     d = HomotopyContinuation.dim(witness_set(V))

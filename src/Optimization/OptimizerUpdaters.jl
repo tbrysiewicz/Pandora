@@ -8,10 +8,12 @@ function update_sampler_radius!(O::Optimizer,information::Dict{Any,Any}; desired
         if get(information,"status",0.0)=="No Improvement"
             scale_sampler_radius!(O,0.7)            
             verbose &&  println("                                               no improvement - radius down: ",eigmax(O.sampling_ellipsoid))
+            print(".")
         end
         if get(information,"status",0.0)=="Improved Current Score" || get(information,"status",0.0)=="Improved Record Score"
             scale_sampler_radius!(O,1.3)            
             verbose &&  println("                                               Improved Current Score - radius up: ",eigmax(O.sampling_ellipsoid))
+            print("'")
         end
         return()
     end
@@ -19,24 +21,26 @@ function update_sampler_radius!(O::Optimizer,information::Dict{Any,Any}; desired
     n_non_taboo = get(information,"n_non_taboo","na")
     if n_fibres!="na" && n_non_taboo!="na"
         non_taboo_proportion = n_non_taboo/n_fibres
-        println("Non taboo proportion:",non_taboo_proportion)
+        verbose && println("Non taboo proportion:",non_taboo_proportion)
         if desired_interval[1]<non_taboo_proportion
             #there are sufficiently many non-taboo
             if non_taboo_proportion<desired_interval[2]
                 #non_taboo proportion is within the desired interval - do nothing
-                println("                                                                 radius is good")
+                verbose && println("                                                                 radius is good")
             else
                 #there are too many non-taboo
                 scale_sampler_radius!(O,2+rand(Float64))
-                println("                                                                 radius up: ",eigmax(O.sampling_ellipsoid))
+                verbose && println("                                                                 radius up: ",eigmax(O.sampling_ellipsoid))
+                print("'")
             end
         else
             #there are too few non-taboo
             scale_sampler_radius!(O,rand(Float64))
-            println("                                                                 radius down: ",eigmax(O.sampling_ellipsoid))
+            verbose && println("                                                                 radius down: ",eigmax(O.sampling_ellipsoid))
+            print(".")
         end
     else
-        println("!!!!!!!!!!!!!",n_fibres,"  ",n_non_taboo)
+        verbose && println("!!!!!!!!!!!!!",n_fibres,"  ",n_non_taboo)
     end
 end
 

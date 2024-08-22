@@ -223,7 +223,7 @@ end
 #  6) update history
 #  7) return the data from steps 2,3,4,5 for the meta_strategy to adjust the optimizer settings
 
-function improve!(O::Optimizer; n_samples=nothing, verbose = true)
+function improve!(O::Optimizer; n_samples=nothing, verbose = false)
     improvement_info = Dict{Any,Any}()
     improvement_info["n_samples"] = n_samples
 
@@ -260,6 +260,7 @@ function improve!(O::Optimizer; n_samples=nothing, verbose = true)
         #5)
         if record>O.current_score
             status = "Improved Current Score"
+            print("i")
             old_score = O.current_score
             O.current_score = record
             O.current_fibre = record_fibre
@@ -273,10 +274,12 @@ function improve!(O::Optimizer; n_samples=nothing, verbose = true)
             end
         else
             status = "No Improvement"
+            print("n")
             improvement = 0.0.*O.current_score
         end
     else
         status = "All Are Taboo"
+        print("t")
     end
     verbose && println("Current Score: ",O.current_score)
     improvement_info["status"] = status
@@ -285,7 +288,7 @@ function improve!(O::Optimizer; n_samples=nothing, verbose = true)
     return(improvement_info)
 end
 
-function optimize!(O::Optimizer; n_trials = 10, n_samples = nothing, verbose=true)
+function optimize!(O::Optimizer; n_trials = 10, n_samples = nothing, verbose=false)
     trials = 0
     while trials<n_trials && O.goal(O)==false
         trials = trials+1
@@ -298,6 +301,10 @@ function optimize!(O::Optimizer; n_trials = 10, n_samples = nothing, verbose=tru
             update_solver_fibre!(O; verbose=verbose)
         end
     end
+    if O.goal(O)==true
+        print("!")
+        println()
+    end
     return(O)
 end
 
@@ -305,7 +312,7 @@ function all_real_goal(O::Optimizer)
     degree(O.EP) == length(HomotopyContinuation.real_solutions(O.record_fibre[1]))
 end
 
-function optimize_real(EP::EnumerativeProblem; n_trials = 50, Strategy = :normal, Objective = :onebyone)
+function optimize_real(EP::EnumerativeProblem; n_trials = 50, n_samples = nothing, Strategy = :normal, Objective = :onebyone)
     obj_fun = cts_real
     if Objective == :alltogether
         obj_fun = cts_real_total
@@ -313,13 +320,13 @@ function optimize_real(EP::EnumerativeProblem; n_trials = 50, Strategy = :normal
 
     if Strategy == :normal   
         O = initialize_optimizer(EP,obj_fun;taboo_score = real_taboo, barrier_score = real_barrier, goal = all_real_goal);
-        O = optimize!(O; n_trials = n_trials)
+        O = optimize!(O; n_trials = n_trials, n_samples=n_samples)
         return(O)
     elseif Strategy == :shotgun
-        println("------------------Shotgun Hill-Climb-------------------")
+        verbose && println("------------------Shotgun Hill-Climb-------------------")
         runs = []
         for i in 1:48
-            println("----------------------------------Shotgun: ",i)
+            verbose && println("----------------------------------Shotgun: ",i)
             O = initialize_optimizer(EP,obj_fun;taboo_score = real_taboo, barrier_score = real_barrier, goal = all_real_goal);
             scale_sampler_radius!(O,2)
             improve!(O;n_samples = 100)
@@ -340,7 +347,7 @@ function optimize_real(EP::EnumerativeProblem; n_trials = 50, Strategy = :normal
         O.taboo_score = real_taboo
         O.record_score = cts_real(O.record_fibre)
         O.current_score = cts_real(O.current_fibre)
-        println("-------***Switching to one-by-one***--------")
+        verbose && println("-------***Switching to one-by-one***--------")
         O = optimize!(O; n_trials = 2500, n_samples = 30)
   
     end
