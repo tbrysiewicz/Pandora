@@ -787,7 +787,7 @@ function Delaunay_visualization(EP::EnumerativeProblem;
     T = mesh1.triangulation
 	total_resolution -= L
 	if continuous == true
-		refinement_standard = standard_for_continuous_function_refinement2(V, T, plot_proportion)
+		refinement_standard = standard_for_continuous_function_refinement(V, T, plot_proportion)
 		while total_resolution > 0
 			refinement_termination, L = triforce_refinement!(mesh1, total_resolution, refinement_standard)
 			Delaunay_triangulation!(mesh1)
