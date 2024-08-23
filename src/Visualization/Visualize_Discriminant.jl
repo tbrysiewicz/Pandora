@@ -781,7 +781,9 @@ function Delaunay_visualization(EP::EnumerativeProblem;
                                 label = true,
                                 scatter = false,
                                 plot_logged_values = false)
-    xlims, ylims = adjust_visualization_window(EP, fibre_function, xlims, ylims)
+    if continuous == false
+        xlims, ylims = adjust_visualization_window(EP, fibre_function, xlims, ylims)
+    end
 	mesh1, L = initialize_mesh(EP, fibre_function = fibre_function, xlims = xlims, ylims = ylims, resolution = initial_resolution, continuous = continuous)
     V = mesh1.value_dict
     T = mesh1.triangulation
@@ -861,13 +863,15 @@ function triforce_visualization(EP::EnumerativeProblem;
                                     label = true,
                                     scatter = false,
                                     plot_logged_values = false)
-    xlims, ylims = adjust_visualization_window(EP, fibre_function, xlims, ylims)
+    if continuous == false
+        xlims, ylims = adjust_visualization_window(EP, fibre_function, xlims, ylims)
+    end
     mesh1, L = initialize_mesh(EP, fibre_function = fibre_function, xlims = xlims, ylims = ylims, resolution = initial_resolution, continuous = continuous)
     V = mesh1.value_dict
     T = mesh1.triangulation
     total_resolution -= L
     if continuous == true
-        refinement_standard = standard_for_continuous_function_refinement2(V, T, plot_proportion)
+        refinement_standard = standard_for_continuous_function_refinement(V, T, plot_proportion)
         while total_resolution > 0
             refinement_termination, L = triforce_refinement!(mesh1, total_resolution, refinement_standard)
             if refinement_termination == true
@@ -889,7 +893,8 @@ function triforce_visualization(EP::EnumerativeProblem;
     return mesh1, my_plot
 end
 
-function visualize_parameterspace(EP::EnumerativeProblem, strategy = "Delaunay";
+function visualize_parameterspace(EP::EnumerativeProblem;
+                    strategy = "Delaunay",
                     xlims = [-2.0,2.0], 
                     ylims = [-2.0,2.0], 
                     fibre_function = x->HomotopyContinuation.nreal(x[1]), 
