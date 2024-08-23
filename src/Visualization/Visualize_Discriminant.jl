@@ -1,7 +1,9 @@
+using DelaunayTriangulation
+
 export
     restrict_enumerative_problem_to_plane,
     restrict_enumerative_problem
-    visualize
+    visualize_parameterspace
 
 
 
