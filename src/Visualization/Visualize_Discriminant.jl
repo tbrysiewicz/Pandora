@@ -3,7 +3,7 @@ using DelaunayTriangulation
 export
     restrict_enumerative_problem_to_plane,
     restrict_enumerative_problem,
-    visualize_parameterspace
+    visualize_parameter_space
 
 
 
@@ -53,7 +53,7 @@ function restrict_enumerative_problem_to_plane(EP::EnumerativeProblem)
 	P = [randn(Float64,n_parameters(EP)) for i in 1:3]
 	return(restrict_enumerative_problem(EP,P))
 end
-
+#=
 function restrict_enumerative_problem(EP::EnumerativeProblem,P::Vector{Vector{Float64}})
 	F = system(EP)
 	xv = variables(F)
@@ -63,6 +63,36 @@ function restrict_enumerative_problem(EP::EnumerativeProblem,P::Vector{Vector{Fl
 	affine_span = P[n]+sum([t[i].*(P[i]-P[n]) for i in 1:n-1])
 	NewEquations = [subs(f,xp=>affine_span) for f in expressions(F)]
 	return(EnumerativeProblem(System(NewEquations,variables=xv,parameters=t)))
+end
+=#
+
+function Gram_Schmidt(basis_vectors::Vector)
+	orthonormal_basis = []
+	for i in 1:length(basis_vectors)
+		if i == 1
+			new_basis_vector = basis_vectors[i]
+			new_basis_vector = new_basis_vector/norm(new_basis_vector)
+			push!(orthonormal_basis, new_basis_vector)
+		else
+			new_basis_vector = basis_vectors[i] - sum([(sum(basis_vectors[i].*orthonormal_basis[x])/sum(orthonormal_basis[x].*orthonormal_basis[x])).*orthonormal_basis[x] for x in 1:i-1])
+			new_basis_vector = new_basis_vector/norm(new_basis_vector)
+			push!(orthonormal_basis, new_basis_vector)
+		end
+	end
+	return orthonormal_basis
+end
+
+function restrict_enumerative_problem(EP::EnumerativeProblem,P::Vector{Vector{Float64}})
+    F = system(EP)
+    xv = variables(F)
+    xp = parameters(F)
+    n = length(P)
+    @var t[1:n-1]
+    basis_vectors = [(P[i]-P[n]) for i in 1:n-1]
+    basis_vectors = Gram_Schmidt(basis_vectors)
+    affine_span = P[n] + sum([t[i].*basis_vectors[i] for i in 1:n-1])
+    NewEquations = [subs(f,xp=>affine_span) for f in expressions(F)]
+    return(EnumerativeProblem(System(NewEquations,variables=xv,parameters=t)))
 end
 
 mutable struct mesh
@@ -356,6 +386,90 @@ function triforce_refinement!(mesh1::mesh, resolution = 1000, standard_for_refin
 		push!(new_parameters, midpoint2)
 		push!(new_parameters, midpoint3)
 	end
+    mesh1.triangulation = new_triangulation
+	S = solve_over_params(mesh1.EP, new_parameters, checks = [], retry=true)
+	for i in S
+		if length(solutions(i[1]))!=degree(mesh1.EP) || nsingular(i[1])!=0
+        	value_dict[i[2]] = false
+		else
+			value_dict[i[2]] = fibre_function(i)
+        end
+	end
+    return refinement_termination, length(S)
+end
+
+#= function barycenter_refinement! - finds triangles in mesh over which the number of real solutions changes and inserts barycenter into these triangles then solves for new vertices.
+    input:
+        mesh1 - mesh object
+        resolution
+        standard_for_refinement - in the case that fibre_function is continuous, used as the threshold for triangle refinement; this value is produced by standard_for_continuous_function_refinement
+    output:
+        refinement_termination - indicates whether total resolution has been reached in current round of refinement
+        length(S) - number of points solved for in refinement
+=#
+function barycenter_refinement!(mesh1::mesh, resolution = 1000, standard_for_refinement = 0.0)
+	value_dict = mesh1.value_dict
+    triangles = mesh1.triangulation
+    fibre_function = mesh1.fibre_function
+	refinement_termination = false
+    white_space_triangles = []
+    triangles_to_refine = []
+    if mesh1.type_of_fibre_function == "continuous"
+        triangle_value_ranges = Dict()
+        for T in triangles
+            if isa(value_dict[T[1]], Bool) || isa(value_dict[T[2]], Bool) || isa(value_dict[T[3]], Bool)
+                non_error_coordinates = findall(x->isa(value_dict[x], Bool) == false, T)
+                if length(non_error_coordinates) == 2
+                    triangle_value_ranges[T] = abs(value_dict[T[non_error_coordinates[1]]] - value_dict[T[non_error_coordinates[2]]])
+                else
+                    continue
+                end
+            else
+                min_value = min([value_dict[x] for x in T]...)
+                max_value = max([value_dict[x] for x in T]...)
+                triangle_value_ranges[T] = max_value - min_value
+            end
+        end
+        triangles_to_refine = filter(x->triangle_value_ranges[x]>standard_for_refinement, keys(triangle_value_ranges))
+    else
+        white_space_triangles = filter(x->value_dict[x[1]]!=value_dict[x[2]]||value_dict[x[1]]!=value_dict[x[3]], triangles)
+        for T in white_space_triangles
+            if isa(value_dict[T[1]], Bool) == false && isa(value_dict[T[2]], Bool) == false && isa(value_dict[T[3]], Bool) == false
+                push!(triangles_to_refine, T)
+            else
+                non_error_coordinates = findall(x->isa(value_dict[x], Bool) == false, T)
+                if length(non_error_coordinates) <= 1
+                    continue
+                else
+                    if value_dict[T[non_error_coordinates[1]]] != value_dict[T[non_error_coordinates[2]]] #triangles with a single error and two differing values on the other two vertices are refined
+                        push!(triangles_to_refine, T)
+                    else
+                        continue
+                    end
+                end
+            end
+        end
+    end
+	restricted_triangles_to_refine = [] #need to restrict triangles_to_refine to meet resolution requirement
+	if (length(triangles_to_refine)*3)>resolution #triforce refinement inserts three points in each white space triangle. Therefore, if the length of triangles_to_refine times 3 is greater than the resolution, only resolution/3 many triangles are chosen to be refined
+		while length(restricted_triangles_to_refine)*3<resolution
+			v = rand(triangles_to_refine,Int(floor(resolution/10)))
+			restricted_triangles_to_refine = unique(vcat(restricted_triangles_to_refine,v))
+		end
+		restricted_triangles_to_refine = restricted_triangles_to_refine[1:Int(floor(resolution/3))]
+		refinement_termination = true #when triangles_to_refine needs to be restricted, this indicates that total_resolution has been reached and refinement must be stopped.
+	else
+		restricted_triangles_to_refine = triangles_to_refine
+	end
+    new_triangulation = setdiff(triangles, restricted_triangles_to_refine) 
+    new_parameters = []
+    for T in restricted_triangles_to_refine
+        barycenter = (T[1]+T[2]+T[3])/3
+        push!(new_triangulation,[T[1],T[2],barycenter])
+        push!(new_triangulation,[T[1],T[3],barycenter])
+        push!(new_triangulation,[T[2],T[3],barycenter])
+        push!(new_parameters,barycenter)
+    end
     mesh1.triangulation = new_triangulation
 	S = solve_over_params(mesh1.EP, new_parameters, checks = [], retry=true)
 	for i in S
@@ -893,10 +1007,88 @@ function triforce_visualization(EP::EnumerativeProblem;
     return mesh1, my_plot
 end
 
-function visualize_parameterspace(EP::EnumerativeProblem;
+#= function triforce_visualization
+    input:
+        EP 
+        xlims
+        ylims
+        fibre_function
+        initial_resolution - maximum number of vertices solved for in initial mesh
+        total_resolution - maximum number of vertices solved for over the entirety of the visualizaiton process (initial mesh and subsequent refinement)
+        continuous - indicates whether the fibre_function is continuous
+        plot_proportion - in the case that fibre_function is continuous, plot_proportion is used to calculate the threshold for both refinement. For continuous fibre functions, the
+		range of fibre_function values across a triangle is calculated (range across the values of the three vertices) and this range is used to determine if the triangle will be refined. For example, if plot_proportion is 0.7, the 70th percentile of triangle value ranges is used as the threshold for refinement; any triangle with a value range greater than the 70th percentile will be refined. 
+        label - indicates whether a legend will be included in the plot
+        scatter - indicates whether triangulation vertices will be plotted
+        plot_logged_values - indicates whether, in the case of a continuous fibre_function, if logged fibre_function values are to be plotted
+    output:
+        mesh1 - mesh object resulting from refinement process
+        my_plot - parameter space visualization
+=#
+function barycenter_visualization(EP::EnumerativeProblem; 
+                                    xlims = [-2.0,2.0], 
+                                    ylims = [-2.0,2.0], 
+                                    fibre_function = x->HomotopyContinuation.nreal(x[1]), 
+                                    initial_resolution = 1000, 
+                                    total_resolution = 4*initial_resolution, 
+                                    continuous = false, 
+                                    plot_proportion = 0.7,
+                                    label = true,
+                                    scatter = false,
+                                    plot_logged_values = false)
+    if continuous == false
+        xlims, ylims = adjust_visualization_window(EP, fibre_function, xlims, ylims)
+    end
+    mesh1, L = initialize_mesh(EP, fibre_function = fibre_function, xlims = xlims, ylims = ylims, resolution = initial_resolution, continuous = continuous)
+    V = mesh1.value_dict
+    T = mesh1.triangulation
+    total_resolution -= L
+    if continuous == true
+        refinement_standard = standard_for_continuous_function_refinement(V, T, plot_proportion)
+        while total_resolution > 0
+            refinement_termination, L = barycenter_refinement!(mesh1, total_resolution, refinement_standard)
+            if refinement_termination == true
+                break
+            end
+            total_resolution -= L
+        end
+    else
+        while total_resolution > 0
+            refinement_termination, L = barycenter_refinement!(mesh1, total_resolution)
+            if refinement_termination == true
+                break
+            end
+            total_resolution -= L
+        end
+    end
+    my_plot = draw_mesh(mesh1.value_dict, mesh1.triangulation, xlims = mesh1.xlims, ylims = mesh1.ylims, continuous = continuous, scatter = scatter, label = label, plot_logged_values = plot_logged_values)
+
+    return mesh1, my_plot
+end
+
+#= function visualize_parameter_space
+    input:
+        EP - Enumerative problem
+        strategy - indicates what visualization strategy to use
+        xlims
+        ylims
+        fibre_function
+        initial_resolution
+        total_resolution
+        continuous
+        plot_proportion
+        label
+        scatter
+        plot_logged_values
+        near - you can enter a coordinate in the parameterspace that you want the visualization to be centered around.
+    output:
+        mesh1
+        my_plot
+=#
+function visualize_parameter_space(EP::EnumerativeProblem;
                     strategy = "Delaunay",
-                    xlims = [-2.0,2.0], 
-                    ylims = [-2.0,2.0], 
+                    xlims = [-10.0,10.0], 
+                    ylims = [-10.0,10.0], 
                     fibre_function = x->HomotopyContinuation.nreal(x[1]), 
                     initial_resolution = 1000, 
                     total_resolution = 4*initial_resolution, 
@@ -908,6 +1100,9 @@ function visualize_parameterspace(EP::EnumerativeProblem;
                     near = false)
     if isa(near, Bool) == false
         EP = restrict_enumerative_problem(EP, [near + randn(Float64, 20) for i in 1:3])
+    elseif length(EP.F.parameters) != 2 && isa(near,Bool)
+        EP = restrict_enumerative_problem_to_plane(EP)
+        println("The inputted enumerative problem does not have two parameters. A random 2-plane in the parameter space will be visualized.")
     end
     if strategy == "Delaunay"
         mesh1, my_plot = Delaunay_visualization(EP, xlims = xlims, ylims = ylims, fibre_function = fibre_function, initial_resolution = initial_resolution, total_resolution = total_resolution, continuous = continuous, plot_proportion = plot_proportion, label = label, scatter = scatter, plot_logged_values = plot_logged_values)
@@ -915,8 +1110,11 @@ function visualize_parameterspace(EP::EnumerativeProblem;
     elseif strategy == "triforce"
         mesh1, my_plot = triforce_visualization(EP, xlims = xlims, ylims = ylims, fibre_function = fibre_function, initial_resolution = initial_resolution, total_resolution = total_resolution, continuous = continuous, plot_proportion = plot_proportion, label = label, scatter = scatter, plot_logged_values = plot_logged_values)
         return mesh1, my_plot
+    elseif strategy == "barycenter"
+        mesh1, my_plot = barycenter_visualization(EP, xlims = xlims, ylims = ylims, fibre_function = fibre_function, initial_resolution = initial_resolution, total_resolution = total_resolution, continuous = continuous, plot_proportion = plot_proportion, label = label, scatter = scatter, plot_logged_values = plot_logged_values)
+        return mesh1, my_plot
     else
-        throw(ArgumentError("Invalid strategy inputted. Valid strategies include: Delaunay, triforce"))
+        throw(ArgumentError("Invalid strategy inputted. Valid strategies include: Delaunay, triforce, barycenter"))
     end
 end
 
