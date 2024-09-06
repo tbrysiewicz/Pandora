@@ -44,9 +44,9 @@ end
  
  ```
  """
-function bkk(E::EnumerativeProblem)
+function bkk(E::EnumerativeProblem;only_torus=false)
     P = randn(Float64,n_parameters(E))
-    HomotopyContinuation.paths_to_track(specialized_system(E);only_torus=true)
+    HomotopyContinuation.paths_to_track(specialized_system(E);only_torus=only_torus)
 end
 
 function specialized_system(E::EnumerativeProblem; P = nothing)

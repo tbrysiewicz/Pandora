@@ -13,6 +13,7 @@ function automate(E::EnumerativeProblem; describe_monodromy = default_monodromy_
 
     bezout_bound = bezout(E)
     bkk_bound = bkk(E)
+    bkk_bound_torus = bkk(E;only_torus=true)
     d = degree(E)
     G = galois_group(E)
     N = 1000
@@ -30,8 +31,12 @@ function automate(E::EnumerativeProblem; describe_monodromy = default_monodromy_
     println("--------------------basic---------------------")
     println("----------------------------------------------")
     println("This is an enumerative problem in ",n," variables, cut out by ",m," polynomials over ",k," parameters.")
-    println("The degree counts d<=bkk<=bezout are given by ")
+    println("The degree counts d<=bkk in affine space<=bezout are given by ")
+    println("                          V|  ")
+    println("                     bkk in torus  ")
     println("    ",d,"<=",bkk_bound,"<=",bezout_bound)
+    println("                V|")
+    println("             ",bkk_bound_torus)
 
     println("----------------------------------------------")
     println("---------------monodromy/galois---------------")
