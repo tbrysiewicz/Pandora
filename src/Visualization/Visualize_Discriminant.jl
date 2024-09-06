@@ -1098,8 +1098,9 @@ function visualize_parameter_space(EP::EnumerativeProblem;
                     scatter = false,
                     plot_logged_values = false,
                     near = false)
+    k = n_parameters(EP)
     if isa(near, Bool) == false
-        EP = restrict_enumerative_problem(EP, [near + randn(Float64, 20) for i in 1:3])
+        EP = restrict_enumerative_problem(EP, [near + randn(Float64, k) for i in 1:3])
     elseif length(EP.F.parameters) != 2 && isa(near,Bool)
         EP = restrict_enumerative_problem_to_plane(EP)
         println("The inputted enumerative problem does not have two parameters. A random 2-plane in the parameter space will be visualized.")

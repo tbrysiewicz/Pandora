@@ -2,7 +2,11 @@ export
     automate
 
 
-function automate(E::EnumerativeProblem)
+function default_monodromy_describe()
+     true
+end
+
+function automate(E::EnumerativeProblem; describe_monodromy = default_monodromy_describe(), kwargs...)
     n = ambient_dimension(E)
     k = n_parameters(E)
     m = n_polynomials(E)
@@ -32,7 +36,11 @@ function automate(E::EnumerativeProblem)
     println("----------------------------------------------")
     println("---------------monodromy/galois---------------")
     println("----------------------------------------------")
-    println("The Galois group/monodromy group is ", describe(G))
+    println("The Galois group/monodromy group is ")
+    if get(kwargs,:describe_monodromy,false) && println(describe(G))
+    else
+        print("computed, but not described,")
+    end
     println("   and has order ",order(G))
     println("   In particular it is ")
     if is_transitive(G)
@@ -90,5 +98,7 @@ function automate(E::EnumerativeProblem)
     println("The maximum of ", max_record, " was achieved by the parameters")
     println("  ",Obucket[argmax(records)].record_fibre[2])
 
-
+    (v,P) = visualize_parameter_space(E;near = Obucket[argmax(records)].record_fibre[2])
+    show(P)
+    return(P)
 end
