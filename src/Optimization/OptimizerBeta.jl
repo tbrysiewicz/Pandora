@@ -312,7 +312,7 @@ function all_real_goal(O::Optimizer)
     degree(O.EP) == length(HomotopyContinuation.real_solutions(O.record_fibre[1]))
 end
 
-function optimize_real(EP::EnumerativeProblem; n_trials = 50, n_samples = nothing, Strategy = :normal, Objective = :onebyone, Verbose = false)
+function optimize_real(EP::EnumerativeProblem; n_trials = 50, n_samples = nothing, Strategy = :normal, Objective = :onebyone, verbose = false)
     obj_fun = cts_real
     if Objective == :alltogether
         obj_fun = cts_real_total
@@ -320,7 +320,7 @@ function optimize_real(EP::EnumerativeProblem; n_trials = 50, n_samples = nothin
 
     if Strategy == :normal   
         O = initialize_optimizer(EP,obj_fun;taboo_score = real_taboo, barrier_score = real_barrier, goal = all_real_goal);
-        O = optimize!(O; n_trials = n_trials, n_samples=n_samples)
+        O = optimize!(O; n_trials = n_trials, n_samples=n_samples, verbose=verbose)
         return(O)
     elseif Strategy == :shotgun
         verbose && println("------------------Shotgun Hill-Climb-------------------")
@@ -330,7 +330,7 @@ function optimize_real(EP::EnumerativeProblem; n_trials = 50, n_samples = nothin
             O = initialize_optimizer(EP,obj_fun;taboo_score = real_taboo, barrier_score = real_barrier, goal = all_real_goal);
             scale_sampler_radius!(O,2)
             improve!(O;n_samples = 100)
-            O = optimize!(O; n_trials = 500, n_samples = 20)
+            O = optimize!(O; n_trials = 500, n_samples = 20, verbose=verbose)
             push!(runs,O)
         end
         return(runs)
@@ -341,14 +341,14 @@ function optimize_real(EP::EnumerativeProblem; n_trials = 50, n_samples = nothin
         scale_sampler_radius!(O,10)
         improve!(O;n_samples =200)
         scale_sampler_radius!(O,2)
-        O = optimize!(O; n_trials = 50, n_samples = 30)
+        O = optimize!(O; n_trials = 50, n_samples = 30, verbose=verbose)
         O.objective_score = cts_real
         O.barrier_score = real_barrier
         O.taboo_score = real_taboo
         O.record_score = cts_real(O.record_fibre)
         O.current_score = cts_real(O.current_fibre)
         verbose && println("-------***Switching to one-by-one***--------")
-        O = optimize!(O; n_trials = 2500, n_samples = 30)
+        O = optimize!(O; n_trials = 2500, n_samples = 30, verbose=verbose)
   
     end
     #=
