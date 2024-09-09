@@ -312,7 +312,7 @@ function all_real_goal(O::Optimizer)
     degree(O.EP) == length(HomotopyContinuation.real_solutions(O.record_fibre[1]))
 end
 
-function optimize_real(EP::EnumerativeProblem; n_trials = 50, n_samples = nothing, Strategy = :normal, Objective = :onebyone)
+function optimize_real(EP::EnumerativeProblem; n_trials = 50, n_samples = nothing, Strategy = :normal, Objective = :onebyone, Verbose = false)
     obj_fun = cts_real
     if Objective == :alltogether
         obj_fun = cts_real_total
