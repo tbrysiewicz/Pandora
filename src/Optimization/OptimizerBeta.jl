@@ -289,6 +289,16 @@ function improve!(O::Optimizer; n_samples=nothing, verbose = false)
 end
 
 function optimize!(O::Optimizer; n_trials = 10, n_samples = nothing, verbose=false)
+
+    if verbose==false
+        println("You have opted for a non-verbose optimization run.")
+        println("i: record score improved")
+        println(".: radius decreased")
+        println("': radius increased")
+        println("t: all samples were taboo")
+        println("n: not improved")
+        println("!: goal achieved")
+    end
     trials = 0
     while trials<n_trials && O.goal(O)==false
         trials = trials+1
