@@ -517,6 +517,14 @@ mutable struct Particle
 	a::Vector{Vector{Float64}}
 end
 
+function position(P::Particle)
+	return(last(P.p))
+end
+
+function positions(P::Vector{Particle})
+	return([position(p) for p in P])
+end
+
 function point_set_data(point_set; xwin = [-1,1], ywin = [-1,1])
 	particles = Vector{Particle}([])
 	for p in point_set
@@ -562,13 +570,13 @@ function frame(point_set,xwin,ywin,i)
 end 
 
 #Returns the animation of the forces acting on the points for n frames, with time step t. 
-function force_directed_animation(particles::Vector{Particle}, xwin, ywin)
+function force_directed_animation(particles::Vector{Particle}, xwin, ywin; fps=10)
 	n = length(particles[1].p)
 	anim = @animate for i ∈ 1:n
 		point_set = [parti.p[i] for parti in particles]
 		frame(point_set, xwin, ywin,  i)
 	end
-	return(gif(anim, "anim_fps15.gif", fps = 10))
+	return(gif(anim, "anim_fps15.gif", fps = fps))
 end 
 
 function window(M)
