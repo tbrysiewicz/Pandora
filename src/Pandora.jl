@@ -1,25 +1,25 @@
 module Pandora
 
-using Pkg 					#To remove eventually
+using Pkg 					#remove eventually
 
-using HomotopyContinuation	
-using LinearAlgebra
-using Combinatorics
-using Oscar			
-using Plots
-using ProgressBars
-using Clustering
-using ImplicitPlots
+#using HomotopyContinuation	
+#using LinearAlgebra
+#using Combinatorics
+#using Oscar			
+#using Plots
+#using ProgressBars
+#using Clustering
+#using ImplicitPlots
 
 
 
-import HomotopyContinuation.solve
-import HomotopyContinuation.degree
-import HomotopyContinuation.dim
-import Oscar.dim
-import Oscar.degree
+#import HomotopyContinuation.solve
+#import HomotopyContinuation.degree
+#import HomotopyContinuation.dim
+#import Oscar.dim
+#import Oscar.degree
 
-export order
+#export order
 
 const PROJECT_TOML = Pkg.TOML.parsefile(joinpath(@__DIR__, "..", "Project.toml"))
 const VERSION_NUMBER = VersionNumber(PROJECT_TOML["version"])
@@ -49,60 +49,64 @@ end
 
 
 
-include("CoreObjects/Varieties/Variety.jl")
-include("CoreObjects/EnumerativeProblems/EnumerativeProblem.jl")
+#include("CoreObjects/EnumerativeProblems/EnumerativeProblem.jl")
+
+
+
+
+#include("CoreObjects/Varieties/Variety.jl")
 #include("Fibres/Scores.jl")
 
 #This needs to be fixed in several ways.
 #include("AlgebraicMatroid/AlgebraicMatroid.jl")
 
-include("CoreMethods/MovingInParameterSpace.jl")
+#include("CoreMethods/MovingInParameterSpace.jl")
 
 
-include("CoreObjects/EnumerativeProblems/EPGetters.jl")
+#include("CoreObjects/EnumerativeProblems/EPGetters.jl")
 
-include("Enumeration/DegreeBounds.jl")
+#include("Enumeration/DegreeBounds.jl")
 
-include("Examples/BasicEnumerativeExamples.jl")
-include("Examples/FamousEnumerativeExamples.jl")
-include("Examples/BasicVarietyExamples.jl")
-include("Examples/MatroidRealizations.jl")
-include("Examples/CrossRatioMap.jl")
-include("Visualization/MatroidVisualization.jl")
-include("Examples/AltBurmester.jl")
-include("Examples/CCEquations.jl")
+#include("Examples/BasicEnumerativeExamples.jl")
+#include("Examples/FamousEnumerativeExamples.jl")
+#include("Examples/BasicVarietyExamples.jl")
+#include("Examples/MatroidRealizations.jl")
+#include("Examples/CrossRatioMap.jl")
+#include("Visualization/MatroidVisualization.jl")
+#include("Examples/AltBurmester.jl")
+#include("Examples/CCEquations.jl")
 
 
-include("Exploration/Explore.jl")
-include("Exploration/FibreFunctions.jl")
-include("Exploration/Samplers.jl")
+#include("Exploration/Explore.jl")
+#include("Exploration/FibreFunctions.jl")
+#include("Exploration/Samplers.jl")
 
-include("Fibres/FibreChecks.jl")
-include("Fibres/FibreFunctions.jl")
-include("Fibres/RealityScores.jl")
+#include("Fibres/FibreChecks.jl")
+#include("Fibres/FibreFunctions.jl")
+#include("Fibres/RealityScores.jl")
 
-include("GaloisGroups/GaloisSampling.jl")
-include("GaloisGroups/GaloisGroups.jl")
-include("GaloisGroups/CoordinateSymmetryGroup.jl")
+#include("GaloisGroups/GaloisSampling.jl")
+#include("GaloisGroups/GaloisGroups.jl")
+#include("GaloisGroups/CoordinateSymmetryGroup.jl")
 
 #include("Optimization/CoreObjects.jl")
 #include("Optimization/Optimizer.jl")
-include("Optimization/OptimizerBeta.jl")
-include("Optimization/OptimizerUpdaters.jl")
+#include("Optimization/OptimizerBeta.jl")
+#include("Optimization/OptimizerUpdaters.jl")
 
 
-include("Statistics/Tally.jl")
+#include("Statistics/Tally.jl")
 
 
 
 
 #include("Visualization/Visualize.jl")
 #include("Visualization/Triangulate.jl")
-include("Visualization/Visualize_Discriminant.jl")
+#include("Visualization/Visualize_Discriminant.jl")
 
-include("Sampling/Sampling.jl")
+#include("Sampling/Sampling.jl")
 
-include("Automation/Automate.jl")
+#include("Automation/Automate.jl")
 
 end # module Pandora
 
