@@ -14,6 +14,7 @@ function TrivialScore(x)
     return(0.0)
 end
 
+#A score should take input of Fibre
 function is_score(f::Function)
     RT = Base.return_types(f)
     for r in RT
