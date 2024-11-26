@@ -1,17 +1,66 @@
-export
-    solve_over_param,
-    solve_over_params,
-    rebase!
+function solve(EP::EnumerativeProblem,fibre::Fibre, P::Vector{Vector{T}} where T <: Number)
+    S = solve(system(EP),solutions(fibre); start_parameters= parameters(fibre), target_parameters = P)
+    return(map(x->solutions(x[1]),S))
+end
+
+function solve(EP::EnumerativeProblem,fibre::Fibre, p::Vector{T} where T)
+    S = solve(system(EP),solutions(fibre); start_parameters= parameters(fibre), target_parameters = p)
+    return(solutions(S))
+end
+
+function solve(EP::EnumerativeProblem, p::Vector{T} where T)
+    return(solve(EP,base_fibre(EP),p))
+end
+
+function solve(EP::EnumerativeProblem, P::Vector{Vector{T}} where T)
+    return(solve(EP,base_fibre(EP),P))
+end
+
+function (EP::EnumerativeProblem)(fibre::Fibre, P::Vector{Vector{T}} where T <: Number)
+    return(solve(EP,fibre,P))
+end
+
+function (EP::EnumerativeProblem)(fibre::Fibre, p::Vector{T} where T)
+    return(solve(EP,fibre,p))    
+end
+
+function (EP::EnumerativeProblem)(P::Vector{Vector{T}} where T <:Number)   
+    return(solve(EP,P))
+end
+
+function (EP::EnumerativeProblem)(p::Vector{T} where T <:Number)    
+    return(solve(EP,p))
+end
 
 
 
-function rebase!(E::EnumerativeProblem; new_param = nothing)
-    if typeof(new_param) == Nothing
-        new_param = randn(ComplexF64,n_parameters(E))
+function (EP::EnumerativeProblem)()
+    solve(EP)
+end
+
+function solve(EP::EnumerativeProblem)
+    p = randn(ComplexF64,n_parameters(EP))
+    if is_populated(EP)==false
+        S = solve(system(EP);target_parameters=p)
+        return(solutions(S))
+    else
+        return(solve(EP,p))
     end
-    S = solve_over_param(E,new_param)
-    if length(S) == degree(E)
-        E.BaseFibre = (S,new_param)
+end
+
+
+
+#=
+function rebase!(EP::EnumerativeProblem; new_param)
+    if !is_populated(EP)
+        return(populate!(EP))
+    end
+    if !isdefined(new_param)
+        new_param = randn(ComplexF64,n_parameters(EP))
+    end
+    S = EP(new_param)
+    if length(S) == degree(EP)
+        EP.base_fibre = (S,new_param)
         return(nothing)
     else
         println("Failed to rebase")
@@ -67,3 +116,5 @@ function solve_over_params(E::EnumerativeProblem,P; start_fibre = nothing, monod
     end
     return S
 end
+
+=#

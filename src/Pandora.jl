@@ -2,6 +2,48 @@ module Pandora
 
 using Pkg 					#remove eventually
 
+
+#HC functions used (in the code)
+using HomotopyContinuation:System,  @var,  expressions,  monodromy_solve, Result
+
+#HC functions which we extend to different types
+import HomotopyContinuation:variables, parameters, system, solutions, solve
+
+export System, @var, solve
+
+
+#Base
+import Base: convert
+
+
+
+
+#Exports of Pandora types
+export
+    AbstractEnumerativeProblem,
+    EnumerativeProblem,
+    Fibre
+
+#Exports of Pandora functions
+export
+    system,
+    n_parameters,
+    n_polynomials,
+    base_solutions,
+    solutions,
+    base_parameters,
+    parameters,
+    base_fibre,
+    ambient_dimension,
+    degree,
+    solve!,
+    monodromy_solve!,
+    is_populated,
+    populate!
+
+
+
+
 #using HomotopyContinuation	
 #using LinearAlgebra
 #using Combinatorics
@@ -48,10 +90,20 @@ function __init__()
 end
 
 
+include("DependencyConversions/HC_Conversions.jl")
+include("CoreObjects/EnumerativeProblems/AbstractEnumerativeProblem.jl")
 
-#include("CoreObjects/EnumerativeProblems/EnumerativeProblem.jl")
+include("CoreObjects/Fibres/Fibre.jl")
+include("CoreObjects/EnumerativeProblems/EnumerativeProblem.jl")
+
+include("CoreObjects/EnumerativeProblems/EPGetters.jl")
+include("CoreObjects/EnumerativeProblems/EPPopulators.jl")
+
+include("CoreObjects/EnumerativeProblems/Initialization.jl")
 
 
+
+include("CoreMethods/EPSolving.jl")
 
 
 #include("CoreObjects/Varieties/Variety.jl")
