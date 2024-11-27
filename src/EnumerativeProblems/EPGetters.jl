@@ -68,7 +68,7 @@ end
 
 function degree(EP::EnumerativeProblem)
     if !is_populated(EP)
-        println("Warning: this function will alter the inputted enumerative problem by computing a base fibre")
+        println(AlterWarning)
         populate!(EP)
     end
     return(length(base_solutions(EP)))

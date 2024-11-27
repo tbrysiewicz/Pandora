@@ -89,24 +89,22 @@ function __init__()
 		printstyled(" $VERSION_NUMBER ", color = :green)
 end
 
-
+include("Constants/TypeAliases.jl")
+include("Constants/Warnings.jl")
 include("DependencyConversions/HC_Conversions.jl")
-include("CoreObjects/EnumerativeProblems/AbstractEnumerativeProblem.jl")
+include("DependencyConversions/Julia_Conversions.jl")
 
-include("CoreObjects/Fibres/Fibre.jl")
-include("CoreObjects/EnumerativeProblems/EnumerativeProblem.jl")
+include("EnumerativeProblems/AbstractEnumerativeProblem.jl")
 
-include("CoreObjects/EnumerativeProblems/EPGetters.jl")
-include("CoreObjects/EnumerativeProblems/EPPopulators.jl")
+include("Fibres/Fibre.jl")
 
-include("CoreObjects/EnumerativeProblems/Initialization.jl")
-
-
-
-include("CoreMethods/EPSolving.jl")
+include("EnumerativeProblems/EnumerativeProblem.jl")
+include("EnumerativeProblems/EPGetters.jl")
+include("EnumerativeProblems/EPSetters.jl")
+include("EnumerativeProblems/EPSolving.jl")
 
 
-#include("CoreObjects/Varieties/Variety.jl")
+#include("Varieties/Variety.jl")
 #include("Fibres/Scores.jl")
 
 #This needs to be fixed in several ways.
@@ -115,7 +113,7 @@ include("CoreMethods/EPSolving.jl")
 #include("CoreMethods/MovingInParameterSpace.jl")
 
 
-#include("CoreObjects/EnumerativeProblems/EPGetters.jl")
+#include("EnumerativeProblems/EPGetters.jl")
 
 #include("Enumeration/DegreeBounds.jl")
 

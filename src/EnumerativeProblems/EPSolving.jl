@@ -9,11 +9,23 @@ function solve(EP::EnumerativeProblem,fibre::Fibre, p::Vector{T} where T)
 end
 
 function solve(EP::EnumerativeProblem, p::Vector{T} where T)
-    return(solve(EP,base_fibre(EP),p))
+    if is_populated(EP)
+        return(solve(EP,base_fibre(EP),p))
+    else
+        println(AlterWarning)
+        populate!(EP)
+        return(solve(EP,p))
+    end
 end
 
 function solve(EP::EnumerativeProblem, P::Vector{Vector{T}} where T)
-    return(solve(EP,base_fibre(EP),P))
+    if is_populated(EP)
+        return(solve(EP,base_fibre(EP),P))
+    else
+        println(AlterWarning)
+        populate!(EP)
+        return(solve(EP,P))
+    end
 end
 
 function (EP::EnumerativeProblem)(fibre::Fibre, P::Vector{Vector{T}} where T <: Number)

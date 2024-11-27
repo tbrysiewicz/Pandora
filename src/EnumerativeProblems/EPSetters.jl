@@ -1,13 +1,12 @@
 ################################################################
 ################################################################
-##############       Fundamental Populators      ###############
+##############       Fundamental Setters         ###############
 ################################################################
 ################################################################
 
 #If one changes their mind about what to call EnumerativeProblem.base_fibre, or EnumerativeProblem.system
 #   one should only need to change the fundamental getters and fundamental populators (see EPPopulators.jl)
 #   for enumerative problems. Everything esle should work fine. 
-
 
 function update_base_fibre!(EP::EnumerativeProblem,fibre::Fibre)
     EP.base_fibre = fibre
@@ -22,9 +21,9 @@ end
 
 
 function populate!(EP::EnumerativeProblem)
-    new_param = randn(ComplexF64,n_parameters(EP))
-    S = EP(new_param)
-    update_base_fibre!(EP,(S,new_param))
+    p = randn(ComplexF64,n_parameters(EP))
+    S = solve(system(EP); target_parameters = p)
+    update_base_fibre!(EP,convert(Fibre,(S,p)))
     return(EP)
 end
 

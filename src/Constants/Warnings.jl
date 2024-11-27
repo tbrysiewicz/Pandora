@@ -1,0 +1,1 @@
+const AlterWarning = "Warning: this function will alter the inputted enumerative problem by computing a base fibre"
