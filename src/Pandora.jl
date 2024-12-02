@@ -14,7 +14,7 @@ export System, @var, solve
 
 #Oscar (GAP) functions used (in code)
 using Oscar:perm, PermGroupElem, symmetric_group, sub, gens, PermGroup, cperm
-using Oscar: is_transitive, is_primitive, describe
+using Oscar: is_transitive, is_primitive, describe, orbits
 
 #Oscar (GAP) functions which we extend
 import Oscar: degree
@@ -22,7 +22,7 @@ import Oscar: degree
 
 #Oscar (GAP) functions we want users to have access to
 export gens, sub, symmetric_group, perm, cperm
-export is_transitive, is_primitive, describe
+export is_transitive, is_primitive, describe, orbits
 
 #Base
 import Base: convert
@@ -55,7 +55,10 @@ export
     monodromy_homomorphism,
     monodromy_sample,
     monodromy_group,
-    galois_group
+    galois_group,
+    is_decomposable,
+    is_irreducible,
+    components
 
 
 
@@ -125,7 +128,10 @@ include("EnumerativeProblems/EPSolving.jl")
 
 
 
-include("Monodromy/MonodromyLoops.jl")
+include("Monodromy/MonodromyGroups.jl")
+include("Monodromy/MonodromyInterpretations.jl")
+include("Monodromy/MonodromyLabeling.jl")
+include("Monodromy/MonodromyBreakup.jl")
 
 #include("Varieties/Variety.jl")
 #include("Fibres/Scores.jl")
