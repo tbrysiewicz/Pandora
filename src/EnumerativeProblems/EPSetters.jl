@@ -10,7 +10,7 @@
 
 function update_base_fibre!(EP::EnumerativeProblem,fibre::Fibre)
     EP.base_fibre = fibre
-    data(EP)[:degree]=length(fibre[1])
+    data(EP)[:degree]=length(solutions(fibre))
     return(EP)
 end
 

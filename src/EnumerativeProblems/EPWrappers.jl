@@ -1,11 +1,22 @@
 
 
-function degree(EP::EnumerativeProblem)
-    if !is_populated(EP)
-        println(AlterWarning)
+function degree(EP::EnumerativeProblem; force_recompute=false)
+    if force_recompute
+        delete!(data(EP),:degree)
+        println(RecomputationWarning)
         populate!(EP)
     end
-    return(length(base_solutions(EP)))
+    if haskey(data(EP),:degree)
+        return(data(EP)[:degree])
+    else
+        if !is_populated(EP) 
+            println(AlterWarning)
+            populate!(EP)
+        end
+        d = length(base_solutions(EP))
+        data(EP)[:degree]=d
+        return(d)
+    end
 end
 
 

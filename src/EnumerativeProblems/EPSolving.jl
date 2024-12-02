@@ -1,10 +1,10 @@
 function solve(EP::EnumerativeProblem,fibre::Fibre, P::Vector{Vector{T}} where T <: Number)
-    S = solve(system(EP),solutions(fibre); start_parameters= parameters(fibre), target_parameters = P)
+    S = solve(system(EP),solutions(fibre); start_parameters= parameters(fibre), target_parameters = P, tracker_options = tracker_options(EP))
     return(map(x->solutions(x[1]),S))
 end
 
 function solve(EP::EnumerativeProblem,fibre::Fibre, p::Vector{T} where T)
-    S = solve(system(EP),solutions(fibre); start_parameters= parameters(fibre), target_parameters = p)
+    S = solve(system(EP),solutions(fibre); start_parameters= parameters(fibre), target_parameters = p, tracker_options = tracker_options(EP))
     return(solutions(S))
 end
 
@@ -53,7 +53,7 @@ end
 function solve(EP::EnumerativeProblem)
     p = randn(ComplexF64,n_parameters(EP))
     if is_populated(EP)==false
-        S = solve(system(EP);target_parameters=p)
+        S = solve(system(EP);target_parameters=p,tracker_options = tracker_options(EP))
         return(solutions(S))
     else
         return(solve(EP,p))

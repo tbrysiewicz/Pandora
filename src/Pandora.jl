@@ -4,7 +4,7 @@ using Pkg 					#remove eventually
 
 
 #HC functions used (in the code)
-using HomotopyContinuation:System,  @var,  expressions,  monodromy_solve, Result
+using HomotopyContinuation:System,  @var,  expressions,  monodromy_solve, Result, TrackerOptions
 
 #HC functions which we extend to different types
 import HomotopyContinuation:variables, parameters, system, solutions, solve
@@ -59,7 +59,8 @@ export
     is_decomposable,
     is_irreducible,
     components,
-    data
+    data,
+    tracker_options
 
 
 

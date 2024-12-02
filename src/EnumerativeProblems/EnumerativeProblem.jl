@@ -12,19 +12,29 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
         EP = new()
         EP.system=F
         EP.Data = Dict{Symbol,Any}()
+        EP.Reasoning = Dict{Symbol,Symbol}()
+        EP.Interpreter = Dict{Symbol,Any}()
+        EP.HomotopyContinuationOptions = Dict{Any,Any}()
+        EP.HomotopyContinuationOptions[:tracker_options]=TrackerOptions()
         return(EP)
     end
 
-    function EnumerativeProblem(F::System,B::Fibre)
+    function EnumerativeProblem(F::System,fibre::Fibre)
         EP = new()
         EP.system = F
-        EP.base_fibre = B
+        EP.base_fibre = fibre
         EP.Data = Dict{Symbol,Any}()
+        EP.Reasoning = Dict{Symbol,Symbol}()
+        EP.Interpreter = Dict{Symbol,Any}()
+        EP.HomotopyContinuationOptions = Dict{Any,Any}()
+        EP.HomotopyContinuationOptions[:tracker_options]=TrackerOptions()
         return(EP)
     end
 
-    Data::Dict{Symbol,Any}
-
+    Data::Dict{Symbol,Any}          #Cache information about the problem
+    Reasoning::Dict{Symbol,Symbol}  #Justify the key value pairs in Data via algorithm names
+    Interpreter::Dict{Symbol,Any}   #Customize how to interpret solutions
+    HomotopyContinuationOptions::Dict{Any,Any}
 
 end
 
@@ -43,7 +53,7 @@ function Base.show(io::IO, E::EnumerativeProblem)
     println(io,tenspaces," |")
     println(io,tenspaces," |")
     print(io,tenspaces," | π ")
-    if is_populated(E)
+    if haskey(data(E),:degree)
         println(io,"  ",degree(E),"-to-1")
     else
         println(io,"   ???-to-1")

@@ -24,6 +24,13 @@ end
 function data(EP::EnumerativeProblem) :: Dict{Symbol,Any}
     EP.Data
 end
+function homotopy_continuation_options(EP::EnumerativeProblem) 
+    EP.HomotopyContinuationOptions
+end
+
+function tracker_options(EP::EnumerativeProblem) :: TrackerOptions
+    homotopy_continuation_options(EP)[:tracker_options]
+end
 
 function is_populated(EP::EnumerativeProblem) :: Bool
     isdefined(EP,:base_fibre)
