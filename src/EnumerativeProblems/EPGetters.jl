@@ -10,7 +10,11 @@
 #   for enumerative problems. Everything esle should work fine. 
 
 function base_fibre(EP::EnumerativeProblem) :: Fibre
-    EP.base_fibre
+    if is_populated(EP)
+        EP.base_fibre
+    else
+        println("Base fibre has not been compute. Call populate!(::EnumerativeProblem) or solve!(::EnumerativeProblem)")
+    end
 end
 
 function system(EP::EnumerativeProblem) :: System

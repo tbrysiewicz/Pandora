@@ -9,8 +9,20 @@ using HomotopyContinuation:System,  @var,  expressions,  monodromy_solve, Result
 #HC functions which we extend to different types
 import HomotopyContinuation:variables, parameters, system, solutions, solve
 
+#HC functions we want the user to have access to
 export System, @var, solve
 
+#Oscar (GAP) functions used (in code)
+using Oscar:perm, PermGroupElem, symmetric_group, sub, gens, PermGroup, cperm
+using Oscar: is_transitive, is_primitive, describe
+
+#Oscar (GAP) functions which we extend
+import Oscar: degree
+
+
+#Oscar (GAP) functions we want users to have access to
+export gens, sub, symmetric_group, perm, cperm
+export is_transitive, is_primitive, describe
 
 #Base
 import Base: convert
@@ -39,7 +51,11 @@ export
     solve!,
     monodromy_solve!,
     is_populated,
-    populate!
+    populate!,
+    monodromy_homomorphism,
+    monodromy_sample,
+    monodromy_group,
+    galois_group
 
 
 
@@ -91,8 +107,10 @@ end
 
 include("Constants/TypeAliases.jl")
 include("Constants/Warnings.jl")
+
 include("DependencyConversions/HC_Conversions.jl")
 include("DependencyConversions/Julia_Conversions.jl")
+include("DependencyConversions/Oscar_GAP_Conversions.jl")
 
 include("EnumerativeProblems/AbstractEnumerativeProblem.jl")
 
@@ -103,6 +121,11 @@ include("EnumerativeProblems/EPGetters.jl")
 include("EnumerativeProblems/EPSetters.jl")
 include("EnumerativeProblems/EPSolving.jl")
 
+
+
+
+
+include("Monodromy/MonodromyLoops.jl")
 
 #include("Varieties/Variety.jl")
 #include("Fibres/Scores.jl")
