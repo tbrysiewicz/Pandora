@@ -1,4 +1,4 @@
-function components(EP::EnumerativeProblem)
+function compute_components(EP::EnumerativeProblem)
     G = galois_group(EP)
     if is_transitive(G)
         return([EP])

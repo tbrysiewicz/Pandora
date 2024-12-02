@@ -1,7 +1,18 @@
 
-function numerical_bijection(S1::Vector{T}, S2::Vector{T}) where T
+#p is interpretted as a function where p(i) = p[i]. But p(i) may be not injective or
+#  surjective, in which case the following function should return false.
+function is_valid_permutation(p::Vector{Int64},d::Int64)
+    u=unique(p) #
+    if length(u)<d || in(nothing,u) #nothing indicates not surjective, length indicates not injective
+        return(false)
+    else
+        return(true)
+    end
+end
+
+function numerical_bijection(S1::Vector{T} where T, S2::Vector{T} where T) 
     one_line = [findfirst(x->isapprox(x,s),S1) for s in S2]
-    return(perm(one_line))
+    return(one_line)
 end
 
 function monodromy_homomorphism(EP::EnumerativeProblem, loop::Vector{Vector{T}} where T)
@@ -41,23 +52,27 @@ end
 #When sampling many monodromy elements, one can make use of the parallelization in HC.jl by choosing loops all of the form
 #   a->b[i]->c->a where a is the base parameter, and c is another fixed parameter.
 #   This requires 2*N+1 fibres to be tracked. 1 from a->c, and N from a->b[i] and c->b[i]
-function monodromy_sample(EP::EnumerativeProblem, N::Int; loop_scaling = 1.0)
+function monodromy_sample(EP::EnumerativeProblem, N::Int; loop_scaling = 1.0, permutations_only = false)
     k = n_parameters(EP)
     c = loop_scaling.*randn(ComplexF64,k)
     b = [loop_scaling.*randn(ComplexF64,k) for i in 1:N]
+    a = base_parameters(EP)
     S1_bij = solve(EP, base_fibre(EP), b)
     S2 = solve(EP,c)
     S2_fibre = (S2,c)
     S2_bij = solve(EP,S2_fibre,b)
-    perms = [numerical_bijection(S2_bij[i],S1_bij[i]) for i in 1:N]
+    one_line_perms = [numerical_bijection(S2_bij[i],S1_bij[i]) for i in 1:N]
+    indices_of_valid_permutations = findall(x->is_valid_permutation(x,degree(EP)),one_line_perms)
+    if permutations_only
+        return([perm(p) for p in one_line_perms[indices_of_valid_permutations]])
+    else
+        sampled_loops = [[a,bb,c,a] for bb in b]
+        return(([perm(p) for p in one_line_perms[indices_of_valid_permutations]],sampled_loops[indices_of_valid_permutations]))
+    end
 end
 
 
-function monodromy_group(EP::EnumerativeProblem)
-    perms = monodromy_sample(EP,50)
+function compute_monodromy_group(EP::EnumerativeProblem)
+    (perms,loops) = monodromy_sample(EP,50)
     G = subgroup(unique(perms))
-end
-
-function galois_group(EP::EnumerativeProblem)
-    monodromy_group(EP)
 end

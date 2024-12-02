@@ -21,6 +21,10 @@ function system(EP::EnumerativeProblem) :: System
     EP.system
 end
 
+function data(EP::EnumerativeProblem) :: Dict{Symbol,Any}
+    EP.Data
+end
+
 function is_populated(EP::EnumerativeProblem) :: Bool
     isdefined(EP,:base_fibre)
 end
@@ -67,14 +71,5 @@ end
 
 function parameters(EP::EnumerativeProblem)
     parameters(system(EP))
-end
-
-
-function degree(EP::EnumerativeProblem)
-    if !is_populated(EP)
-        println(AlterWarning)
-        populate!(EP)
-    end
-    return(length(base_solutions(EP)))
 end
 

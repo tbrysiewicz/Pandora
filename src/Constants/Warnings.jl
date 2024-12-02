@@ -1,1 +1,2 @@
 const AlterWarning = "Warning: this function will alter the inputted enumerative problem by computing a base fibre"
+const RecomputationWarning = "Warning: you are recomputing a property of an enumerative problem \n Take care to recompute other properties depending upon its result."

@@ -11,6 +11,7 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
     function EnumerativeProblem(F::System)
         EP = new()
         EP.system=F
+        EP.Data = Dict{Symbol,Any}()
         return(EP)
     end
 
@@ -18,8 +19,12 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
         EP = new()
         EP.system = F
         EP.base_fibre = B
+        EP.Data = Dict{Symbol,Any}()
         return(EP)
     end
+
+    Data::Dict{Symbol,Any}
+
 
 end
 
@@ -48,6 +53,10 @@ function Base.show(io::IO, E::EnumerativeProblem)
     println(io,tenspaces,"C^",n_parameters(E),"\n")
     println(io,"An enumerative problem in ",ambient_dimension(E)," variable(s) cut out by ", 
                 n_polynomials(E)," condition(s) over ", n_parameters(E)," parameter(s).")
+    println(io,"The following information is known about this problem:")
+    for k in keys(data(E))
+        println(io,"-",k)
+    end
 end
 
 

@@ -58,7 +58,8 @@ export
     galois_group,
     is_decomposable,
     is_irreducible,
-    components
+    components,
+    data
 
 
 
@@ -123,6 +124,7 @@ include("EnumerativeProblems/EnumerativeProblem.jl")
 include("EnumerativeProblems/EPGetters.jl")
 include("EnumerativeProblems/EPSetters.jl")
 include("EnumerativeProblems/EPSolving.jl")
+include("EnumerativeProblems/EPWrappers.jl")
 
 
 
