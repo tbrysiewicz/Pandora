@@ -71,8 +71,22 @@ function monodromy_sample(EP::EnumerativeProblem, N::Int; loop_scaling = 1.0, pe
     end
 end
 
+function compute_monodromy_dictionary(EP::EnumerativeProblem; n_loops = 50) :: Dict{PermGroupElem,Vector{Vector{ComplexF64}}}
+    monodromy_dictionary = Dict{PermGroupElem,Vector{Vector{ComplexF64}}}()
+    (perms,loops) = monodromy_sample(EP,n_loops)
+    U = unique(perms)
+    unique_perm_locations = [findfirst(x->x==u,perms) for u in U]
+    for upl in unique_perm_locations
+        monodromy_dictionary[perms[upl]]=loops[upl]
+    end
+    return(monodromy_dictionary)
+
+end
 
 function compute_monodromy_group(EP::EnumerativeProblem)
-    (perms,loops) = monodromy_sample(EP,50)
-    G = subgroup(unique(perms))
+    G = subgroup(unique(keys(monodromy_dictionary(EP))))
 end
+
+
+
+

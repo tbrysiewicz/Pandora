@@ -13,9 +13,9 @@ import HomotopyContinuation:variables, parameters, system, solutions, solve
 export System, @var, solve
 
 #Oscar (GAP) functions used (in code)
-using Oscar:perm, PermGroupElem, symmetric_group, sub, gens, PermGroup, cperm
+using Oscar: perm, PermGroupElem, symmetric_group, sub, gens, PermGroup, cperm
 using Oscar: is_transitive, is_primitive, describe, orbits, minimal_block_reps
-using Oscar: cycles
+using Oscar: cycles, orbit, on_sets, order
 #Oscar (GAP) functions which we extend
 import Oscar: degree
 
@@ -23,6 +23,7 @@ import Oscar: degree
 #Oscar (GAP) functions we want users to have access to
 export gens, sub, symmetric_group, perm, cperm, cycles
 export is_transitive, is_primitive, describe, orbits, minimal_block_reps
+export orbit,  transitivity, order
 
 #Base
 import Base: convert
@@ -61,7 +62,11 @@ export
     components,
     data,
     tracker_options,
-    restrict
+    restrict,
+    orbit_block_partition,
+    orbit_block_relabel!,
+    transitivity_basis,
+    monodromy_dictionary
 
 
 

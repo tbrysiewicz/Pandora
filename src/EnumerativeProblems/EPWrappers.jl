@@ -36,6 +36,14 @@ function monodromy_group(EP::EnumerativeProblem; force_recompute=false)
     get!(data(EP),:monodromy_group,compute_monodromy_group(EP))
 end
 
+function monodromy_dictionary(EP::EnumerativeProblem; force_recompute=false)
+    if force_recompute 
+        delete!(data(EP),:monodromy_group) 
+        println(RecomputationWarning)
+    end
+    get!(data(EP),:monodromy_dictionary,compute_monodromy_dictionary(EP))
+end
+
 
 function galois_group(EP::EnumerativeProblem; force_recompute=false)
     monodromy_group(EP; force_recompute = force_recompute)
