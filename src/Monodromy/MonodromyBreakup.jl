@@ -5,6 +5,12 @@ function compute_components(EP::EnumerativeProblem)
     end
     (sols,params) = base_fibre(EP)
     solution_partition = [sols[collect(o)] for o in orbits(G)]
-    return([EnumerativeProblem(system(EP),(sp,params)) for sp in solution_partition])
+    EP_List = [EnumerativeProblem(system(EP),(sp,params)) for sp in solution_partition]
+    for i in 1:length(EP_List)
+        o = orbits(G)[i]
+        E = EP_List[i]
+        data(E)[:monodromy_group] = restrict(G,collect(o))
+    end
+    return(EP_List)
 end
 

@@ -24,6 +24,7 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
         EP.system = F
         EP.base_fibre = fibre
         EP.Data = Dict{Symbol,Any}()
+        EP.Data[:degree]=length(solutions(fibre))
         EP.Reasoning = Dict{Symbol,Symbol}()
         EP.Interpreter = Dict{Symbol,Any}()
         EP.HomotopyContinuationOptions = Dict{Any,Any}()

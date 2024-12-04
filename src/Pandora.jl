@@ -14,15 +14,15 @@ export System, @var, solve
 
 #Oscar (GAP) functions used (in code)
 using Oscar:perm, PermGroupElem, symmetric_group, sub, gens, PermGroup, cperm
-using Oscar: is_transitive, is_primitive, describe, orbits
-
+using Oscar: is_transitive, is_primitive, describe, orbits, minimal_block_reps
+using Oscar: cycles
 #Oscar (GAP) functions which we extend
 import Oscar: degree
 
 
 #Oscar (GAP) functions we want users to have access to
-export gens, sub, symmetric_group, perm, cperm
-export is_transitive, is_primitive, describe, orbits
+export gens, sub, symmetric_group, perm, cperm, cycles
+export is_transitive, is_primitive, describe, orbits, minimal_block_reps
 
 #Base
 import Base: convert
@@ -60,7 +60,8 @@ export
     is_irreducible,
     components,
     data,
-    tracker_options
+    tracker_options,
+    restrict
 
 
 

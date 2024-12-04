@@ -1,8 +1,15 @@
 
+#A wrapper is something that directs how something is computed based on what it 
+#   already knows. e.g. if we've computed something before, a wrapper will navigate toward
+#   looking it up instead of recomputation. If a computation of something is specialized
+#   for specific objects, the wrapper will assess the best algorithm for computing the 
+#   desired feature of the object. 
+
 
 function degree(EP::EnumerativeProblem; force_recompute=false)
     if force_recompute
         delete!(data(EP),:degree)
+        println(AlterWarning)
         println(RecomputationWarning)
         populate!(EP)
     end
