@@ -72,7 +72,6 @@ function monodromy_sample(EP::EnumerativeProblem, N::Int; loop_scaling = 1.0, pe
 end
 
 function compute_monodromy_dictionary(EP::EnumerativeProblem; n_loops = 50) :: Dict{PermGroupElem,Vector{Vector{ComplexF64}}}
-    println("cmd")
     monodromy_dictionary = Dict{PermGroupElem,Vector{Vector{ComplexF64}}}()
     (perms,loops) = monodromy_sample(EP,n_loops)
     U = unique(perms)

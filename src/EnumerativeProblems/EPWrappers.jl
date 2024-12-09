@@ -43,7 +43,6 @@ function monodromy_dictionary(EP::EnumerativeProblem; force_recompute=false)
         delete!(data(EP),:monodromy_dictionary) 
         println(RecomputationWarning)
     end
-    println("hi")
     get!(data(EP),:monodromy_dictionary) do
          compute_monodromy_dictionary(EP)
     end
