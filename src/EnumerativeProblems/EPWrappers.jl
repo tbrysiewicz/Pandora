@@ -33,7 +33,9 @@ function monodromy_group(EP::EnumerativeProblem; force_recompute=false)
         delete!(data(EP),:monodromy_group) 
         println(RecomputationWarning)
     end
-    get!(data(EP),:monodromy_group, compute_monodromy_group(EP))
+    get!(data(EP),:monodromy_group) do
+        compute_monodromy_group(EP)
+    end
 end
 
 function monodromy_dictionary(EP::EnumerativeProblem; force_recompute=false)
@@ -42,7 +44,9 @@ function monodromy_dictionary(EP::EnumerativeProblem; force_recompute=false)
         println(RecomputationWarning)
     end
     println("hi")
-    get!(data(EP),:monodromy_dictionary, compute_monodromy_dictionary(EP))
+    get!(data(EP),:monodromy_dictionary) do
+         compute_monodromy_dictionary(EP)
+    end
 end
 
 
@@ -56,5 +60,7 @@ function components(EP::EnumerativeProblem; force_recompute=false)
         delete!(data(EP),:components) 
         println(RecomputationWarning)
     end
-    get!(data(EP),:components,compute_components(EP))
+    get!(data(EP),:components) do
+        compute_components(EP)
+    end
 end
