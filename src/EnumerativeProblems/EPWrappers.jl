@@ -5,6 +5,9 @@
 #   for specific objects, the wrapper will assess the best algorithm for computing the 
 #   desired feature of the object. 
 
+#Think of wrappers for the things that the user touches: they wrap together the stuff the
+#  user shouldn't see/have to worry about.
+
 
 function degree(EP::EnumerativeProblem; force_recompute=false)
     if force_recompute

@@ -68,7 +68,8 @@ export
     orbit_block_relabel!,
     transitivity_basis,
     monodromy_dictionary,
-    monodromy_basis
+    monodromy_basis,
+    is_score
 
 export
     TwentySevenLines

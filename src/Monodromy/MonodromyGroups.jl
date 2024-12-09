@@ -1,7 +1,10 @@
 
 #p is interpretted as a function where p(i) = p[i]. But p(i) may be not injective or
 #  surjective, in which case the following function should return false.
-function is_valid_permutation(p::Vector{Int64},d::Int64)
+function is_valid_permutation(p::Union{Vector{Int},Vector{Union{Nothing,Int64}}},d::Int64)
+    if in(nothing,p)
+        return(false)
+    end
     u=unique(p) #
     if length(u)<d || in(nothing,u) #nothing indicates not surjective, length indicates not injective
         return(false)
@@ -63,6 +66,9 @@ function monodromy_sample(EP::EnumerativeProblem, N::Int; loop_scaling = 1.0, pe
     S2_bij = solve(EP,S2_fibre,b)
     one_line_perms = [numerical_bijection(S2_bij[i],S1_bij[i]) for i in 1:N]
     indices_of_valid_permutations = findall(x->is_valid_permutation(x,degree(EP)),one_line_perms)
+    println("# Loops computed:            ",N)
+    println("# Valid permutations:        ",length(indices_of_valid_permutations))
+    println("# Unique valid permutations: ",length(unique(one_line_perms[indices_of_valid_permutations])))
     if permutations_only
         return([perm(p) for p in one_line_perms[indices_of_valid_permutations]])
     else
