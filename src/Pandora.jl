@@ -5,6 +5,7 @@ using Pkg 					#remove eventually
 
 #HC functions used (in the code)
 using HomotopyContinuation:System,  @var,  expressions,  monodromy_solve, Result, TrackerOptions
+using HomotopyContinuation:subs, coefficients
 
 #HC functions which we extend to different types
 import HomotopyContinuation:variables, parameters, system, solutions, solve
@@ -66,7 +67,11 @@ export
     orbit_block_partition,
     orbit_block_relabel!,
     transitivity_basis,
-    monodromy_dictionary
+    monodromy_dictionary,
+    monodromy_basis
+
+export
+    TwentySevenLines
 
 
 
@@ -141,6 +146,9 @@ include("Monodromy/MonodromyGroups.jl")
 include("Monodromy/MonodromyInterpretations.jl")
 include("Monodromy/MonodromyLabeling.jl")
 include("Monodromy/MonodromyBreakup.jl")
+
+
+include("Examples/NamedExamples.jl")
 
 #include("Varieties/Variety.jl")
 #include("Fibres/Scores.jl")

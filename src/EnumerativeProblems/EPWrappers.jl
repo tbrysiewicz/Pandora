@@ -33,15 +33,16 @@ function monodromy_group(EP::EnumerativeProblem; force_recompute=false)
         delete!(data(EP),:monodromy_group) 
         println(RecomputationWarning)
     end
-    get!(data(EP),:monodromy_group,compute_monodromy_group(EP))
+    get!(data(EP),:monodromy_group, compute_monodromy_group(EP))
 end
 
 function monodromy_dictionary(EP::EnumerativeProblem; force_recompute=false)
     if force_recompute 
-        delete!(data(EP),:monodromy_group) 
+        delete!(data(EP),:monodromy_dictionary) 
         println(RecomputationWarning)
     end
-    get!(data(EP),:monodromy_dictionary,compute_monodromy_dictionary(EP))
+    println("hi")
+    get!(data(EP),:monodromy_dictionary, compute_monodromy_dictionary(EP))
 end
 
 
