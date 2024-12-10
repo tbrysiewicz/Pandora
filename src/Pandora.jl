@@ -4,11 +4,11 @@ using Pkg 					#remove eventually
 
 
 #LinearAlgebra functions used
-using LinearAlgebra: I, norm
+using LinearAlgebra: I, norm, det
 
 #HC functions used (in the code)
 using HomotopyContinuation:System,  @var,  expressions,  monodromy_solve, Result, TrackerOptions
-using HomotopyContinuation:subs, coefficients
+using HomotopyContinuation:subs, coefficients, differentiate
 
 #HC functions which we extend to different types
 import HomotopyContinuation:variables, parameters, system, solutions, solve, is_real
@@ -83,7 +83,9 @@ export
     sample,
     initialize_real_sampler,
     dietmaier,
-    initialize_real_optimizer
+    initialize_real_optimizer,
+    n_samples,
+    improve!
 
 
 #using HomotopyContinuation	
@@ -151,6 +153,7 @@ include("Fibres/Fibre.jl")
 include("Fibres/FibreFunctions.jl")
 
 include("Samplers/Sampler.jl")
+include("Samplers/SamplerGetters.jl")
 
 
 include("Monodromy/MonodromyGroups.jl")

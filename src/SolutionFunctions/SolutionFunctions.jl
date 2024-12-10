@@ -15,9 +15,22 @@ function nonreal_solutions(S::Vector{Vector{ComplexF64}})
 end
 
 function dietmaier(S::Vector{Vector{ComplexF64}})
-    minimum(norm ∘ imag, nonreal_solutions(S)) #is norm best here? or some 
+    nrs = nonreal_solutions(S)
+    if isempty(nrs)
+        return(0.0)
+    else
+        minimum(norm ∘ imag, nonreal_solutions(S)) #is norm best here? or some 
+    end
 end
 
 function dietmaier_pair(S::Vector{Vector{ComplexF64}})
-    (n_real_solutions(S),-minimum(norm ∘ imag, nonreal_solutions(S))) #is norm best here? or some 
+    (n_real_solutions(S),-dietmaier(S)) 
+end
+
+function always_false(s)
+    false
+end
+
+function zero(s)
+    0.0
 end

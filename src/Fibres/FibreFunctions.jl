@@ -7,6 +7,10 @@ function n_real_solutions(S::Vector{Vector{ComplexF64}}; tol::Float64=1e-6) :: I
     count(s->is_real(s;tol=tol), S)
 end
 
+function real_solutions(fibre::Fibre)
+    real_solutions(solutions(fibre))
+end
+
 
 function valid_fibre(EP::EnumerativeProblem, fibre::Fibre)
     length(solutions(fibre))==degree(EP)
