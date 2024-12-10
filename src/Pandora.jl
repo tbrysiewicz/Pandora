@@ -82,7 +82,8 @@ export
     EllipseSampler,
     sample,
     initialize_real_sampler,
-    dietmaier
+    dietmaier,
+    initialize_real_optimizer
 
 
 #using HomotopyContinuation	

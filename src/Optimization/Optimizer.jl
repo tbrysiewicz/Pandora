@@ -76,3 +76,12 @@ function Base.show(io::IO, optimizer::Optimizer)
     #soft-goal info
 end
 
+
+function improve!(optimizer::Optimizer) :: Optimizer
+    #First sample some new points
+    optimizer.sampler()
+
+
+
+    return(optimizer)
+end
