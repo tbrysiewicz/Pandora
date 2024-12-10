@@ -3,6 +3,9 @@ module Pandora
 using Pkg 					#remove eventually
 
 
+#LinearAlgebra functions used
+using LinearAlgebra: I, norm
+
 #HC functions used (in the code)
 using HomotopyContinuation:System,  @var,  expressions,  monodromy_solve, Result, TrackerOptions
 using HomotopyContinuation:subs, coefficients
@@ -74,7 +77,11 @@ export
 export
     TwentySevenLines
 
-
+export 
+    Sampler,
+    EllipseSampler,
+    sample,
+    initialize_real_sampler
 
 
 #using HomotopyContinuation	
@@ -131,8 +138,6 @@ include("DependencyConversions/Oscar_GAP_Conversions.jl")
 
 include("EnumerativeProblems/AbstractEnumerativeProblem.jl")
 
-include("Fibres/Fibre.jl")
-include("Fibres/FibreFunctions.jl")
 
 include("EnumerativeProblems/EnumerativeProblem.jl")
 include("EnumerativeProblems/EPGetters.jl")
@@ -140,8 +145,10 @@ include("EnumerativeProblems/EPSetters.jl")
 include("EnumerativeProblems/EPSolving.jl")
 include("EnumerativeProblems/EPWrappers.jl")
 
+include("Fibres/Fibre.jl")
+include("Fibres/FibreFunctions.jl")
 
-
+include("Samplers/Sampler.jl")
 
 
 include("Monodromy/MonodromyGroups.jl")
@@ -154,6 +161,8 @@ include("Examples/NamedExamples.jl")
 
 
 include("SolutionFunctions/SolutionFunctions.jl")
+
+include("Optimization/Optimizer.jl")
 
 #include("Varieties/Variety.jl")
 #include("Fibres/Scores.jl")

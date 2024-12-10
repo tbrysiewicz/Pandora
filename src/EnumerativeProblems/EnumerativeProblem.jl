@@ -8,7 +8,7 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
     system::System       #EPs consist of a system and
     base_fibre::Fibre    #a fibre of solutions  and parameters
 
-    function EnumerativeProblem(F::System)
+    function EnumerativeProblem(F::System; populate=true)
         EP = new()
         EP.system=F
         EP.Data = Dict{Symbol,Any}()
@@ -16,6 +16,9 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
         EP.Interpreter = Dict{Symbol,Any}()
         EP.HomotopyContinuationOptions = Dict{Any,Any}()
         EP.HomotopyContinuationOptions[:tracker_options]=TrackerOptions()
+        if populate
+            populate!(EP)
+        end
         return(EP)
     end
 
