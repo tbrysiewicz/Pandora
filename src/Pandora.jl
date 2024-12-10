@@ -81,7 +81,8 @@ export
     Sampler,
     EllipseSampler,
     sample,
-    initialize_real_sampler
+    initialize_real_sampler,
+    dietmaier
 
 
 #using HomotopyContinuation	
@@ -163,6 +164,7 @@ include("Examples/NamedExamples.jl")
 include("SolutionFunctions/SolutionFunctions.jl")
 
 include("Optimization/Optimizer.jl")
+include("Optimization/DietmaierOptimization.jl")
 
 #include("Varieties/Variety.jl")
 #include("Fibres/Scores.jl")
