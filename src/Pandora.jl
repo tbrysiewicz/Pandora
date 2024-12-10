@@ -165,6 +165,7 @@ include("Examples/NamedExamples.jl")
 include("SolutionFunctions/SolutionFunctions.jl")
 
 include("Optimization/Optimizer.jl")
+include("Optimization/OptimizationGetters.jl")
 include("Optimization/DietmaierOptimization.jl")
 
 #include("Varieties/Variety.jl")

@@ -79,9 +79,24 @@ end
 
 function improve!(optimizer::Optimizer) :: Optimizer
     #First sample some new points
-    optimizer.sampler()
+    new_samples = sample(optimizer)
+    #solve for the samples
+
+    EP = enumerative_problem(optimizer)
+
+    new_fibres = EP(new_samples)
+
+    new_scores = map(objective_function(optimizer),new_fibres)
+    best_score_index = argmax(new_scores)
+    best_score = new_scores[best_score_index]
+    best_fibre = new_fibres[best_score_index]
+    
 
 
+
+    #Figure which one is the best one that optimizes the objective
+
+    #Change the optimizer.record_fibre, optimizer.record_objective (if needed) and optimizer.solver_fibre (if needed)
 
     return(optimizer)
 end
