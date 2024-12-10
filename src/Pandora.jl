@@ -8,10 +8,10 @@ using HomotopyContinuation:System,  @var,  expressions,  monodromy_solve, Result
 using HomotopyContinuation:subs, coefficients
 
 #HC functions which we extend to different types
-import HomotopyContinuation:variables, parameters, system, solutions, solve
+import HomotopyContinuation:variables, parameters, system, solutions, solve, is_real
 
 #HC functions we want the user to have access to
-export System, @var, solve
+export System, @var, solve, is_real
 
 #Oscar (GAP) functions used (in code)
 using Oscar: perm, PermGroupElem, symmetric_group, sub, gens, PermGroup, cperm
@@ -132,6 +132,7 @@ include("DependencyConversions/Oscar_GAP_Conversions.jl")
 include("EnumerativeProblems/AbstractEnumerativeProblem.jl")
 
 include("Fibres/Fibre.jl")
+include("Fibres/FibreFunctions.jl")
 
 include("EnumerativeProblems/EnumerativeProblem.jl")
 include("EnumerativeProblems/EPGetters.jl")
@@ -150,6 +151,9 @@ include("Monodromy/MonodromyBreakup.jl")
 
 
 include("Examples/NamedExamples.jl")
+
+
+include("SolutionFunctions/SolutionFunctions.jl")
 
 #include("Varieties/Variety.jl")
 #include("Fibres/Scores.jl")
