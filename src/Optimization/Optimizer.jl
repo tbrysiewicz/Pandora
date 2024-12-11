@@ -82,6 +82,7 @@ function Base.show(io::IO, optimizer::Optimizer)
     println("          Last error proportion:  ",od.error_proportion)
     println("          Last taboo proportion:  ",od.taboo_proportion)
     println("    Last improvement proportion:  ",od.improvement_proportion)
+    println("                         Radius:  ", maximum(abs, vec(optimizer.sampler.transform_matrix)))
     #info regarding radius or last improvement size 
     #info regarding conditioning of the ellipse sampler
     #interpretive information 
