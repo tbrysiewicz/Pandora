@@ -28,7 +28,7 @@ function monodromy_basis(EP::EnumerativeProblem)
     gg = filter(x->x!=id,collect(keys(md)))
     S = [1]
     current_group = subgroup(gg[S])
-    for j in 2:eachindex(gg)
+    for j in eachindex(gg)
         if in(gg[j],current_group)==false
             push!(S,j)
             current_group = subgroup(gg[S])
