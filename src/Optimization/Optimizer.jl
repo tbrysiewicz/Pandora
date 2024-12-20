@@ -9,31 +9,52 @@
     improvement_proportion :: Float64 = 1.0
 end
 
+
+mutable struct ScoringScheme
+    objective #function we really want to optimize
+    barrier #barrier penalty
+    barrier_weight :: Float64 #weight of barrier penalty
+    taboo
+    error_checker
+    goal
+    name :: String
+end
+
+
+function weighted_objective(SS::ScoringScheme)
+    x->(1-SS.barrier_weight).*SS.objective(x).+(SS.barrier_weight).*SS.barrier(x)
+end
+
+
+
+function Base.show(io::IO, SS::ScoringScheme)
+    if SS.name==""
+        print(io,"A scoring scheme with barrier weight ",SS.barrier_weight,".")
+    else
+        print(io,"The ",SS.name," scoring scheme with barrier weight ",SS.barrier_weight, ".")
+    end
+end
+
+
 @kwdef mutable struct Optimizer
     EP::EnumerativeProblem
+
     solver_fibre :: Fibre
+
     record_fibre :: Fibre
     record_objective :: Any
     path :: Vector{Vector{ComplexF64}}
 
     sampler :: Sampler                       #used to sample parameter space (frequently updated)
-
-    error_checker  = always_false        #Run any computed fibres through this boolean-valued function to determine if they are errors
-    taboo  = x->0.0                          #Eliminate any fibres for which taboo score decreases - these are not considered valid candidates
-                                             #Steps where taboo increases are considered major improvements
-
-    barrier = x->0.0                         #Among remaining candidates, evaluate objective(fibre)-barrier_weight*barrier(fibre)
-    objective = x->0.0
-    barrier_weight ::Float64  = 0.0    
-
-    goal  = OD -> OD.step>100
-
+    scoring_scheme :: ScoringScheme
     optimizer_data :: OptimizerData
 
 
-    function Optimizer(EP::EnumerativeProblem, sampler :: Sampler, objective)
+    function Optimizer(EP::EnumerativeProblem, sampler :: Sampler, SS :: ScoringScheme)
         optimizer = new()
-        optimizer.objective = objective
+
+        optimizer.scoring_scheme = SS
+
         optimizer.EP = EP
         optimizer.solver_fibre = base_fibre(EP)
         optimizer.sampler=sampler
@@ -43,23 +64,19 @@ end
             p = Vector{ComplexF64}(real(p))
         end
 
-        optimizer.error_checker = always_false
-        optimizer.taboo = zero
-        optimizer.barrier_weight = 0.0
-
-        function more_than_one_hundred_steps(OD::OptimizerData)
-            OD.step >100
-        end
-
-        optimizer.goal = more_than_one_hundred_steps
 
         optimizer.record_fibre = (EP(p),p)
-        optimizer.record_objective = objective(optimizer.record_fibre)
+        optimizer.record_objective = SS.objective(optimizer.record_fibre)
         optimizer.path=[p]
 
         optimizer.optimizer_data = OptimizerData()
 
         return(optimizer)
+    end
+    
+    function Optimizer(EP::EnumerativeProblem, sampler :: Sampler, objective)
+        SS = ScoringScheme(objective)
+        Optimizer(EP,sampler,SS)
     end
 
 end
@@ -90,26 +107,51 @@ function Base.show(io::IO, optimizer::Optimizer)
 end
 
 
-function improve!(optimizer::Optimizer) 
+function ScoringScheme(objective; 
+    barrier = zero_function, barrier_weight = 0.0, 
+    taboo = zero_function, error_checker = false_function,
+    goal = nothing, name = "")
+    function more_than_one_hundred_steps(O::Optimizer)
+        O.optimizer_data.step >100
+    end
+    if goal == nothing
+        ScoringScheme(objective,barrier,barrier_weight,taboo,error_checker, more_than_one_hundred_steps,name)
+    else
+        ScoringScheme(objective,barrier,barrier_weight,taboo,error_checker, goal,name)
+    end
+end
 
-    OD = optimizer_data(optimizer)
+#This is the function which increments all relevant step datum in an optimizer data
+#  prior to running an improvement step
+function increment!(OD::OptimizerData, N::Int) 
     OD.step = OD.step+1
     OD.steps_no_major_progress = OD.steps_no_major_progress+1
     OD.steps_no_progress = OD.steps_no_progress+1
 
-    #First sample some new points
+    OD.parameters_solved = OD.parameters_solved + N
+end
+
+
+
+function improve!(optimizer::Optimizer) 
+
+    #Extract relevant names
+    OD = optimizer_data(optimizer)
+    EP = enumerative_problem(optimizer)
     S = sampler(optimizer)
+
+
+    #Sample new parameters
     new_samples = sample(S)
     N = n_samples(S)
 
-    #solve for the samples
-    OD.parameters_solved = OD.parameters_solved + N
-
-    EP = enumerative_problem(optimizer)
+    #Solve for the samples
     new_solutions = EP(new_samples)
     new_fibres = [(new_solutions[i],new_samples[i]) for i in 1:N]
 
-    update_record!(optimizer,new_fibres)
+    #Update optimizer data values and record fibre
+    update_optimizer!(optimizer,new_fibres)
+    #Update sampler and solver fibre
     update_settings!(optimizer,new_fibres)
 
     return(optimizer)
@@ -117,7 +159,7 @@ end
 
 
 function optimize!(O::Optimizer; max_steps = 100)
-    while O.goal(O.optimizer_data)==false && O.optimizer_data.steps_no_major_progress<max_steps
+    while O.goal(O)==false && O.optimizer_data.steps_no_major_progress<max_steps
         improve!(O)
         println(O)
     end
@@ -153,62 +195,73 @@ function update_settings!(optimizer,new_fibres)
     end
 end
 
-function update_record!(optimizer,new_fibres)
+function partition_optimizer_samples(optimizer:: Optimizer, new_fibres :: Vector{Fibre}) 
+    n = length(new_fibres)
+
+    error_fibres = findall(i->error_checker(optimizer)(new_fibres[i]), 1:n)
+    
+    taboo_function = taboo(optimizer)
+    cts = taboo_function(record_fibre(optimizer)) ##Current taboo score
+    taboo_score_list = [in(i,error_fibres) ? nothing : taboo_function(new_fibres[i]) for i in 1:n]
+    
+    taboo_fibres = findall(i->in(i,error_fibres)==false && taboo_score_list[i]>cts, 1:n)
+
+    w_obj = weighted_objective(optimizer)
+    wo_record = w_obj(record_fibre(optimizer))
+    wo_score_list = [in(i,union(taboo_fibres,error_fibres)) ? nothing : w_obj(new_fibres[i]) for i in 1:n]
+
+    improvement_fibres = findall(i->in(i,union(taboo_fibres,error_fibres))==false && 
+                                    wo_score_list[i]>wo_record,1:n)
+    major_improvement_fibres = findall(i->in(i,improvement_fibres) && taboo_score_list[i]<cts,1:n)
+    minor_improvement_fibres = findall(i->in(i,improvement_fibres) && taboo_score_list[i]==cts, 1:n)
+    no_improvement_fibres = findall(i->in(i,union(taboo_fibres,
+                                                  error_fibres,
+                                                  improvement_fibres))==false, 1:n)
+    
+    best_score_index = []
+    if length(improvement_fibres)>0
+        true_scores = filter(x->x!=nothing,wo_score_list)
+        true_score_indices = findall(x->x!=nothing,wo_score_list)
+        @assert length(true_score_indices)>0
+        b = argmax(true_scores)
+        best_score_index = [true_score_indices[b]]
+    end
+    result = (error_fibres,taboo_fibres,no_improvement_fibres,minor_improvement_fibres,major_improvement_fibres,best_score_index)
+
+
+    return(result)
+
+end
+
+function update_optimizer!(optimizer :: Optimizer, new_fibres :: Vector{Fibre})
     OD = optimizer_data(optimizer)
     N = length(new_fibres)
 
-    non_error_fibres = filter(x->error_checker(optimizer)(x)==false,new_fibres)
+    #Make a default increment update to optimizer data (steps += 1, params solved +=N)
+    increment!(OD,N)
 
-    if isempty(non_error_fibres)
-        OD.error_proportion = 1.0
-        OD.taboo_proportion = 1.0
-        OD.improvement_proportion = 0.0
-        return()
+    (error_fibs, taboo_fibs, non_improv, min_improv, maj_improv, best_score_index) = partition_optimizer_samples(optimizer,new_fibres)
+    
+    #Updating OD
+    OD.error_proportion = length(error_fibs)/N
+    OD.taboo_proportion = length(taboo_fibs)/N
+    OD.improvement_proportion = (length(min_improv)+length(maj_improv))/N
+
+
+
+
+    #Update record fibre/solver fibre
+
+    if OD.improvement_proportion>0.0
+        OD.steps_no_progress=0
+        println("Minor progress")
+        if length(maj_improv)>0
+            OD.steps_no_major_progress = 0
+            println("Major progress")
+        end
+        optimizer.record_fibre = new_fibres[best_score_index[1]]
+        optimizer.record_objective = weighted_objective(optimizer)(optimizer.record_fibre)
     end
 
-    OD.error_proportion = 1-(length(non_error_fibres)/N)
 
-    current_taboo_score = taboo(optimizer)(record_fibre(optimizer))
-    new_taboo_scores = map(x->taboo(optimizer)(x[1]),non_error_fibres)
-
-    m = min(new_taboo_scores...)
-
-    non_taboo_fibres = filter(x->taboo(optimizer)(x[1])>=current_taboo_score,non_error_fibres)
-
-    if isempty(non_taboo_fibres)
-        OD.taboo_proportion = 1.0
-        OD.improvement_proportion = 0.0
-        return()
-    end
-
-    OD.taboo_proportion = 1-(length(non_taboo_fibres)/N)
-    if m<current_taboo_score #This indicates a major improvement - non_taboo_fibres changes, but #non_taboo doesn't
-        current_taboo_score = m
-        OD.steps_no_major_progress = 0
-        println("Major Progress")
-    end
-
-    non_taboo_fibres = filter(x->taboo(optimizer)(x[1])>=current_taboo_score,non_error_fibres)
-
-    new_scores = map(objective_function(optimizer),non_taboo_fibres)
-
-    improvement_indices = findall(x->x>record_objective(optimizer),new_scores)
-    improvements = non_taboo_fibres[improvement_indices]
-
-
-    if isempty(improvements)
-        OD.improvement_proportion = 0.0
-        return()
-    end
-    println("Minor Progress")
-
-    best_score_index = argmax(new_scores[improvement_indices])
-    best_score = new_scores[improvement_indices][best_score_index]
-    best_fibre = new_fibres[improvement_indices][best_score_index]
-    optimizer.record_fibre = best_fibre
-    optimizer.record_objective = best_score
-    push!(optimizer.path,parameters(best_fibre))
-    OD.steps_no_progress = 0
-
-    OD.improvement_proportion = length(improvements)/N
 end

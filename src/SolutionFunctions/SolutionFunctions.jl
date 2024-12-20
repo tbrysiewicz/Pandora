@@ -27,10 +27,10 @@ function dietmaier_pair(S::Vector{Vector{ComplexF64}})
     (n_real_solutions(S),-dietmaier(S)) 
 end
 
-function always_false(s)
+function false_function(s)
     false
 end
 
-function zero(s)
+function zero_function(s)
     0.0
 end

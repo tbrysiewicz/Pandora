@@ -15,7 +15,7 @@ function enumerative_problem(optimizer::Optimizer)
 end
 
 function objective_function(optimizer::Optimizer)
-    optimizer.objective
+    optimizer.scoring_scheme.objective
 end
 
 function record_objective(optimizer::Optimizer)
@@ -23,13 +23,17 @@ function record_objective(optimizer::Optimizer)
 end
 
 function error_checker(optimizer::Optimizer)
-    optimizer.error_checker
+    optimizer.scoring_scheme.error_checker
 end
 
 function taboo(optimizer::Optimizer)
-    optimizer.taboo
+    optimizer.scoring_scheme.taboo
 end
 
 function record_fibre(optimizer::Optimizer)
     optimizer.record_fibre
+end
+
+function weighted_objective(optimizer::Optimizer)
+    weighted_objective(optimizer.scoring_scheme)
 end
