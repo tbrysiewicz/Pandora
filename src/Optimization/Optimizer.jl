@@ -47,8 +47,8 @@ end
         optimizer.taboo = zero
         optimizer.barrier_weight = 0.0
 
-        function more_than_one_hundred_steps(O::Optimizer)
-            optimizer_data(O).steps >100
+        function more_than_one_hundred_steps(OD::OptimizerData)
+            OD.step >100
         end
 
         optimizer.goal = more_than_one_hundred_steps
@@ -115,6 +115,16 @@ function improve!(optimizer::Optimizer)
     return(optimizer)
 end
 
+
+function optimize!(O::Optimizer; max_steps = 100)
+    while O.goal(O.optimizer_data)==false && O.optimizer_data.steps_no_major_progress<max_steps
+        improve!(O)
+        println(O)
+    end
+    return(O)
+end
+
+
 function update_settings!(optimizer,new_fibres)
     OD = optimizer_data(optimizer)
     S = sampler(optimizer)
@@ -133,7 +143,7 @@ function update_settings!(optimizer,new_fibres)
         println("Lot's of improvement - increase radius")
         S.transform_matrix = S.transform_matrix*1.1
     end
-    if OD.improvement_proportion<0.01
+    if OD.improvement_proportion<0.01 && OD.steps_no_progress>5
         println("Almost no improvement - decrease radius - maybe we are at a local max")
         S.transform_matrix = S.transform_matrix*0.5
     end

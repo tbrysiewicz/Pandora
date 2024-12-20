@@ -21,7 +21,7 @@ using Oscar: perm, PermGroupElem, symmetric_group, sub, gens, PermGroup, cperm
 using Oscar: is_transitive, is_primitive, describe, orbits, minimal_block_reps
 using Oscar: cycles, orbit, on_sets, order
 #Oscar (GAP) functions which we extend
-import Oscar: degree
+import Oscar: degree, cube, lattice_points
 
 
 #Oscar (GAP) functions we want users to have access to
@@ -72,7 +72,9 @@ export
     transitivity_basis,
     monodromy_dictionary,
     monodromy_basis,
-    is_score
+    is_score,
+    Optimizer,
+    optimize!
 
 export
     TwentySevenLines
