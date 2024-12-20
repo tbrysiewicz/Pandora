@@ -55,7 +55,16 @@ end
 function galois_group(EP::EnumerativeProblem; force_recompute=false)
     monodromy_group(EP; force_recompute = force_recompute)
 end
-
+ 
+function transitivity_basis(EP::EnumerativeProblem; force_recompute=false)
+    if force_recompute 
+        delete!(data(EP),:transitivity_basis) 
+        println(RecomputationWarning)
+    end
+    get!(data(EP),:transitivity_basis) do
+        transitivity_basis(galois_group(EP))
+    end
+end   
 
 function components(EP::EnumerativeProblem; force_recompute=false)
     if force_recompute 

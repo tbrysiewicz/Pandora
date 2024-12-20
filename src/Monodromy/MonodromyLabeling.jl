@@ -81,3 +81,8 @@ function restrict(G::PermGroup, S::Vector{Int64})
     end
     return(subgroup(newgens))
 end
+
+function monodromy_labeling(EP::EnumerativeProblem)
+    TB = transitivity_basis(EP)
+    return("To code")
+end
