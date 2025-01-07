@@ -1,0 +1,84 @@
+\documentclass[11pt]{amsart}
+\usepackage[margin=1in]{geometry}
+
+
+\usepackage[utf8]{inputenc}
+%\usepackage[T1]{fontenc}
+
+\usepackage{graphbox} 
+\usepackage{mathtools, amsthm, amsfonts, amssymb, amsmath}
+\usepackage{accents} % for underaccent
+\usepackage{microtype}
+\usepackage{enumerate}
+
+\usepackage[normalem]{ulem}
+
+
+
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{thmtools}
+\usepackage[margin=1in]{geometry}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{tikz-cd}
+\usetikzlibrary{patterns,external}
+\usetikzlibrary{calc}
+\usetikzlibrary{shapes.multipart}
+
+\usepackage[numbers,sort]{natbib}
+
+\usepackage[linesnumbered,commentsnumbered,ruled,vlined]{algorithm2e}
+
+\usepackage[colorlinks]{hyperref}
+\hypersetup{
+  linkcolor=[rgb]{0.3,0.3,0.6},
+  citecolor=[rgb]{0.2, 0.6, 0.2},
+  urlcolor=[rgb]{0.6, 0.2, 0.2}
+}
+\makeindex
+%% Capitalize section reference by autoref
+\renewcommand{\sectionautorefname}{Section}
+\renewcommand{\subsectionautorefname}{Section}
+\renewcommand{\figureautorefname}{Figure}
+\renewcommand{\algocfautorefname}{Algorithm}
+\renewcommand{\equationautorefname}{\null}
+
+
+
+%Some commands
+\newcommand{\C}{{\mathbb{C}}}
+\newcommand{\R}{{\mathbb{R}}}
+\renewcommand{\P}{{\mathbb{P}}}
+\newcommand{\Z}{{\mathbb{Z}}}
+\newcommand{\N}{{\mathbb{N}}}
+
+\newcommand{\V}{{\mathcal{V}}}
+
+\newcommand{\MV}{\textrm{MV}}
+\newcommand{\conv}{\textrm{conv}}
+
+
+
+%Theorem environments
+\theoremstyle{definition}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{lemma}[theorem]{Lemma} 
+\newtheorem{corollary}[theorem]{Corollary} 
+\newtheorem{conjecture}[theorem]{Conjecture} 
+\newtheorem{proposition}[theorem]{Proposition}
+
+%End examples with diamond suit
+\newtheorem{examplex}[theorem]{Example}
+\newenvironment{example}
+  {\pushQED{\qed}\renewcommand{\qedsymbol}{$\diamondsuit$}\examplex}
+  {\popQED\endexamplex}
+  
+%End remarks with diamond suit
+\newtheorem{remarkx}[theorem]{Remark}
+\newenvironment{remark}
+  {\pushQED{\qed}\renewcommand{\qedsymbol}{$\diamondsuit$}\remarkx}
+  {\popQED\endremarkx}
+

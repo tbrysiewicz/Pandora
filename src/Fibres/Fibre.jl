@@ -44,6 +44,6 @@ function is_score(f::Function)
         println("Your function (1) takes solutions (but not fibres) as input, and (2) does so only with real solutions.")
     end
     println("Your function, as written, is not recognized as a score function.  
-    Consider writing it as to enforce the input type.")
+    Consider writing it in a way which enforces the input type of 'Fibre'.")
     return(false)
 end

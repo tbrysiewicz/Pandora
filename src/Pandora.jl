@@ -3,6 +3,10 @@ module Pandora
 using Pkg 					#remove eventually
 
 
+#Small uses
+using Dates: today
+
+
 #LinearAlgebra functions used
 using LinearAlgebra: I, norm, det
 
@@ -90,6 +94,9 @@ export
     improve!
 
 
+export 
+    summarize
+
 #using HomotopyContinuation	
 #using LinearAlgebra
 #using Combinatorics
@@ -172,6 +179,14 @@ include("SolutionFunctions/SolutionFunctions.jl")
 include("Optimization/Optimizer.jl")
 include("Optimization/OptimizationGetters.jl")
 include("Optimization/DietmaierOptimization.jl")
+
+
+include("Summarization/CreateDocument.jl")
+include("Summarization/InitializeSummary.jl")
+include("Summarization/AbstractSummary.jl")
+include("Summarization/BackgroundSummary.jl")
+include("Summarization/EndSummary.jl")
+include("Summarization/Summarize.jl")
 
 #include("Varieties/Variety.jl")
 #include("Fibres/Scores.jl")
