@@ -9,3 +9,10 @@ Refinement6Plot.pdf
 src/Examples/ResearchExamples.jl
 TODO.jl
 Tricks
+OutputFiles/latex_summary.aux
+OutputFiles/latex_summary.idx
+OutputFiles/latex_summary.log
+OutputFiles/latex_summary.out
+OutputFiles/latex_summary.pdf
+OutputFiles/latex_summary.synctex.gz
+OutputFiles/latex_summary.tex

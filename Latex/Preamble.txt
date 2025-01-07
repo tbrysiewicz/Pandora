@@ -2,8 +2,8 @@
 \usepackage[margin=1in]{geometry}
 
 
-\usepackage[utf8]{inputenc}
-%\usepackage[T1]{fontenc}
+\usepackage[mathletters]{ucs}
+\usepackage[utf8x]{inputenc}
 
 \usepackage{graphbox} 
 \usepackage{mathtools, amsthm, amsfonts, amssymb, amsmath}
@@ -55,6 +55,9 @@
 \newcommand{\N}{{\mathbb{N}}}
 
 \newcommand{\V}{{\mathcal{V}}}
+
+\newcommand{\x}{\textbf{x}}
+\newcommand{\p}{\textbf{p}}
 
 \newcommand{\MV}{\textrm{MV}}
 \newcommand{\conv}{\textrm{conv}}

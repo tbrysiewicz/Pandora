@@ -12,10 +12,11 @@ using LinearAlgebra: I, norm, det
 
 #HC functions used (in the code)
 using HomotopyContinuation:System,  @var,  expressions,  monodromy_solve, Result, TrackerOptions
-using HomotopyContinuation:subs, coefficients, differentiate
+using HomotopyContinuation:subs, coefficients, differentiate, Expression, Variable, support_coefficients
+using HomotopyContinuation:evaluate, paths_to_track
 
 #HC functions which we extend to different types
-import HomotopyContinuation:variables, parameters, system, solutions, solve, is_real
+import HomotopyContinuation:variables,  parameters, system, solutions, solve, is_real
 
 #HC functions we want the user to have access to
 export System, @var, solve, is_real
@@ -149,6 +150,8 @@ include("DependencyConversions/HC_Conversions.jl")
 include("DependencyConversions/Julia_Conversions.jl")
 include("DependencyConversions/Oscar_GAP_Conversions.jl")
 
+
+
 include("EnumerativeProblems/AbstractEnumerativeProblem.jl")
 
 
@@ -157,6 +160,7 @@ include("EnumerativeProblems/EPGetters.jl")
 include("EnumerativeProblems/EPSetters.jl")
 include("EnumerativeProblems/EPSolving.jl")
 include("EnumerativeProblems/EPWrappers.jl")
+include("EnumerativeProblems/Specialize.jl")
 
 include("Fibres/Fibre.jl")
 include("Fibres/FibreFunctions.jl")
@@ -187,6 +191,11 @@ include("Summarization/AbstractSummary.jl")
 include("Summarization/BackgroundSummary.jl")
 include("Summarization/EndSummary.jl")
 include("Summarization/Summarize.jl")
+include("Summarization/DegreeSummary.jl")
+
+
+
+include("DegreeBounds/Bounds.jl")
 
 #include("Varieties/Variety.jl")
 #include("Fibres/Scores.jl")

@@ -75,3 +75,38 @@ function components(EP::EnumerativeProblem; force_recompute=false)
         compute_components(EP)
     end
 end
+
+
+
+
+function bezout(EP::EnumerativeProblem; force_recompute=false)
+    if force_recompute 
+        delete!(data(EP),:bezout) 
+        println(RecomputationWarning)
+    end
+    get!(data(EP),:bezout) do
+        compute_bezout(EP)
+    end
+end
+
+
+function bkk(EP::EnumerativeProblem; force_recompute=false)
+    if force_recompute 
+        delete!(data(EP),:bkk) 
+        println(RecomputationWarning)
+    end
+    get!(data(EP),:bkk) do
+        compute_bkk(EP)
+    end
+end
+
+
+function affine_bkk(EP::EnumerativeProblem; force_recompute=false)
+    if force_recompute 
+        delete!(data(EP),:affine_bkk) 
+        println(RecomputationWarning)
+    end
+    get!(data(EP),:affine_bkk) do
+        compute_affine_bkk(EP)
+    end
+end
