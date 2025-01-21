@@ -197,6 +197,10 @@ include("Summarization/DegreeSummary.jl")
 
 include("DegreeBounds/Bounds.jl")
 
+include("FibreVisualization/GraphMesh.jl")
+include("FibreVisualization/Refiner.jl")
+include("FibreVisualization/Visualization.jl")
+
 #include("Varieties/Variety.jl")
 #include("Fibres/Scores.jl")
 
