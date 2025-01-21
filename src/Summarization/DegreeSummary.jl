@@ -15,5 +15,5 @@ function degree_summary(EP::EnumerativeProblem;kwargs...)
     if haskey(data(EP),:affine_bkk)
         summary *= raw"The affine BKK bound of the enumerative problem is $"*string(affine_bkk(EP))*raw"$. "
     end
-
+    return(summary)
 end
