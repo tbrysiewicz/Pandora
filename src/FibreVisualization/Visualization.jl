@@ -1,4 +1,39 @@
-function initialize_Subdivision(EP::EnumerativeProblem, xlims::Vector, ylims::Vector, fibre_function = x->HomotopyContinuation.nreal(x[1]), resolution = 1000)
+#I pulled the following three functions from main branch, only changed getters
+function Gram_Schmidt(basis_vectors::Vector)
+	orthonormal_basis = []
+	for i in 1:length(basis_vectors)
+		if i == 1
+			new_basis_vector = basis_vectors[i]
+			new_basis_vector = new_basis_vector/norm(new_basis_vector)
+			push!(orthonormal_basis, new_basis_vector)
+		else
+			new_basis_vector = basis_vectors[i] - sum([(sum(basis_vectors[i].*orthonormal_basis[x])/sum(orthonormal_basis[x].*orthonormal_basis[x])).*orthonormal_basis[x] for x in 1:i-1])
+			new_basis_vector = new_basis_vector/norm(new_basis_vector)
+			push!(orthonormal_basis, new_basis_vector)
+		end
+	end
+	return orthonormal_basis
+end
+
+function restrict_enumerative_problem(EP::EnumerativeProblem,P::Vector{Vector{Float64}})
+    xv = variables(EP)
+    xp = parameters(EP)
+    n = length(P)
+    @var t[1:n-1]
+    basis_vectors = [(P[i]-P[n]) for i in 1:n-1]
+    basis_vectors = Gram_Schmidt(basis_vectors)
+    affine_span = P[n] + sum([t[i].*basis_vectors[i] for i in 1:n-1])
+    new_expressions = [subs(f,xp=>affine_span) for f in expressions(EP)]
+    return(EnumerativeProblem(System(new_expressions,variables=xv,parameters=t)))
+end
+
+function restrict_enumerative_problem_to_plane(EP::EnumerativeProblem)
+	P = [randn(Float64,n_parameters(EP)) for i in 1:3]
+	return(restrict_enumerative_problem(EP,P))
+end
+
+function initialize_subdivision(EP::EnumerativeProblem, xlims::Vector, ylims::Vector, fibre_function = x->n_real_solutions(x), resolution = 1000)
+
 	xlength = xlims[2] - xlims[1]
 	ylength = ylims[2] - ylims[1]
 
@@ -18,15 +53,11 @@ function initialize_Subdivision(EP::EnumerativeProblem, xlims::Vector, ylims::Ve
 	shift_amount = (x_values[2] - x_values[1])/2
 	parameters_1 = [[i - isodd(findfirst(x->x==j, y_values))*shift_amount, j] for i in x_values for j in y_values]
 	
-	#=
-	start_parameters = randn(ComplexF64, length(parameters(system(EP))))
-	start_solutions = solutions(HomotopyContinuation.solve(system(EP), target_parameters= start_parameters))
-	subdivision_data = HomotopyContinuation.solve(system(EP), start_solutions, start_parameters = start_parameters, target_parameters = parameters_1)
-	=#
-    function_values = []
+	subdivision_solutions = solve(EP, parameters_1)
+    function_cache = []
 	
-	for s in subdivision_data
-		push!(function_values, (s[2], fibre_function(s)))
+	for i in subdivision_solutions
+		push!(function_cache, (parameters_1[findfirst(x->x==i, subdivision_solutions)], fibre_function(i)))
 	end
 
 	polygons = []
@@ -38,25 +69,25 @@ function initialize_Subdivision(EP::EnumerativeProblem, xlims::Vector, ylims::Ve
 			tr = parameter_array[i+1,j]
 			bl = parameter_array[i, j+1]
 			br = parameter_array[i+1, j+1]
-			tl_index = findfirst(x->x[1] == tl, function_values)
-			tr_index = findfirst(x->x[1] == tr, function_values)
-			bl_index = findfirst(x->x[1] == bl, function_values)
-			br_index = findfirst(x->x[1] == br, function_values)
+			tl_index = findfirst(x->x[1] == tl, function_cache)
+			tr_index = findfirst(x->x[1] == tr, function_cache)
+			bl_index = findfirst(x->x[1] == bl, function_cache)
+			br_index = findfirst(x->x[1] == br, function_cache)
 
-		if isodd(i)
-			push!(polygons, [tl_index, tr_index, bl_index])
-			push!(polygons, [bl_index, tr_index, br_index])
-		else
-			push!(polygons, [tl_index, tr_index, br_index])
-			push!(polygons, [bl_index, tl_index, br_index])
-		end
+			if isodd(i)
+				push!(polygons, [tl_index, tr_index, bl_index])
+				push!(polygons, [bl_index, tr_index, br_index])
+			else
+				push!(polygons, [tl_index, tr_index, br_index])
+				push!(polygons, [bl_index, tl_index, br_index])
+			end
 		end
 	end
 	
-	initial_graphmesh = GraphMesh(function_values)
+	initial_graphmesh = GraphMesh(function_cache)
 	initial_subdivision = Subdivision(initial_graphmesh,polygons)
 	
-	return initial_graphmesh, initial_subdivision
+	return initial_subdivision
 end
 
 
