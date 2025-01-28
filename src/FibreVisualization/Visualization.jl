@@ -23,7 +23,7 @@ function restrict_enumerative_problem(EP::EnumerativeProblem,P::Vector{Vector{Fl
     basis_vectors = [(P[i]-P[n]) for i in 1:n-1]
     basis_vectors = Gram_Schmidt(basis_vectors)
     affine_span = P[n] + sum([t[i].*basis_vectors[i] for i in 1:n-1])
-    new_expressions = [subs(f,xp=>affine_span) for f in expressions(EP)]
+    new_expressions = [subs(f,xp=>affine_span) for f in expressions(system(EP))]
     return(EnumerativeProblem(System(new_expressions,variables=xv,parameters=t)))
 end
 

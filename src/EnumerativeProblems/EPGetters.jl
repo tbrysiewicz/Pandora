@@ -80,7 +80,8 @@ function parameters(EP::EnumerativeProblem)
     parameters(system(EP))
 end
 
+#=
 function expressions(EP::EnumerativeProblem)
     expressions(system(EP))
 end
-
+=#
