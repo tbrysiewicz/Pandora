@@ -1,21 +1,22 @@
 
 #write function that finds function value of an index associated with a parameter from the subdivision (it needs to search through the graphmesh)
 
-function fibre_function_value(GM_index, GM::GraphMesh) #takes an index value from a subdivision polygon and returns parameter and fibre function value
+function value_from_index(GM_index, GM::GraphMesh) #takes an index value from a subdivision polygon and returns parameter and fibre function value
     function_cache = GM.function_cache
     (parameter, parameter_fibre_function_value) = function_cache[GM_index]
     return (parameter, parameter_fibre_function_value)
 end
 
+
 function is_complete(p, GM::GraphMesh) #checks if all polygon vertices share the same fibre function value. If polygon is complete, also returns new parameters to insert.
-    vertex_1_fibre_function_value = fibre_function_value(p[1], GM)
-    vertex_2_fibre_function_value = fibre_function_value(p[2], GM)
-    vertex_3_fibre_function_value = fibre_function_value(p[3], GM)
+    v1_value = value_from_index(p[1], GM)
+    v2_value = value_from_index(p[2], GM)
+    v3_value = value_from_index(p[3], GM) 
     new_parameters = []
-    if vertex_1_fibre_function_value[2] != vertex_2_fibre_function_value[2] || vertex_1_fibre_function_value[2] != vertex_3_fibre_function_value[2]
-        midpoint1 = 0.5*(vertex_2_fibre_function_value[1]-vertex_1_fibre_function_value[1]) + vertex_1_fibre_function_value[1]
-        midpoint2 = 0.5*(vertex_3_fibre_function_value[1]-vertex_2_fibre_function_value[1]) + vertex_2_fibre_function_value[1]
-        midpoint3 = 0.5*(vertex_3_fibre_function_value[1]-vertex_1_fibre_function_value[1]) + vertex_1_fibre_function_value[1]
+    if v1_value[2] != v2_value[2] || v1_value[2] != v3_value[2]
+        midpoint1 = 0.5*(v2_value[1]-v1_value[1]) + v1_value[1]
+        midpoint2 = 0.5*(v3_value[1]-v2_value[1]) + v2_value[1]
+        midpoint3 = 0.5*(v3_value[1]-v1_value[1]) + v1_value[1]
         push!(new_parameters, midpoint1)
         push!(new_parameters, midpoint2)
         push!(new_parameters, midpoint3)

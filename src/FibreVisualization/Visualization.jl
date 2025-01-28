@@ -1,35 +1,28 @@
 #I pulled the following three functions from main branch, only changed getters
-function Gram_Schmidt(basis_vectors::Vector)
-	orthonormal_basis = []
-	for i in 1:length(basis_vectors)
-		if i == 1
-			new_basis_vector = basis_vectors[i]
-			new_basis_vector = new_basis_vector/norm(new_basis_vector)
-			push!(orthonormal_basis, new_basis_vector)
-		else
-			new_basis_vector = basis_vectors[i] - sum([(sum(basis_vectors[i].*orthonormal_basis[x])/sum(orthonormal_basis[x].*orthonormal_basis[x])).*orthonormal_basis[x] for x in 1:i-1])
-			new_basis_vector = new_basis_vector/norm(new_basis_vector)
-			push!(orthonormal_basis, new_basis_vector)
-		end
-	end
-	return orthonormal_basis
+function gram_schmidt(basis_vectors::Vector)
+	M = hcat(basis_vectors...)
+	Q = Matrix(qr(M).Q)
+	return(collect(eachcol(Q)))
 end
 
-function restrict_enumerative_problem(EP::EnumerativeProblem,P::Vector{Vector{Float64}})
-    xv = variables(EP)
-    xp = parameters(EP)
-    n = length(P)
+#Given P = [p_1...p_k] parameters, this function considers the affine span of P 
+#   as p_1+span(p_i-p_1) where span(p_i-p_1) = span(b_1...b_k-1) where the bi's are
+#   an orthonormal basis for the span. 
+
+#TODO: Which cache values can be inherited by the restriction?
+
+function restrict(EP::EnumerativeProblem,P::Vector{Vector{Float64}})
+	n = length(P)
     @var t[1:n-1]
-    basis_vectors = [(P[i]-P[n]) for i in 1:n-1]
-    basis_vectors = Gram_Schmidt(basis_vectors)
-    affine_span = P[n] + sum([t[i].*basis_vectors[i] for i in 1:n-1])
-    new_expressions = [subs(f,xp=>affine_span) for f in expressions(system(EP))]
-    return(EnumerativeProblem(System(new_expressions,variables=xv,parameters=t)))
+    basis_vectors = gram_schmidt([(P[i]-P[1]) for i in 2:n])
+    affine_span = P[1] + sum([t[i].*basis_vectors[i] for i in 1:n-1])
+    new_expressions = [subs(f,parameters(EP)=>affine_span) for f in expressions(EP)]
+    return(EnumerativeProblem(System(new_expressions,variables=variables(EP),parameters=t)))
 end
 
-function restrict_enumerative_problem_to_plane(EP::EnumerativeProblem)
+function planar_restriction(EP::EnumerativeProblem)
 	P = [randn(Float64,n_parameters(EP)) for i in 1:3]
-	return(restrict_enumerative_problem(EP,P))
+	return(restrict(EP,P))
 end
 
 function initialize_subdivision(EP::EnumerativeProblem, xlims::Vector, ylims::Vector, fibre_function = x->n_real_solutions(x), resolution = 1000)

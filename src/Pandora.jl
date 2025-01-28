@@ -8,18 +8,18 @@ using Dates: today
 
 
 #LinearAlgebra functions used
-using LinearAlgebra: I, norm, det
+using LinearAlgebra: I, norm, det, qr
 
 #HC functions used (in the code)
-using HomotopyContinuation:System,  @var,  expressions,  monodromy_solve, Result, TrackerOptions
+using HomotopyContinuation:System,  @var,   monodromy_solve, Result, TrackerOptions
 using HomotopyContinuation:subs, coefficients, differentiate, Expression, Variable, support_coefficients
 using HomotopyContinuation:evaluate, paths_to_track
 
 #HC functions which we extend to different types
-import HomotopyContinuation:variables,  parameters, system, solutions, solve, is_real
+import HomotopyContinuation:variables,  parameters, system, solutions, solve, is_real, expressions
 
 #HC functions we want the user to have access to
-export System, @var, solve, is_real
+export System, @var, solve, is_real, expressions
 
 #Oscar (GAP) functions used (in code)
 using Oscar: perm, PermGroupElem, symmetric_group, sub, gens, PermGroup, cperm
@@ -33,6 +33,9 @@ import Oscar: degree, cube, lattice_points
 export gens, sub, symmetric_group, perm, cperm, cycles
 export is_transitive, is_primitive, describe, orbits, minimal_block_reps
 export orbit,  transitivity, order
+
+#DelaunayTriangulation functions we want to use
+using DelaunayTriangulation: triangulate
 
 #Base
 import Base: convert
@@ -80,6 +83,9 @@ export
     is_score,
     Optimizer,
     optimize!
+
+export 
+    planar_restriction
 
 export
     TwentySevenLines
