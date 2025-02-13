@@ -50,7 +50,7 @@ function Delaunay_triangulation!(SD::Subdivision)
 	return nothing
 end
 
-function refine!(S::Subdivision, EP::EnumerativeProblem, resolution = 1000; fibre_function = x->n_real_solutions(x)) :: Tuple{GraphMesh,Subdivision}
+function refine!(S::Subdivision, EP::EnumerativeProblem, resolution = 1000; fibre_function = x->n_real_solutions(x))
     new_parameters = []
     resolution_used = 0
     for p in S.Polygons
