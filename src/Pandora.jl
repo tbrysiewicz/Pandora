@@ -6,6 +6,9 @@ using Pkg 					#remove eventually
 #Small uses
 using Dates: today
 
+#Visualize
+using Plots: scatter, scatter!, plot, plot!
+
 
 #LinearAlgebra functions used
 using LinearAlgebra: I, norm, det, qr
@@ -35,7 +38,7 @@ export is_transitive, is_primitive, describe, orbits, minimal_block_reps
 export orbit,  transitivity, order
 
 #DelaunayTriangulation functions we want to use
-using DelaunayTriangulation: triangulate
+using DelaunayTriangulation: triangulate, each_solid_triangle, triangle_vertices, get_point
 
 #Base
 import Base: convert
@@ -82,7 +85,8 @@ export
     monodromy_basis,
     is_score,
     Optimizer,
-    optimize!
+    optimize!,
+    n_real_solutions
 
 export 
     planar_restriction

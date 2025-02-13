@@ -20,13 +20,16 @@ function restrict(EP::EnumerativeProblem,P::Vector{Vector{Float64}})
     return(EnumerativeProblem(System(new_expressions,variables=variables(EP),parameters=t)))
 end
 
+#If the user doesn't care WHICH plane to restrict to, do one through the current base
+# parameters so that EP inherits the solutions
+
 function planar_restriction(EP::EnumerativeProblem)
 	P = [randn(Float64,n_parameters(EP)) for i in 1:3]
 	return(restrict(EP,P))
 end
 
-function initialize_subdivision(EP::EnumerativeProblem, xlims::Vector, ylims::Vector, fibre_function = x->n_real_solutions(x), resolution = 1000)
-
+function initialize_subdivision(EP::EnumerativeProblem, xlims::Vector, ylims::Vector, 
+								fibre_function = x->n_real_solutions(x), resolution = 1000)
 	xlength = xlims[2] - xlims[1]
 	ylength = ylims[2] - ylims[1]
 
@@ -137,8 +140,17 @@ function visualize(EP::EnumerativeProblem; xlims = [-2,2], ylims = [-2,2], fibre
 end
 =#
 function visualize(GM::GraphMesh)
-    #Create plot, display plot, return plot
+	scatter([p[1] for p in input_points(GM)],[p[2] for p in input_points(GM)],zcolor = output_values(GM), legend = false, colorbar=true)
 end
+
+#TODO: Write this cleanly
+function visualize(SD::Subdivision)
+	GM = graph_mesh(SD)
+	#scatter([p[1] for p in input_points(GM)],[p[2] for p in input_points(GM)],zcolor = output_values(GM), legend = false, colorbar=true)
+
+end
+
+
 
 
 function visualize(EP::EnumerativeProblem; fibre_function = n_real_points,kwargs)

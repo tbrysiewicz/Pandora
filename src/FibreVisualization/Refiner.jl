@@ -1,38 +1,36 @@
 
-#write function that finds function value of an index associated with a parameter from the subdivision (it needs to search through the graphmesh)
-
-function value_from_index(GM_index, GM::GraphMesh) #takes an index value from a subdivision polygon and returns parameter and fibre function value
-    function_cache = GM.function_cache
-    (parameter, parameter_fibre_function_value) = function_cache[GM_index]
-    return (parameter, parameter_fibre_function_value)
-end
-
-
-function is_complete(p, GM::GraphMesh) #checks if all polygon vertices share the same fibre function value. If polygon is complete, also returns new parameters to insert.
-    v1_value = value_from_index(p[1], GM)
-    v2_value = value_from_index(p[2], GM)
-    v3_value = value_from_index(p[3], GM) 
-    new_parameters = []
-    if v1_value[2] != v2_value[2] || v1_value[2] != v3_value[2]
-        midpoint1 = 0.5*(v2_value[1]-v1_value[1]) + v1_value[1]
-        midpoint2 = 0.5*(v3_value[1]-v2_value[1]) + v2_value[1]
-        midpoint3 = 0.5*(v3_value[1]-v1_value[1]) + v1_value[1]
-        push!(new_parameters, midpoint1)
-        push!(new_parameters, midpoint2)
-        push!(new_parameters, midpoint3)
-        return (false, new_parameters)
-    else
-        return (true, new_parameters)
+function is_complete(p::Vector{Int}, GM::GraphMesh) #checks if all polygon vertices share the same fibre function value. 
+                                       #If polygon is complete, also returns new parameters to insert.
+    v1_value = value_from_index(p[1],GM)[2]
+    for i in p[2:end]
+        vval = value_from_index(i,GM)[2]
+        if vval!=v1_value
+            return(false)
+        end
     end
+    return(true)
 end
 
-function Delaunay_triangulation!(SD::Subdivision)
+function midpoint(p,q)
+    return((p+q)./2)
+end
+
+#TODO: how should this be done for non-triangles? Should it be done at all for non-triangles?
+#TODO: this will produce duplicate midpoints on edges which are shared by multiple incomplete triangles!
+function subdivide(p::Vector{Int},GM::GraphMesh)
+     v = [value_from_index(p[i],GM)[1] for i in 1:3]
+    return([sum(v)./3])
+   # new_parameters = [midpoint(vertices[i],vertices[j]) for (i,j) in [(1,2),(1,3),(2,3)]]
+   # return(new_parameters)
+end
+
+function delaunay_triangulation!(SD::Subdivision)
     vertices = []
     for v in SD.GM.function_cache
         push!(vertices, v[1])
     end
 	vertices = hcat(vertices...)
-	tri = DelaunayTriangulation.triangulate(vertices)
+	tri = triangulate(vertices)
 	triangle_iterator = each_solid_triangle(tri)
 	triangles = []
 	for T in triangle_iterator
@@ -41,9 +39,9 @@ function Delaunay_triangulation!(SD::Subdivision)
 		vertex_1 = [i[1], i[2]]
 		vertex_2 = [j[1], j[2]]
 		vertex_3 = [k[1], k[2]]
-        index_1 = findfirst(x->x[1] == vertex_1, SM.GM.function_cache)
-        index_2 = findfirst(x->x[1] == vertex_2, SM.GM.function_cache)
-        index_3 = findfirst(x->x[1] == vertex_3, SM.GM.function_cache)
+        index_1 = findfirst(x->x[1] == vertex_1, SD.GM.function_cache)
+        index_2 = findfirst(x->x[1] == vertex_2, SD.GM.function_cache)
+        index_3 = findfirst(x->x[1] == vertex_3, SD.GM.function_cache)
 		push!(triangles, [index_1, index_2, index_3])
 	end
     SD.Polygons = triangles
@@ -51,16 +49,17 @@ function Delaunay_triangulation!(SD::Subdivision)
 end
 
 function refine!(S::Subdivision, EP::EnumerativeProblem, resolution = 1000; fibre_function = x->n_real_solutions(x))
-    new_parameters = []
+    new_parameters = Vector{Vector{Float64}}([])
     resolution_used = 0
     for p in S.Polygons
         if resolution_used > (resolution - 3)
             break
         else
             check_polygon = is_complete(p, S.GM)
-            if check_polygon[1] == false
-                for i in check_polygon[2]
-                    push!(new_parameters, i)
+            if check_polygon == false
+                some_new_parameters = subdivide(p,S.GM)
+                for snp in some_new_parameters
+                    push!(new_parameters,snp)
                 end
                 resolution_used += 3
             end
@@ -71,7 +70,7 @@ function refine!(S::Subdivision, EP::EnumerativeProblem, resolution = 1000; fibr
         push!(S.GM.function_cache, (new_parameters[findfirst(x->x==s, new_solutions)], fibre_function(s)))
     end
 
-    Delaunay_triangulation!(S)
+    delaunay_triangulation!(S)
 
     return resolution_used
 end
