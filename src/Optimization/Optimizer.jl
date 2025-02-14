@@ -159,7 +159,8 @@ end
 
 
 function optimize!(O::Optimizer; max_steps = 100)
-    while O.goal(O)==false && O.optimizer_data.steps_no_major_progress<max_steps
+    G = goal(O)
+    while G(O)==false && O.optimizer_data.steps_no_major_progress<max_steps
         improve!(O)
         println(O)
     end

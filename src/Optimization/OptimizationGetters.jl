@@ -18,6 +18,11 @@ function objective_function(optimizer::Optimizer)
     optimizer.scoring_scheme.objective
 end
 
+
+function goal(optimizer::Optimizer)
+    optimizer.scoring_scheme.goal
+end
+
 function record_objective(optimizer::Optimizer)
     optimizer.record_objective
 end

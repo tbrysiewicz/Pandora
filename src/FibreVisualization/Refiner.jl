@@ -18,6 +18,9 @@ end
 #TODO: how should this be done for non-triangles? Should it be done at all for non-triangles?
 #TODO: this will produce duplicate midpoints on edges which are shared by multiple incomplete triangles!
 function subdivide(p::Vector{Int},GM::GraphMesh)
+    c = randn(Float64,3)
+    c = map(abs,c)
+    c = c/norm(c)
      v = [value_from_index(p[i],GM)[1] for i in 1:3]
     return([sum(v)./3])
    # new_parameters = [midpoint(vertices[i],vertices[j]) for (i,j) in [(1,2),(1,3),(2,3)]]
