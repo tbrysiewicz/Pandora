@@ -37,6 +37,7 @@ function monodromy_group(EP::EnumerativeProblem; force_recompute=false)
         println(RecomputationWarning)
     end
     get!(data(EP),:monodromy_group) do
+        justify(EP,:monodromy_group,"Computed from monodromy dictionary.")
         compute_monodromy_group(EP)
     end
 end
@@ -47,6 +48,7 @@ function monodromy_dictionary(EP::EnumerativeProblem; force_recompute=false)
         println(RecomputationWarning)
     end
     get!(data(EP),:monodromy_dictionary) do
+         justify(EP,:monodromy_dictionary,"Computed numerically.")
          compute_monodromy_dictionary(EP)
     end
 end

@@ -8,14 +8,18 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
     system::System       #EPs consist of a system and
     base_fibre::Fibre    #a fibre of solutions  and parameters
 
+
+    data::Dict{Symbol,Any}          #Cache information about the problem
+    knowledge::Knowledge    #string justifications (for now) of key/value pairs in data
+    hc_options::Dict{Any,Any}
+
     function EnumerativeProblem(F::System; populate=true)
         EP = new()
         EP.system=F
-        EP.Data = Dict{Symbol,Any}()
-        EP.Reasoning = Dict{Symbol,Symbol}()
-        EP.Interpreter = Dict{Symbol,Any}()
-        EP.HomotopyContinuationOptions = Dict{Any,Any}()
-        EP.HomotopyContinuationOptions[:tracker_options]=TrackerOptions()
+        EP.data = Dict{Symbol,Any}()
+        EP.knowledge = Knowledge()
+        EP.hc_options = Dict{Any,Any}()
+        EP.hc_options[:tracker_options]=TrackerOptions()
         if populate
             populate!(EP)
         end
@@ -26,19 +30,14 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
         EP = new()
         EP.system = F
         EP.base_fibre = fibre
-        EP.Data = Dict{Symbol,Any}()
-        EP.Data[:degree]=length(solutions(fibre))
-        EP.Reasoning = Dict{Symbol,Symbol}()
-        EP.Interpreter = Dict{Symbol,Any}()
-        EP.HomotopyContinuationOptions = Dict{Any,Any}()
-        EP.HomotopyContinuationOptions[:tracker_options]=TrackerOptions()
+        EP.data = Dict{Symbol,Any}()
+        EP.data[:degree]=length(solutions(fibre))
+        EP.knowledge = Knowledge()
+        EP.hc_options = Dict{Any,Any}()
+        EP.hc_options[:tracker_options]=TrackerOptions()
         return(EP)
     end
 
-    Data::Dict{Symbol,Any}          #Cache information about the problem
-    Reasoning::Dict{Symbol,Symbol}  #Justify the key value pairs in Data via algorithm names
-    Interpreter::Dict{Symbol,Any}   #Customize how to interpret solutions
-    HomotopyContinuationOptions::Dict{Any,Any}
 
 end
 

@@ -21,11 +21,16 @@ function system(EP::EnumerativeProblem) :: System
     EP.system
 end
 
-function data(EP::EnumerativeProblem) :: Dict{Symbol,Any}
-    EP.Data
+function knowledge(EP::EnumerativeProblem) :: Knowledge
+    EP.knowledge
 end
+
+function data(EP::EnumerativeProblem) :: Dict{Symbol,Any}
+    EP.data
+end
+
 function homotopy_continuation_options(EP::EnumerativeProblem) 
-    EP.HomotopyContinuationOptions
+    EP.hc_options
 end
 
 function tracker_options(EP::EnumerativeProblem) :: TrackerOptions

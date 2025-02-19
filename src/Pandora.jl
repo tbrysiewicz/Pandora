@@ -156,6 +156,8 @@ end
 include("Constants/TypeAliases.jl")
 include("Constants/Warnings.jl")
 
+include("Epistemology/Knowledge.jl")
+
 include("DependencyConversions/HC_Conversions.jl")
 include("DependencyConversions/Julia_Conversions.jl")
 include("DependencyConversions/Oscar_GAP_Conversions.jl")
