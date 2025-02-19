@@ -156,6 +156,7 @@ end
 include("Constants/TypeAliases.jl")
 include("Constants/Warnings.jl")
 
+include("Citations/Citation.jl")
 include("Epistemology/Knowledge.jl")
 
 include("DependencyConversions/HC_Conversions.jl")
@@ -173,6 +174,10 @@ include("EnumerativeProblems/EPSetters.jl")
 include("EnumerativeProblems/EPSolving.jl")
 include("EnumerativeProblems/EPWrappers.jl")
 include("EnumerativeProblems/Specialize.jl")
+
+include("EnumerativeAlgorithms/EnumerativeAlgorithm.jl")
+
+include("Epistemology/Justification.jl")
 
 include("Fibres/Fibre.jl")
 include("Fibres/FibreFunctions.jl")
@@ -212,6 +217,10 @@ include("DegreeBounds/Bounds.jl")
 include("FibreVisualization/GraphMesh.jl")
 include("FibreVisualization/Refiner.jl")
 include("FibreVisualization/Visualization.jl")
+
+
+
+include("EnumerativeAlgorithms/AlgorithmList.jl")
 
 #include("Varieties/Variety.jl")
 #include("Fibres/Scores.jl")
