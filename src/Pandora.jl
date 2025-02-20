@@ -16,13 +16,13 @@ using LinearAlgebra: I, norm, det, qr
 #HC functions used (in the code)
 using HomotopyContinuation:System,  @var,   monodromy_solve, Result, TrackerOptions
 using HomotopyContinuation:subs, coefficients, differentiate, Expression, Variable, support_coefficients
-using HomotopyContinuation:evaluate, paths_to_track
+using HomotopyContinuation:evaluate, paths_to_track, degree
 
 #HC functions which we extend to different types
-import HomotopyContinuation:variables,  parameters,  solutions, solve, is_real, expressions
+import HomotopyContinuation:variables,  parameters,  solutions, solve, is_real, expressions, degree
 
 #HC functions we want the user to have access to
-export System, @var, solve, is_real, expressions
+export System, @var, solve, is_real, expressions, degree
 
 #Oscar (GAP) functions used (in code)
 using Oscar: perm, PermGroupElem, symmetric_group, sub, gens, PermGroup, cperm
@@ -36,6 +36,9 @@ import Oscar: cube, lattice_points, degree
 export gens, sub, symmetric_group, perm, cperm, cycles
 export is_transitive, is_primitive, describe, orbits, minimal_block_reps
 export orbit,  transitivity, order
+
+#Oscar (Polymake) functions
+using Oscar: Polyhedron
 
 #DelaunayTriangulation functions we want to use
 using DelaunayTriangulation: triangulate, each_solid_triangle, triangle_vertices, get_point
@@ -170,12 +173,12 @@ end
 include("Constants/TypeAliases.jl")
 include("Citations/Citation.jl")
 include("Fibres/Fibre.jl")
-include("Fibres/FibreFunctions.jl")
 include("EnumerativeProblems/AbstractEnumerativeProblem.jl")
 include("EnumerativeProperties/EnumerativeProperty.jl")
 include("EnumerativeAlgorithms/EnumerativeAlgorithm.jl")
 include("Epistemology/Knowledge.jl")
 include("EnumerativeProblems/EnumerativeProblem.jl")
+include("Fibres/FibreFunctions.jl")
 include("EnumerativeProblems/EPGetters.jl")
 include("Epistemology/Learning.jl")
 include("EnumerativeProperties/PropertyList.jl")
@@ -183,9 +186,11 @@ include("EnumerativeAlgorithms/AlgorithmFinder.jl")
 include("EnumerativeProperties/PropertyGetters.jl")
 
 
+include("Algorithms/degree_bounds.jl")
 include("Algorithms/degree_from_base_fibre.jl")
 include("Algorithms/polyhedral.jl")
 
+include("Examples/NamedExamples.jl")
 
 
 #include("Constants/TypeAliases.jl")

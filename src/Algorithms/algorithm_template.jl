@@ -1,5 +1,4 @@
 #Make an EnumerativeProperty for the property you want to compute
-#Name the file the exact name of the enumerative_algorithm
 
 function my_actual_computation(I1::Type1,I2::Type2) :: Type3
     #Do computations and return result
