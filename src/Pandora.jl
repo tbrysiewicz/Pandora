@@ -19,7 +19,7 @@ using HomotopyContinuation:subs, coefficients, differentiate, Expression, Variab
 using HomotopyContinuation:evaluate, paths_to_track
 
 #HC functions which we extend to different types
-import HomotopyContinuation:variables,  parameters, system, solutions, solve, is_real, expressions
+import HomotopyContinuation:variables,  parameters,  solutions, solve, is_real, expressions
 
 #HC functions we want the user to have access to
 export System, @var, solve, is_real, expressions
@@ -29,7 +29,7 @@ using Oscar: perm, PermGroupElem, symmetric_group, sub, gens, PermGroup, cperm
 using Oscar: is_transitive, is_primitive, describe, orbits, minimal_block_reps
 using Oscar: cycles, orbit, on_sets, order
 #Oscar (GAP) functions which we extend
-import Oscar: degree, cube, lattice_points
+import Oscar: cube, lattice_points, degree
 
 
 #Oscar (GAP) functions we want users to have access to
@@ -44,8 +44,40 @@ using DelaunayTriangulation: triangulate, each_solid_triangle, triangle_vertices
 import Base: convert
 
 
+export
+    EnumerativeProblem,
+    EnumerativeProperty,
+    EnumerativeAlgorithm
 
 
+export
+    know!,
+    learn!,
+    discover!
+
+#EnumerativeProperties
+export
+    system,
+    enumerative_degree,
+    degree
+
+
+#Basic enumerative properties
+export
+    n_polynomials,
+    n_parameters,
+    ambient_dimension,
+    expressions,
+    variables,
+    parameters
+
+#EnumerativeAlgorithms
+export
+    polyhedral
+
+
+
+#=
 #Exports of Pandora types
 export
     AbstractEnumerativeProblem,
@@ -107,25 +139,7 @@ export
 
 export 
     summarize
-
-#using HomotopyContinuation	
-#using LinearAlgebra
-#using Combinatorics
-#using Oscar			
-#using Plots
-#using ProgressBars
-#using Clustering
-#using ImplicitPlots
-
-
-
-#import HomotopyContinuation.solve
-#import HomotopyContinuation.degree
-#import HomotopyContinuation.dim
-#import Oscar.dim
-#import Oscar.degree
-
-#export order
+=#
 
 const PROJECT_TOML = Pkg.TOML.parsefile(joinpath(@__DIR__, "..", "Project.toml"))
 const VERSION_NUMBER = VersionNumber(PROJECT_TOML["version"])
@@ -154,73 +168,115 @@ function __init__()
 end
 
 include("Constants/TypeAliases.jl")
-include("Constants/Warnings.jl")
-
 include("Citations/Citation.jl")
-include("Epistemology/Knowledge.jl")
-
-include("DependencyConversions/HC_Conversions.jl")
-include("DependencyConversions/Julia_Conversions.jl")
-include("DependencyConversions/Oscar_GAP_Conversions.jl")
-
-
-
-include("EnumerativeProblems/AbstractEnumerativeProblem.jl")
-
-
-include("EnumerativeProblems/EnumerativeProblem.jl")
-include("EnumerativeProblems/EPGetters.jl")
-include("EnumerativeProblems/EPSetters.jl")
-include("EnumerativeProblems/EPSolving.jl")
-include("EnumerativeProblems/EPWrappers.jl")
-include("EnumerativeProblems/Specialize.jl")
-
-include("EnumerativeAlgorithms/EnumerativeAlgorithm.jl")
-
-include("Epistemology/Justification.jl")
-
 include("Fibres/Fibre.jl")
 include("Fibres/FibreFunctions.jl")
-
-include("Samplers/Sampler.jl")
-include("Samplers/SamplerGetters.jl")
-
-
-include("Monodromy/MonodromyGroups.jl")
-include("Monodromy/MonodromyInterpretations.jl")
-include("Monodromy/MonodromyLabeling.jl")
-include("Monodromy/MonodromyBreakup.jl")
-
-
-include("Examples/NamedExamples.jl")
+include("EnumerativeProblems/AbstractEnumerativeProblem.jl")
+include("EnumerativeProperties/EnumerativeProperty.jl")
+include("EnumerativeAlgorithms/EnumerativeAlgorithm.jl")
+include("Epistemology/Knowledge.jl")
+include("EnumerativeProblems/EnumerativeProblem.jl")
+include("EnumerativeProblems/EPGetters.jl")
+include("Epistemology/Learning.jl")
+include("EnumerativeProperties/PropertyList.jl")
+include("EnumerativeAlgorithms/AlgorithmFinder.jl")
+include("EnumerativeProperties/PropertyGetters.jl")
 
 
-include("SolutionFunctions/SolutionFunctions.jl")
-
-include("Optimization/Optimizer.jl")
-include("Optimization/OptimizationGetters.jl")
-include("Optimization/DietmaierOptimization.jl")
-
-
-include("Summarization/CreateDocument.jl")
-include("Summarization/InitializeSummary.jl")
-include("Summarization/AbstractSummary.jl")
-include("Summarization/BackgroundSummary.jl")
-include("Summarization/EndSummary.jl")
-include("Summarization/Summarize.jl")
-include("Summarization/DegreeSummary.jl")
+include("Algorithms/degree_from_base_fibre.jl")
+include("Algorithms/polyhedral.jl")
 
 
 
-include("DegreeBounds/Bounds.jl")
+#include("Constants/TypeAliases.jl")
+#include("Constants/Warnings.jl")
 
-include("FibreVisualization/GraphMesh.jl")
-include("FibreVisualization/Refiner.jl")
-include("FibreVisualization/Visualization.jl")
+#include("Citations/Citation.jl")
+#include("Epistemology/Knowledge.jl")
+
+#include("DependencyConversions/HC_Conversions.jl")
+#include("DependencyConversions/Julia_Conversions.jl")
+#include("DependencyConversions/Oscar_GAP_Conversions.jl")
 
 
 
-include("EnumerativeAlgorithms/AlgorithmList.jl")
+#include("EnumerativeProblems/AbstractEnumerativeProblem.jl")
+
+
+#include("EnumerativeProblems/EnumerativeProblem.jl")
+#include("EnumerativeProblems/EPGetters.jl")
+#include("EnumerativeProblems/EPSetters.jl")
+#include("EnumerativeProblems/EPSolving.jl")
+#include("EnumerativeProblems/EPWrappers.jl")
+#include("EnumerativeProblems/Specialize.jl")
+
+#include("EnumerativeAlgorithms/EnumerativeAlgorithm.jl")
+
+#include("Epistemology/Justification.jl")
+
+#include("Fibres/Fibre.jl")
+#include("Fibres/FibreFunctions.jl")
+
+#include("Samplers/Sampler.jl")
+#include("Samplers/SamplerGetters.jl")
+
+
+#include("Monodromy/MonodromyGroups.jl")
+#include("Monodromy/MonodromyInterpretations.jl")
+#include("Monodromy/MonodromyLabeling.jl")
+#include("Monodromy/MonodromyBreakup.jl")
+
+
+#include("Examples/NamedExamples.jl")
+
+
+#include("SolutionFunctions/SolutionFunctions.jl")
+
+#include("Optimization/Optimizer.jl")
+#include("Optimization/OptimizationGetters.jl")
+#include("Optimization/DietmaierOptimization.jl")
+
+
+#include("Summarization/CreateDocument.jl")
+#include("Summarization/InitializeSummary.jl")
+#include("Summarization/AbstractSummary.jl")
+#include("Summarization/BackgroundSummary.jl")
+#include("Summarization/EndSummary.jl")
+#include("Summarization/Summarize.jl")
+#include("Summarization/DegreeSummary.jl")
+
+
+
+#include("DegreeBounds/Bounds.jl")
+
+#include("FibreVisualization/GraphMesh.jl")
+#include("FibreVisualization/Refiner.jl")
+#include("FibreVisualization/Visualization.jl")
+
+
+
+#include("EnumerativeAlgorithms/AlgorithmList.jl")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#Very old
 
 #include("Varieties/Variety.jl")
 #include("Fibres/Scores.jl")

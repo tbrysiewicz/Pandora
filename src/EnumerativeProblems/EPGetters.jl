@@ -4,7 +4,41 @@
 ################################################################
 ################################################################
 
+##  These should only exist for properties of enumerative problems
+##    which are not `EnumerativeProperties`: if P is an enumerative
+##    property, then one can extract the property P of an enumerative
+##    problem via P(EP). For example, system(EP) needs no explicit getter
 
+function knowledge(EP::EnumerativeProblem)
+    EP.knowledge
+end
+
+function ambient_dimension(EP::EnumerativeProblem)
+    length(variables(system(EP)))
+end
+
+function n_polynomials(EP::EnumerativeProblem)
+    length(expressions(system(EP)))
+end
+
+function n_parameters(EP::EnumerativeProblem)
+    length(parameters(system(EP)))
+end
+
+function variables(EP::EnumerativeProblem)
+    variables(system(EP))
+end
+
+function parameters(EP::EnumerativeProblem)
+    parameters(system(EP))
+end
+
+
+function expressions(EP::EnumerativeProblem)
+    expressions(system(EP))
+end
+
+#=
 #If one changes their mind about what to call EnumerativeProblem.base_fibre, or EnumerativeProblem.system
 #   one should only need to change the fundamental getters and fundamental populators (see EPPopulators.jl)
 #   for enumerative problems. Everything esle should work fine. 
@@ -65,28 +99,5 @@ function base_parameters(EP::EnumerativeProblem)
 end
 
 
-function ambient_dimension(EP::EnumerativeProblem)
-    length(variables(system(EP)))
-end
 
-function n_polynomials(EP::EnumerativeProblem)
-    length(expressions(system(EP)))
-end
-
-function n_parameters(EP::EnumerativeProblem)
-    length(parameters(system(EP)))
-end
-
-function variables(EP::EnumerativeProblem)
-    variables(system(EP))
-end
-
-function parameters(EP::EnumerativeProblem)
-    parameters(system(EP))
-end
-
-
-function expressions(EP::EnumerativeProblem)
-    expressions(system(EP))
-end
-
+=#

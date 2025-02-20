@@ -6,5 +6,5 @@ struct Citation
 end
 
 
-global NullCitation = Citation([""],"","",0)
+global NULL_CITATION = Citation([""],"","",0)
 

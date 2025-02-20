@@ -1,4 +1,8 @@
 
+function n_solutions(fibre::Fibre)
+    return(length(solutions(fibre)))
+end
+
 function n_real_solutions(fibre::Fibre; tol::Float64=1e-6) :: Int
     n_real_solutions(solutions(fibre);tol=tol)
 end
