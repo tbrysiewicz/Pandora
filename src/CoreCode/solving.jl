@@ -40,8 +40,7 @@ function solve(EP::EnumerativeProblem, P::Vector{Vector{T}} where T)
 end
 
 (EP::EnumerativeProblem)(fibre::Fibre, P::Vector{Vector{T}} where T <: Number) = solve(EP,fibre,P)
-(EP::EnumerativeProblem)(fibre::Fibre, p::Vector{T} where T) = solve(EP,fibre,p)    
-(EP::EnumerativeProblem)(fibre1::Fibre, fibre2::Fibre) = solve(EP,fibre1,parameters(fibre2))    
+(EP::EnumerativeProblem)(fibre::Fibre, p::Vector{T} where T) = solve(EP,fibre,p)      
 (EP::EnumerativeProblem)(P::Vector{Vector{T}} where T <:Number) = solve(EP,P)
 (EP::EnumerativeProblem)(p::Vector{T} where T <:Number) = solve(EP,p)
 (EP::EnumerativeProblem)() = solve(EP)

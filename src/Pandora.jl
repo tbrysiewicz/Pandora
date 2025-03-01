@@ -14,6 +14,8 @@ using HomotopyContinuation: System,  @var
 #HC exports
 export System, @var
 
+import Oscar: perm
+
 function __init__()
 	print(raw"
         0ooo000oo oo oo
@@ -42,7 +44,7 @@ include("Automation/automation.jl")
 
 include("Examples/named_examples.jl")
 
-
+include("Algorithms/monodromy.jl")
 
 
 

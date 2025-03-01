@@ -1,35 +1,4 @@
 
-#A wrapper is something that directs how something is computed based on what it 
-#   already knows. e.g. if we've computed something before, a wrapper will navigate toward
-#   looking it up instead of recomputation. If a computation of something is specialized
-#   for specific objects, the wrapper will assess the best algorithm for computing the 
-#   desired feature of the object. 
-
-#Think of wrappers for the things that the user touches: they wrap together the stuff the
-#  user shouldn't see/have to worry about.
-
-
-function degree(EP::EnumerativeProblem; force_recompute=false)
-    if force_recompute
-        delete!(data(EP),:degree)
-        println(AlterWarning)
-        println(RecomputationWarning)
-        populate!(EP)
-    end
-    if haskey(data(EP),:degree)
-        return(data(EP)[:degree])
-    else
-        if !is_populated(EP) 
-            println(AlterWarning)
-            populate!(EP)
-        end
-        d = length(base_solutions(EP))
-        data(EP)[:degree]=d
-        return(d)
-    end
-end
-
-
 
 function monodromy_group(EP::EnumerativeProblem; force_recompute=false)
     if force_recompute 
