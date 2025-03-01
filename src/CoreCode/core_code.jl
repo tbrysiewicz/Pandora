@@ -1,14 +1,33 @@
-export 
+export #main types
     EnumerativeProperty,
     EnumerativeAlgorithm,
-    KnowledgeNode
+    KnowledgeNode,
+    EnumerativeProblem
+
+
+export #callable on enumerative problems
+    degree
+
+export #enumerative properties (also callable on enumerative problems)
+    system
 
 
 ##############################################################
-###################    Core Aliases    #######################
+#############  Warning and Error Messages ####################
+##############################################################
+const NeedToComputeWarning = "Computing...\n"
+
+##############################################################
+###################    Fibre          #######################
 ##############################################################
 const Fibre = Tuple{Vector{Vector{ComplexF64}},Vector{ComplexF64}}
 #const RealFibre = Tuple{Vector{Vector{Float64}},Vector{Float64}}
+
+solutions(fibre::Fibre) = fibre[1]
+parameters(fibre::Fibre) = fibre[2]
+n_solutions(fibre::Fibre) = length(solutions(fibre))
+
+export solutions, parameters, n_solutions
 
 ##############################################################
 ###################Enumerative Property#######################
@@ -26,6 +45,8 @@ Base.show(io::IO, EProp::EnumerativeProperty) =  print(io,name(EProp))
 const enumerative_degree = EnumerativeProperty{Int}("degree")
 const system  = EnumerativeProperty{System}("system")
 const base_fibre = EnumerativeProperty{Fibre}("base fibre")
+
+export enumerative_degree, system, base_fibre
 
 ##############################################################
 #############          Citation          #####################
@@ -125,7 +146,7 @@ global MAIN_ALGORITHMS = Vector{EnumerativeAlgorithm}([])
 
 
 ##############################################################
-###################      KnowledgeNode     #######################
+###################      KnowledgeNode     ###################
 ##############################################################
 
 
@@ -148,11 +169,18 @@ input_knowledge(K::KnowledgeNode) = K.input_knowledge
 input_kwargs(K::KnowledgeNode) = K.input_kwargs
 algorithm(K::KnowledgeNode) = K.algorithm
 
+known_properties(K::Knowledge) = unique([property(k) for k in K])
+    
+
+#TODO: reliability(K::KnowledgeNode) must track all the way back
+
+export property, value, input_knowledge, input_kwargs, algorithm
+
 function Base.show(io::IO, K::KnowledgeNode)
     println(io,"Knowledge node for [",property(K),"]:")
-    println(io,value(K))
+ #   println(io,value(K))
     println(io,"----------------------------")
-    println(io,"Algorithm used: [",name(algorithm(K)),"]")
+    println(io,"Algorithm: [",name(algorithm(K)),"]")
     if length(input_knowledge(K))>0
         println(io,"Ran on knowledge nodes for ")
     end
@@ -160,11 +188,12 @@ function Base.show(io::IO, K::KnowledgeNode)
         println(io,"     ",name(property(i)))
     end
     if length(keys(input_kwargs(K)))>0
-        println(io," with input parameters")
+        println(io,"Keyword arguments")
         for ip in keys(input_kwargs(K))
-            println(io," ",ip,": ",(input_kwargs(K))[ip])
+            println(io,"      ",ip,": ",(input_kwargs(K))[ip])
         end
     end
+    print("")
 end
 
 
@@ -193,16 +222,21 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
         know!(EP,system,F)
 
         if populate
-            learn!(EP,base_fibre; algorithm = polyhedral)
-            learn!(EP,enumerative_degree; algorithm = degree_from_base_fibre)
+            populate!(EP)
         end
         return(EP)
     end
 end
 
+function populate!(EP::EnumerativeProblem; kwargs...)
+    learn!(EP,base_fibre; algorithm = solve_generic_via_start_system, kwargs...)
+    learn!(EP,enumerative_degree; algorithm = degree_from_base_fibre, kwargs...)
+end
+
 #Getters for EnumerativeProblems should only be implemented if we do not expect to
 #  hold a 'knowledge node' for them, since getting knowledge nodes is automatic. 
 
+tracker_options(EP::EnumerativeProblem) = EP.hc_options[:tracker_options]
 knowledge(EP::EnumerativeProblem) = EP.knowledge
 ambient_dimension(EP::EnumerativeProblem) = length(variables(system(EP)))
 n_polynomials(EP::EnumerativeProblem) = length(expressions(system(EP)))
@@ -210,7 +244,9 @@ n_parameters(EP::EnumerativeProblem) = length(parameters(system(EP)))
 variables(EP::EnumerativeProblem) = variables(system(EP))
 parameters(EP::EnumerativeProblem) = parameters(system(EP))
 expressions(EP::EnumerativeProblem) = expressions(system(EP))
+degree(EP::EnumerativeProblem; kwargs...) =  enumerative_degree(EP; kwargs...)
 
+export knowledge, ambient_dimension, n_polynomials, n_parameters, variables, parameters, expressions, degree
 
 
 #######################################################################################################################
@@ -225,37 +261,76 @@ expressions(EP::EnumerativeProblem) = expressions(system(EP))
 ### know!(EP,EProperty,val) -> Create user-given knowledge node that EP.Eproperty = val and discover that knowledge####
 #######################################################################################################################
 
-function knows(EP::EnumerativeProblem, EProp::EnumerativeProperty)
-    count(p -> property(p) == EProp, knowledge(EP)) == 0 ? false : true
+function knowledge_agrees_with_kwargs(k::KnowledgeNode;kwargs...)
+    isempty(kwargs) && return(true)
+    ikwargs = input_kwargs(k)
+    isempty(ikwargs) && return(true)
+    d = Dict(kwargs)
+    for i in keys(ikwargs)
+        if haskey(d,i)
+            if d[i]!=ikwargs[i]
+                return(false)
+            end
+        end
+    end
+    return(true)
 end
 
+function knows(EP::EnumerativeProblem, EProp::EnumerativeProperty; kwargs...)
+    #TODO: must check that the knowledge node has input kwargs which agree with kwargs...
+    candidate_knowledge = filter(k->property(k) == EProp, knowledge(EP))
+    kwarg_agreement  = filter(k->knowledge_agrees_with_kwargs(k;kwargs...),candidate_knowledge)
+    if length(kwarg_agreement)>0
+        return(true)
+    else
+        return(false)
+    end
+end
+
+
+function find_algorithm(EProp::EnumerativeProperty,EP::EnumerativeProblem)
+    potential_algorithms = filter(EA->output_property(EA)==EProp,MAIN_ALGORITHMS)
+    println("There is a total of ",length(potential_algorithms), " algorithm(s) in Pandora.jl which compute(s) ",name(EProp),":")
+    counter=0
+    for p in potential_algorithms
+        counter=counter+1
+        println("      ",counter,") ",name(p))
+    end
+    if length(potential_algorithms)==0
+        return(nothing)
+    else
+        #Extend to find the algorithm which requires the least amount of EP info which is unknown
+        return(potential_algorithms[1])
+    end
+end
 
 function learn!(EP::EnumerativeProblem, EProp::EnumerativeProperty{T}; 
     algorithm = nothing, kwargs...)      where T
 
     if algorithm == nothing
-        error("Taylor needs to code how to find best algorithm")
+        algorithm = find_algorithm(EProp,EP)  #find and algorithm which will obtain it
     end
     
     EA = algorithm
     f = core_function(EA)
-    for i in default_kwargs(EA)
+    #=
+    for i in input_properties(EA)
         if knows(EP,i)==false
             error("Property \n    ["*string(i)*"]\nis required for algorithm \n    ["*name(EA)*"]\nbut is not known")
         end
     end
-    input_knowledge = [get_knowledge(i,EP) for i in input_properties(EA)]
+    =#
+    input_knowledge = [get_knowledge!(i,EP) for i in input_properties(EA)]
     input_knowledge_values = [value(kn) for kn in input_knowledge]
-    kwargs_to_pass = default_kwargs(EA)
+    kwargs_to_pass = copy(default_kwargs(EA))
     if !isempty(kwargs)
-       if :k in keys(kwargs...)
-           if haskey(:k,kwargs_to_pass)
-               kwargs_to_pass[:k] = kwargs[:k]
+       for kv in kwargs
+           if haskey(kwargs_to_pass,kv[1])
+               kwargs_to_pass[kv[1]] = kv[2]
            end
         end
     end
-    flattened_dict = [kwargs_to_pass[k] for k in keys(kwargs_to_pass)]
-	o = f(input_knowledge_values...;flattened_dict...)
+	o = f(input_knowledge_values...;kwargs_to_pass...)
     new_knowledge = KnowledgeNode{T}(EProp,o,input_knowledge,kwargs_to_pass,EA)
 	return(know!(EP,new_knowledge))
 end
@@ -272,26 +347,24 @@ end
 
 
 
-
-
 ############Getter System for EnumerativeProperty of Enumerative Problem#############
 
 function get_knowledge(EProp::EnumerativeProperty,EP::EnumerativeProblem; kwargs...)
-    if knows(EP,EProp)==false
+    if knows(EP,EProp; kwargs...)==false
         return(nothing)
     end
-    K = knowledge(EP)
-    relevant_knowledge = filter(p->property(p)==EProp,K)
-    if  length(relevant_knowledge)==1
-        return(relevant_knowledge[1])
+    candidate_knowledge = filter(k->property(k) == EProp, knowledge(EP))
+    kwarg_agreement  = filter(k->knowledge_agrees_with_kwargs(k;kwargs),candidate_knowledge)
+    if  length(kwarg_agreement)==1
+        return(kwarg_agreement[1])
     else
-        println("Warning: the property [",EProp,"] has more than one knowledge node.")
-        return(relevant_knowledge[1])
+        println("Warning: the property [",EProp,"] with given keyword arguments has more than one knowledge node.")
+        return(kwarg_agreement[1])
     end
 end
 
-function get_knowledge_value(EProp::EnumerativeProperty,EP::EnumerativeProblem; user_parameters :: Dict{Symbol,Any} = Dict{Symbol,Any}())
-    K = get_knowledge(EProp,EP; user_parameters=user_parameters)
+function get_knowledge_value(EProp::EnumerativeProperty,EP::EnumerativeProblem; kwargs...)
+    K = get_knowledge(EProp,EP; kwargs...)
     if K != nothing
         return(value(K))
     else
@@ -299,15 +372,15 @@ function get_knowledge_value(EProp::EnumerativeProperty,EP::EnumerativeProblem; 
     end
 end
 
+
 function get_knowledge!(EProp::EnumerativeProperty,EP::EnumerativeProblem; kwargs...)
     gk = get_knowledge(EProp,EP; kwargs...)
     if gk != nothing #Check if knowledge of this property is already known
+                     #TODO: With input_kwargs which agree with kwargs!!!!
         return(gk)   #If so, return it
     else             #Otherwise,
-        algorithm = find_algorithm(EProp,EP)  #find and algorithm which will obtain it
-        if algorithm != nothing
-            return(learn!(EP,EProp; algorithm = algorithm, kwargs...))
-        end
+        learn!(EP,EProp; kwargs...)
+        return(get_knowledge!(EProp,EP;kwargs...))
     end
 end
 
@@ -315,9 +388,12 @@ end
 get_knowledge_value!(EProp::EnumerativeProperty,EP::EnumerativeProblem; kwargs...)  =  value(get_knowledge!(EProp,EP; kwargs...))
 
 #This is the core "getter" for enumerative properties of enumerative problems
-(EProp::EnumerativeProperty)(EP::EnumerativeProblem; kwargs...) = get_knowledge_value!(EProp,EP; kwargs...)
+function (EProp::EnumerativeProperty)(EP::EnumerativeProblem; kwargs...) 
+    !knows(EP, EProp; kwargs...) && print(NeedToComputeWarning)
+    get_knowledge_value!(EProp,EP; kwargs...)
+end
 
-
+include("core_enumerative_algorithms.jl")
 
 function Base.show(io::IO, EP::EnumerativeProblem)
     tenspaces="          "
@@ -343,7 +419,16 @@ function Base.show(io::IO, EP::EnumerativeProblem)
     println(io,"An enumerative problem in ",ambient_dimension(EP)," variable(s) cut out by ", 
                 n_polynomials(EP)," condition(s) over ", n_parameters(EP)," parameter(s).")
     println(io,"The following information is known about this problem:")
-    for k in knowledge(EP)
-        println(io,"-",property(k))
+    for k in known_properties(knowledge(EP))
+        l = length(filter(x->property(x)==k,knowledge(EP)))
+        if l == 1
+         println(io,"-",k)
+        else
+         println(io,"-",k, " (# ways known: ",l,")")
+        end
     end
 end
+
+
+
+include("solving.jl")

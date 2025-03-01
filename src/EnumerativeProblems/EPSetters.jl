@@ -21,12 +21,7 @@ end
 ################################################################
 
 
-function populate!(EP::EnumerativeProblem)
-    p = randn(ComplexF64,n_parameters(EP))
-    S = solve(system(EP); target_parameters = p)
-    update_base_fibre!(EP,convert(Fibre,(S,p)))
-    return(EP)
-end
+
 
 
 function solve!(EP::EnumerativeProblem)

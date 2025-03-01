@@ -6,11 +6,12 @@ const PROJECT_TOML = Pkg.TOML.parsefile(joinpath(@__DIR__, "..", "Project.toml")
 const VERSION_NUMBER = VersionNumber(PROJECT_TOML["version"])
 
 #Use from HC only
-using HomotopyContinuation: TrackerOptions
-#Import from HC
-import HomotopyContinuation: expressions, variables, parameters
-#Use and export from HC
+using HomotopyContinuation: TrackerOptions, Result
+#Use and extend from HC
+import HomotopyContinuation: expressions, variables, parameters, solve, solutions
+#Use from HC with intent to export
 using HomotopyContinuation: System,  @var
+#HC exports
 export System, @var
 
 function __init__()
@@ -35,7 +36,7 @@ function __init__()
 		printstyled(" $VERSION_NUMBER ", color = :green)
 end
 
-include("CoreCode/CoreTypesAndFunctionality.jl")
+include("CoreCode/core_code.jl")
 
 
 
