@@ -102,13 +102,14 @@ default_kwargs(EA::EnumerativeAlgorithm) = EA.default_kwargs
 core_function(EA::EnumerativeAlgorithm) = EA.core_function
 output_property(EA::EnumerativeAlgorithm) = EA.output_property
 reliability(EA::EnumerativeAlgorithm) =  EA.reliability
+citation(EA::EnumerativeAlgorithm) =  EA.citation
 
 function Base.show(io::IO, EA::EnumerativeAlgorithm)
     tenspaces="          "
     println(io,"Algorithm:       ",name(EA))
     println(io,"----------------------------------------------------")
     println(io,"Input:            ")
-    if epistemic_status(EA)==:user_given
+    if reliability(EA)==:user_given
     print("None (the algorithm always returns the user-given value) \n")
     end
     for i in input_properties(EA)
@@ -116,7 +117,7 @@ function Base.show(io::IO, EA::EnumerativeAlgorithm)
     end
     println(io,"Output:           ",output_property(EA))
     println(io,"Citation:         ",citation(EA))
-    println(io,"Epistemic Status: ",epistemic_status(EA))
+    println(io,"Reliability: ",reliability(EA))
 end
 
 function user_given(EProp::EnumerativeProperty{T},value::T) where T 
@@ -129,7 +130,7 @@ function user_given(EProp::EnumerativeProperty{T},value::T) where T
     core_function = c
     output_property = EProp
     citation = NULL_CITATION
-    epistemic_status = :user_given
+    reliability = :user_given
     return(EnumerativeAlgorithm(
         alg_name,
         input_properties,
@@ -137,7 +138,7 @@ function user_given(EProp::EnumerativeProperty{T},value::T) where T
         core_function,
         output_property,
         citation,
-        epistemic_status))
+        reliability))
 end
 
 
@@ -261,7 +262,7 @@ export knowledge, ambient_dimension, n_polynomials, n_parameters, variables, par
 ### know!(EP,EProperty,val) -> Create user-given knowledge node that EP.Eproperty = val and discover that knowledge####
 #######################################################################################################################
 
-function knowledge_agrees_with_kwargs(k::KnowledgeNode;kwargs...)
+function knowledge_agrees_with_kwargs(k::KnowledgeNode; kwargs...)
     isempty(kwargs) && return(true)
     ikwargs = input_kwargs(k)
     isempty(ikwargs) && return(true)
@@ -430,5 +431,9 @@ function Base.show(io::IO, EP::EnumerativeProblem)
 end
 
 
+function update_base_fibre!(EP::EnumerativeProblem,F::Fibre)
+    know!(EP,base_fibre,F)
+    learn!(EP,enumerative_degree; algorithm = degree_from_base_fibre)
+end
 
 include("solving.jl")

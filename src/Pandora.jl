@@ -14,8 +14,9 @@ using HomotopyContinuation: System,  @var
 #HC exports
 export System, @var
 
-using Oscar: Perm, PermGroupElem
-import Oscar: perm
+using Oscar: Perm, PermGroupElem, PermGroup, symmetric_group, sub,  order
+import Oscar: perm, degree
+export gens, order, is_primitive, is_transitive
 
 function __init__()
 	print(raw"
