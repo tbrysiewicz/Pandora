@@ -42,11 +42,10 @@ Base.show(io::IO, EProp::EnumerativeProperty) =  print(io,name(EProp))
 
 #We cannot define the enumerative property 'degree' since we
 #   import functions from HC and Oscar called 'degree'
-const enumerative_degree = EnumerativeProperty{Int}("degree")
-const system  = EnumerativeProperty{System}("system")
-const base_fibre = EnumerativeProperty{Fibre}("base fibre")
+const DEGREE = EnumerativeProperty{Int}("degree")
+const SYSTEM  = EnumerativeProperty{System}("system")
+const BASE_FIBRE = EnumerativeProperty{Fibre}("base fibre")
 
-export enumerative_degree, system, base_fibre
 
 ##############################################################
 #############          Citation          #####################
@@ -355,7 +354,7 @@ function get_knowledge(EProp::EnumerativeProperty,EP::EnumerativeProblem; kwargs
         return(nothing)
     end
     candidate_knowledge = filter(k->property(k) == EProp, knowledge(EP))
-    kwarg_agreement  = filter(k->knowledge_agrees_with_kwargs(k;kwargs),candidate_knowledge)
+    kwarg_agreement  = filter(k->knowledge_agrees_with_kwargs(k;kwargs...),candidate_knowledge)
     if  length(kwarg_agreement)==1
         return(kwarg_agreement[1])
     else
