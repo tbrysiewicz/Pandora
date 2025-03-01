@@ -41,16 +41,16 @@ end
 
 (EP::EnumerativeProblem)(fibre::Fibre, P::Vector{Vector{T}} where T <: Number) = solve(EP,fibre,P)
 (EP::EnumerativeProblem)(fibre::Fibre, p::Vector{T} where T) = solve(EP,fibre,p)    
+(EP::EnumerativeProblem)(fibre1::Fibre, fibre2::Fibre) = solve(EP,fibre1,parameters(fibre2))    
 (EP::EnumerativeProblem)(P::Vector{Vector{T}} where T <:Number) = solve(EP,P)
 (EP::EnumerativeProblem)(p::Vector{T} where T <:Number) = solve(EP,p)
 (EP::EnumerativeProblem)() = solve(EP)
 
 function solve(EP::EnumerativeProblem)
-    p = randn(ComplexF64,n_parameters(EP))
-    if knows(EP,base_fibre)
-        S = solve(system(EP);target_parameters=p,tracker_options = tracker_options(EP))
-        return(solutions(S))
-    else
-        return(solve(EP,p))
-    end
+    return(solve(EP,randn(ComplexF64,n_parameters(EP))))
 end
+
+function solve(EP::EnumerativeProblem,N::Int)
+    return(solve(EP,[randn(ComplexF64,n_parameters(EP)) for i in 1:N]))
+end
+

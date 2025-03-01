@@ -6,7 +6,7 @@ const PROJECT_TOML = Pkg.TOML.parsefile(joinpath(@__DIR__, "..", "Project.toml")
 const VERSION_NUMBER = VersionNumber(PROJECT_TOML["version"])
 
 #Use from HC only
-using HomotopyContinuation: TrackerOptions, Result
+using HomotopyContinuation: TrackerOptions, Result, subs, coefficients
 #Use and extend from HC
 import HomotopyContinuation: expressions, variables, parameters, solve, solutions
 #Use from HC with intent to export
@@ -37,6 +37,10 @@ function __init__()
 end
 
 include("CoreCode/core_code.jl")
+
+include("Automation/automation.jl")
+
+include("Examples/named_examples.jl")
 
 
 

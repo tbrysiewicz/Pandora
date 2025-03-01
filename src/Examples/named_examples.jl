@@ -1,4 +1,7 @@
-
+export 
+    TwentySevenLines,
+    TangentCircles
+    
 function TwentySevenLines()
     @var x,y,z
     @var a[1:4,1:4,1:4]
