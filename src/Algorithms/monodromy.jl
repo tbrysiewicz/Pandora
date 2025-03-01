@@ -1,6 +1,7 @@
 export 
     MonodromyLoop,
-    Path
+    Path,
+    monodromy
 
 mutable struct MonodromyLoop
     F :: Fibre                      # Gives sols and ordering on them. (S,P)
@@ -27,7 +28,7 @@ function numerical_bijection(S1::Vector{T} where T, S2::Vector{T} where T; tol::
     return(one_line)
 end
 
-function check_and_fix_monodromy_input(fibre::Fibre, loop::Vector{Vector{T}} where T)
+function check_and_fix_monodromy_input(fibre::Fibre, loop::Vector{Vector{T}})  where T
     if T != ComplexF64 #Make sure parameters are complex
         loop=Vector{Vector{ComplexF64}}(loop) #Parameter type: changing parameters in loop to complex floats
     end
@@ -51,12 +52,12 @@ function monodromy(EP::EnumerativeProblem, fibre::Fibre, loop::Vector{Vector{T}}
     end
     
     g = numerical_bijection(solutions(fibre),S)
-    is_valid_permutation(g) ? return(perm(g)) : return(g)
+    return is_valid_permutation(g,degree(EP)) ? perm(g) : g
 end
 
 monodromy(EP::EnumerativeProblem,loop::Vector{Vector{T}} where T) =monodromy(EP,base_fibre(EP),loop)
-monodromy(EP::EnuemrativeProblem,ML::MonodromyLoop) = monodromy(EP,ML.F,ML.P)
-function monodromy!(EP::EnuemrativeProblem,ML::MonodromyLoop)
+monodromy(EP::EnumerativeProblem,ML::MonodromyLoop) = monodromy(EP,ML.F,ML.P)
+function monodromy!(EP::EnumerativeProblem,ML::MonodromyLoop)
     m = monodromy(EP,ML.F,ML.P)
     if typeof(m) <: Perm
         ML.sigma = m
@@ -64,4 +65,4 @@ function monodromy!(EP::EnuemrativeProblem,ML::MonodromyLoop)
     return(m)
 end
 
- perm!(EP::EnumerativeProblem, ML::MonodromyLoop) = monodromy!(EP,ML)
+perm!(EP::EnumerativeProblem, ML::MonodromyLoop) = monodromy!(EP,ML)

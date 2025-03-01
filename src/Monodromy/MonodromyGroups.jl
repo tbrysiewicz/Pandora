@@ -1,22 +1,7 @@
 
-#p is interpretted as a function where p(i) = p[i]. But p(i) may be not injective or
-#  surjective, in which case the following function should return false.
-function is_valid_permutation(p::Union{Vector{Int},Vector{Union{Nothing,Int64}}},d::Int64)
-    if in(nothing,p)
-        return(false)
-    end
-    u=unique(p) #
-    if length(u)<d || in(nothing,u) #nothing indicates not surjective, length indicates not injective
-        return(false)
-    else
-        return(true)
-    end
-end
 
-function numerical_bijection(S1::Vector{T} where T, S2::Vector{T} where T) 
-    one_line = [findfirst(x->isapprox(x,s),S1) for s in S2]
-    return(one_line)
-end
+
+
 
 function monodromy_homomorphism(EP::EnumerativeProblem, loop::Vector{Vector{T}} where T)
     println("Base fibre: assuming loop begins and ends at base fibre")
