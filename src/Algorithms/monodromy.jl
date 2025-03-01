@@ -1,12 +1,13 @@
 export 
     MonodromyLoop,
     Path,
-    monodromy
+    monodromy,
+    large_monodromy_sample
 
 mutable struct MonodromyLoop
     F :: Fibre                      # Gives sols and ordering on them. (S,P)
     P :: Vector{Vector{ComplexF64}} # A list of parameters starting
-    sigma :: Union{Perm,Nothing}
+    sigma :: Union{PermGroupElem,Nothing}
 end
 
 
@@ -66,3 +67,35 @@ function monodromy!(EP::EnumerativeProblem,ML::MonodromyLoop)
 end
 
 perm!(EP::EnumerativeProblem, ML::MonodromyLoop) = monodromy!(EP,ML)
+
+
+
+#When sampling many monodromy elements, one can make use of the parallelization in HC.jl by choosing loops all of the form
+#   a->b[i]->c->a where a is the base parameter, and c is another fixed parameter.
+#   This requires 2*N+1 fibres to be tracked. 1 from a->c, and N from a->b[i] and c->b[i]
+function large_monodromy_sample(EP::EnumerativeProblem, N::Int; loop_scaling = 1.0, permutations_only = false)
+    k = n_parameters(EP)
+    c = loop_scaling.*randn(ComplexF64,k)
+    b = [loop_scaling.*randn(ComplexF64,k) for i in 1:N]
+    bf = base_fibre(EP)
+    a = parameters(bf)
+    S1_bij = solve(EP, base_fibre(EP), b)
+    S2 = solve(EP,c)
+    S2_fibre = (S2,c)
+    S2_bij = solve(EP,S2_fibre,b)
+    one_line_perms = [numerical_bijection(S2_bij[i],S1_bij[i]) for i in 1:N]
+    indices_of_valid_permutations = findall(x->is_valid_permutation(x,degree(EP)),one_line_perms)
+    println("# Loops computed:            ",N)
+    println("# Valid permutations:        ",length(indices_of_valid_permutations))
+    println("# Unique valid permutations: ",length(unique(one_line_perms[indices_of_valid_permutations])))
+    if permutations_only
+        return([perm(p) for p in one_line_perms[indices_of_valid_permutations]])
+    else
+        sampled_loops = [[a,bb,c,a] for bb in b]
+        ML_bucket = Vector{MonodromyLoop}([])
+        for i in indices_of_valid_permutations
+            push!(ML_bucket,MonodromyLoop(bf,sampled_loops[i],perm(one_line_perms[i])))
+        end
+        return(ML_bucket)
+    end
+end
