@@ -14,6 +14,7 @@ using HomotopyContinuation: System,  @var
 #HC exports
 export System, @var
 
+using Oscar: Perm
 import Oscar: perm
 
 function __init__()
