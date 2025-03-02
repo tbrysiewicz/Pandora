@@ -3,7 +3,7 @@
 ######## Degree by counting points in the base fibre##########
 ##############################################################
 const N_SOLUTIONS = EnumerativeAlgorithm(
-    name = "definition: degree is the number of solutions in a generic base fibre",
+    name = "count base fibre solutions",
     input_properties = [BASE_FIBRE],
     core_function = n_solutions,
     output_property = DEGREE,
@@ -23,7 +23,7 @@ function hc_to_generic(F::System; start_system = :polyhedral) :: Fibre
 end
 
 const HC_TO_GENERIC = EnumerativeAlgorithm(
-    name = "solve generic system via start system using homotopy continuation",
+    name = "start_system->generic_target_system via HC",
     input_properties = [SYSTEM],
     default_kwargs = Dict{Symbol,Any}(:start_system=>:polyhedral),
     core_function = hc_to_generic,

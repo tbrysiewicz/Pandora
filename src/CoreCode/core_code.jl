@@ -5,12 +5,10 @@ export #main types
     EnumerativeProblem
 
 
-export #callable on enumerative problems
-    degree
-
-export #enumerative properties (also callable on enumerative problems)
-    system
-
+export 
+    degree,
+    system,
+    algorithms_which_return
 
 ##############################################################
 #############  Warning and Error Messages ####################
@@ -44,10 +42,8 @@ Base.show(io::IO, EProp::EnumerativeProperty) =  print(io,name(EProp))
 #   import functions from HC and Oscar called 'degree'
 const DEGREE = EnumerativeProperty{Int}("degree")
 degree(EP::EnumerativeProblem; kwargs...) = DEGREE(EP; kwargs...)
-
 const SYSTEM  = EnumerativeProperty{System}("system")
 system(EP::EnumerativeProblem; kwargs...) = SYSTEM(EP; kwargs...)
-
 const BASE_FIBRE = EnumerativeProperty{Fibre}("base fibre")
 base_fibre(EP::EnumerativeProblem; kwargs...) = BASE_FIBRE(EP; kwargs...)
 
@@ -108,19 +104,18 @@ reliability(EA::EnumerativeAlgorithm) =  EA.reliability
 citation(EA::EnumerativeAlgorithm) =  EA.citation
 
 function Base.show(io::IO, EA::EnumerativeAlgorithm)
-    tenspaces="          "
-    println(io,"Algorithm:       ",name(EA))
-    println(io,"----------------------------------------------------")
+    println(io,"Algorithm:        ",name(EA))
     println(io,"Input:            ")
     if reliability(EA)==:user_given
     print("None (the algorithm always returns the user-given value) \n")
     end
     for i in input_properties(EA)
-        println(io,"                    ",i)
+        println(io,"                  ",i)
     end
-    println(io,"Output:           ",output_property(EA))
+    println(io,"Output:\n                  ",output_property(EA))
+    println(io,"Core Function:    ",core_function(EA))
     println(io,"Citation:         ",citation(EA))
-    println(io,"Reliability: ",reliability(EA))
+    println(io,"Reliability:      ",reliability(EA))
 end
 
 function user_given(EProp::EnumerativeProperty{T},value::T) where T 
@@ -181,23 +176,20 @@ known_properties(K::Knowledge) = unique([property(k) for k in K])
 export property, value, input_knowledge, input_kwargs, algorithm
 
 function Base.show(io::IO, K::KnowledgeNode)
-    println(io,"Knowledge node for [",property(K),"]:")
- #   println(io,value(K))
-    println(io,"----------------------------")
-    println(io,"Algorithm: [",name(algorithm(K)),"]")
-    if length(input_knowledge(K))>0
-        println(io,"Ran on knowledge nodes for ")
-    end
-    for i in input_knowledge(K)
-        println(io,"     ",name(property(i)))
-    end
+    print(io,"[",property(K),"] is known as a consequence of [", name(algorithm(K)),"] ")
     if length(keys(input_kwargs(K)))>0
-        println(io,"Keyword arguments")
-        for ip in keys(input_kwargs(K))
-            println(io,"      ",ip,": ",(input_kwargs(K))[ip])
-        end
+        print(io, "(with keyword arguments ",[input_kwargs(K)[i] for i in keys(input_kwargs(K))],") ")
     end
-    print("")
+    print(io,"applied to knowledge of ")
+    if length(input_knowledge(K))==0
+        print(io,"(nothing).")
+    else
+        print(io,"[",property(input_knowledge(K)[1]))
+        for i in input_knowledge(K)[2:end]
+            print(io,", ",property(i))
+        end
+        print(io,"].")
+    end
 end
 
 
@@ -294,7 +286,7 @@ end
 
 
 function find_algorithm(EProp::EnumerativeProperty,EP::EnumerativeProblem)
-    potential_algorithms = filter(EA->output_property(EA)==EProp,MAIN_ALGORITHMS)
+    potential_algorithms = algorithms_which_return(EProp)
     println("There is a total of ",length(potential_algorithms), " algorithm(s) in Pandora.jl which compute(s) ",name(EProp),":")
     counter=0
     for p in potential_algorithms
@@ -441,3 +433,7 @@ function update_base_fibre!(EP::EnumerativeProblem,F::Fibre)
 end
 
 include("solving.jl")
+
+function algorithms_which_return(EProp::EnumerativeProperty)
+    filter(EA->output_property(EA)==EProp,MAIN_ALGORITHMS)
+end

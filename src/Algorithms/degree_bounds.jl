@@ -39,7 +39,7 @@ name = "degree sequence",
 input_properties = [SYSTEM],
 core_function = compute_degree_sequence,
 output_property = DEGREE_SEQUENCE,
-epistemic_status = :symbolic
+reliability = :symbolic
 )
 
 
@@ -50,7 +50,7 @@ name = "bezout bound",
 input_properties = [SYSTEM],
 core_function = compute_bezout,
 output_property = BEZOUT_BOUND,
-epistemic_status = :symbolic
+reliability = :symbolic
 )
 
 push!(MAIN_ALGORITHMS,BEZOUT_BOUND)
