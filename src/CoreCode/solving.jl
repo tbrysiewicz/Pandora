@@ -19,7 +19,7 @@ end
 #  if base_fibre is unknown, provide warning that base fibre is being populated
 #  (i.e. that EP is changing despite not calling solve!)
 function solve(EP::EnumerativeProblem, p::Vector{T} where T)
-    if knows(EP,base_fibre)
+    if knows(EP,BASE_FIBRE)
         return(solve(EP,base_fibre(EP),p))
     else
         println(AlterWarning)
@@ -30,7 +30,7 @@ end
 
 #many solve when no fibre is given
 function solve(EP::EnumerativeProblem, P::Vector{Vector{T}} where T)
-    if knows(EP,base_fibre)
+    if knows(EP,BASE_FIBRE)
         return(solve(EP,base_fibre(EP),P))
     else
         println(AlterWarning)

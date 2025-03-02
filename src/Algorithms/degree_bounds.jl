@@ -11,11 +11,16 @@ function compute_bkk(EP::EnumerativeProblem)
 =#
 
 
-const bkk_bound = EnumerativeProperty{Int}("bkk torus bound")
-const affine_bkk_bound = EnumerativeProperty{Int}("bkk affine bound")
-const degree_sequence = EnumerativeProperty{Vector{Int}}("degree sequence")
-const bezout_bound = EnumerativeProperty{Int}("bezout bound")
-const newton_polytopes = EnumerativeProperty{Vector{Polyhedron}}("newton polytopes")
+const BKK_BOUND = EnumerativeProperty{Int}("bkk torus bound")
+bkk_bound(EP::EnumerativeProblem; kwargs...) = BKK_BOUND(EP; kwargs...)
+const AFFINE_BKK_BOUND = EnumerativeProperty{Int}("bkk affine bound")
+affine_bkk_bound(EP::EnumerativeProblem; kwargs...) = AFFINE_BKK_BOUND(EP; kwargs...)
+const DEGREE_SEQUENCE = EnumerativeProperty{Vector{Int}}("degree sequence")
+degree_sequence(EP::EnumerativeProblem; kwargs...) = DEGREE_SEQUENCE(EP; kwargs...)
+const BEZOUT_BOUND = EnumerativeProperty{Int}("bezout bound")
+bezout_bound(EP::EnumerativeProblem; kwargs...) = BEZOUT_BOUND(EP; kwargs...)
+const NEWTON_POLYTOPES = EnumerativeProperty{Vector{Polyhedron}}("newton polytopes")
+newton_polytopes(EP::EnumerativeProblem; kwargs...) = NEWTON_POLYTOPES(EP; kwargs...)
   
 function compute_bezout(F::System) :: Int64
   return(prod(degree_sequence(F)))
@@ -29,26 +34,26 @@ end
 
 
 
-const degree_sequence_algorithm = EnumerativeAlgorithm(
+const COMPUTE_DEGREE_SEQUENCE = EnumerativeAlgorithm(
 name = "degree sequence",
-input_properties = [system],
+input_properties = [SYSTEM],
 core_function = compute_degree_sequence,
-output_property = degree_sequence,
+output_property = DEGREE_SEQUENCE,
 epistemic_status = :symbolic
 )
 
 
-push!(MAIN_ALGORITHMS,degree_sequence_algorithm)
+push!(MAIN_ALGORITHMS,COMPUTE_DEGREE_SEQUENCE)
 
-const bezout_bound_algorithm = EnumerativeAlgorithm(
+const BEZOUT_BOUND = EnumerativeAlgorithm(
 name = "bezout bound",
-input_properties = [system],
+input_properties = [SYSTEM],
 core_function = compute_bezout,
-output_property = bezout_bound,
+output_property = BEZOUT_BOUND,
 epistemic_status = :symbolic
 )
 
-push!(MAIN_ALGORITHMS,bezout_bound_algorithm)
+push!(MAIN_ALGORITHMS,BEZOUT_BOUND)
 
 
 function compute_bkk(EP::EnumerativeProblem)

@@ -43,9 +43,13 @@ Base.show(io::IO, EProp::EnumerativeProperty) =  print(io,name(EProp))
 #We cannot define the enumerative property 'degree' since we
 #   import functions from HC and Oscar called 'degree'
 const DEGREE = EnumerativeProperty{Int}("degree")
-const SYSTEM  = EnumerativeProperty{System}("system")
-const BASE_FIBRE = EnumerativeProperty{Fibre}("base fibre")
+degree(EP::EnumerativeProblem; kwargs...) = DEGREE(EP; kwargs...)
 
+const SYSTEM  = EnumerativeProperty{System}("system")
+system(EP::EnumerativeProblem; kwargs...) = SYSTEM(EP; kwargs...)
+
+const BASE_FIBRE = EnumerativeProperty{Fibre}("base fibre")
+base_fibre(EP::EnumerativeProblem; kwargs...) = BASE_FIBRE(EP; kwargs...)
 
 ##############################################################
 #############          Citation          #####################
@@ -219,7 +223,7 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
         EP.hc_options = Dict{Any,Any}()
         EP.hc_options[:tracker_options]=TrackerOptions()
 
-        know!(EP,system,F)
+        know!(EP,SYSTEM,F)
 
         if populate
             populate!(EP)
@@ -229,8 +233,8 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
 end
 
 function populate!(EP::EnumerativeProblem; kwargs...)
-    learn!(EP,base_fibre; algorithm = solve_generic_via_start_system, kwargs...)
-    learn!(EP,enumerative_degree; algorithm = degree_from_base_fibre, kwargs...)
+    learn!(EP,BASE_FIBRE; algorithm = HC_TO_GENERIC, kwargs...)
+    learn!(EP,DEGREE; algorithm = N_SOLUTIONS, kwargs...)
 end
 
 #Getters for EnumerativeProblems should only be implemented if we do not expect to
@@ -244,7 +248,8 @@ n_parameters(EP::EnumerativeProblem) = length(parameters(system(EP)))
 variables(EP::EnumerativeProblem) = variables(system(EP))
 parameters(EP::EnumerativeProblem) = parameters(system(EP))
 expressions(EP::EnumerativeProblem) = expressions(system(EP))
-degree(EP::EnumerativeProblem; kwargs...) =  enumerative_degree(EP; kwargs...)
+
+
 
 export knowledge, ambient_dimension, n_polynomials, n_parameters, variables, parameters, expressions, degree
 
@@ -408,7 +413,7 @@ function Base.show(io::IO, EP::EnumerativeProblem)
     println(io,tenspaces," |")
     println(io,tenspaces," |")
     print(io,tenspaces," | π ")
-    if knows(EP,enumerative_degree)
+    if knows(EP,DEGREE)
         println(io,"  ",degree(EP),"-to-1")
     else
         println(io,"   ???-to-1")
@@ -431,8 +436,8 @@ end
 
 
 function update_base_fibre!(EP::EnumerativeProblem,F::Fibre)
-    know!(EP,base_fibre,F)
-    learn!(EP,enumerative_degree; algorithm = degree_from_base_fibre)
+    know!(EP,BASE_FIBRE,F)
+    learn!(EP,DEGREE; algorithm = N_SOLUTIONS)
 end
 
 include("solving.jl")

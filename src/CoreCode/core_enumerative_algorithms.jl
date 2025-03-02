@@ -4,9 +4,9 @@
 ##############################################################
 const N_SOLUTIONS = EnumerativeAlgorithm(
     name = "definition: degree is the number of solutions in a generic base fibre",
-    input_properties = [base_fibre],
+    input_properties = [BASE_FIBRE],
     core_function = n_solutions,
-    output_property = enumerative_degree,
+    output_property = DEGREE,
     reliability = :symbolic
 )
 
@@ -24,10 +24,10 @@ end
 
 const HC_TO_GENERIC = EnumerativeAlgorithm(
     name = "solve generic system via start system using homotopy continuation",
-    input_properties = [Pandora.system],
+    input_properties = [SYSTEM],
     default_kwargs = Dict{Symbol,Any}(:start_system=>:polyhedral),
     core_function = hc_to_generic,
-    output_property = base_fibre,
+    output_property = BASE_FIBRE,
     reliability = :numerical
 )
 

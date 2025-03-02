@@ -1,0 +1,35 @@
+Pandora is designed as follows:
+    AbstractEnumerativeProblems are objects for which generic parameters have a constant number d solutions
+    EnumerativeProblems (EPs) realize this abstraction via branched covers of varieties onto parameter spaces
+    EP's have properties called EnumerativeProperty(s) (EProp(s)) e.g. the monodromy group or degree of an enumerative problem
+
+    An EP holds within itself the field 'knowledge' which is a vector of KnowledgeNodes
+
+    A KnowledgeNode represents a conclusion about EP like 
+        "The algorithm A produced the knowledge KCONCLUSION from the knowledges KHYPOTHESES. This algorithm is
+          a :symbolic calculation (its result is a proof) a :theorem (no calculation required, also a proof),
+          :numerical (subject to numerical errors like path-crossing in HC or checking if a float is zero), 
+          :probability_one, etc. The justification for this algorithm is CITATION"
+    
+    And thus, we have EnumerativeAlgorithm(s) (EA(s)) and Citations(s)
+
+Here's an example:
+
+const MONODROMY_GROUP = EnumerativeProperty{PermGroup}("monodromy group") #Easy to write, const BLAH = EProp{OutputType}("name as string")
+
+#Documentation for monodromy group mathematically
+function monodromy_group(EP::EnumerativeProblem)                          #Easy to write, always is function blah(EP) = BLAH(EP)
+    MONODROMY_GROUP(EP)                                                   #EnumerativeProperty can be called on EnumerativeProblems
+end
+
+
+
+
+const COMPUTE_MONODROMY_GROUP = EnumerativeAlgorithm(
+    requires knowledge of system and base_fibre,..., algorithm = compute_monodromy_group, ...)
+function compute_monodromy_group(S::System, F::Fibre; L::Loops = create_random_loops())
+    #use HC over the system S starting at fibre F around loops in L to obtain permutations p_1...p_|L|
+    # and output <p_1,...,p_|L|>
+end
+
+
