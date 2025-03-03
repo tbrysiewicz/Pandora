@@ -13,28 +13,15 @@ export
 #    often solving is done with auxilliary variables, and if properly implemented, the EnumerativeProblem, 
 #    although it uses the big system, will return the expected solution sizes. 
 struct EnumerativeSolver
-    solve_single :: Function
-    solve_many   :: Function 
-    solve_single_from_fibre   :: Function 
-    solve_many_from_fibre   :: Function 
-
-    function EnumerativeSolve(solve_single :: Function,
-        solve_many   :: Function,
-        solve_single_from_fibre   :: Function, 
-        solve_many_from_fibre   :: Function)
-        ES = new()
-        ES.solve_single = solve_single
-        ES.solve_single_from_fibre = solve_single_from_fibre
-        ES.solve_many = solve_many
-        ES.solve_many_from_fibre = solve_many_from_fibre
-        return(ES)
-    end
-        
+    solve_single 
+    solve_many    
+    solve_single_from_fibre    
+    solve_many_from_fibre   
+end
 
     function EnumerativeSolver(;solve_single = nothing, solve_many = nothing, 
                     solve_single_from_fibre = nothing, solve_many_from_fibre = nothing)
 
-        ES = new()
         if solve_single_from_fibre === nothing || solve_single === nothing
             error("Must be able to solve from Fibre to Fibre and solve over a single Fibre")
         else
@@ -51,11 +38,7 @@ struct EnumerativeSolver
                 solve_many_from_fibre = solve_many_fibre_from_single_fibre
             end
         end
-        ES.solve_single = solve_single
-        ES.solve_single_from_fibre = solve_single_from_fibre
-        ES.solve_many = solve_many
-        ES.solve_many_from_fibre = solve_many_from_fibre
-        return(ES)
+        return(EnumerativeSolver(solve_single,solve_many,solve_single_from_fibre,solve_many_from_fibre))
     end
 
 
@@ -76,7 +59,6 @@ struct EnumerativeSolver
         end
         return(EnumerativeSolver(ss,sm,ssff,smff))
     end
-end
 
 #Solve over many parameters P of  F(EP) from fibre = (S1,P1) -> {(?,p)}_{p in P}
 function solve(EP::EnumerativeProblem, fibre::Fibre, P::Vector{Vector{T}} where T <: Number)
