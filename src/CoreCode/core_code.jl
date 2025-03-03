@@ -216,7 +216,7 @@ end
 abstract type AbstractEnumerativeProblem end
 
 
-mutable struct EnumerativeProblem <components: AbstractEnumerativeProblem
+mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
     system :: System
     knowledge :: Knowledge
     hc_options :: Dict{Any,Any}
