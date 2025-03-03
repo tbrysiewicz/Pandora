@@ -219,14 +219,13 @@ abstract type AbstractEnumerativeProblem end
 mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
     system :: System
     knowledge :: Knowledge
-    hc_options :: Dict{Any,Any}
 
     function EnumerativeProblem(F::System; populate = true)
         EP = new()
         EP.system = F
         EP.knowledge = Knowledge([])
-        EP.hc_options = Dict{Any,Any}()
-        EP.hc_options[:tracker_options]=TrackerOptions()
+        #EP.hc_options = Dict{Any,Any}()
+        #EP.hc_options[:tracker_options]=TrackerOptions()
 
         know!(EP,SYSTEM,F)
 
