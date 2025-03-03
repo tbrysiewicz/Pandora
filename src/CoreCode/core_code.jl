@@ -41,11 +41,8 @@ Base.show(io::IO, EProp::EnumerativeProperty) =  print(io,name(EProp))
 #We cannot define the enumerative property 'degree' since we
 #   import functions from HC and Oscar called 'degree'
 const DEGREE = EnumerativeProperty{Int}("degree")
-degree(EP::EnumerativeProblem; kwargs...) = DEGREE(EP; kwargs...)
 const SYSTEM  = EnumerativeProperty{System}("system")
-system(EP::EnumerativeProblem; kwargs...) = SYSTEM(EP; kwargs...)
 const BASE_FIBRE = EnumerativeProperty{Fibre}("base fibre")
-base_fibre(EP::EnumerativeProblem; kwargs...) = BASE_FIBRE(EP; kwargs...)
 
 ##############################################################
 #############          Citation          #####################
@@ -437,3 +434,8 @@ include("solving.jl")
 function algorithms_which_return(EProp::EnumerativeProperty)
     filter(EA->output_property(EA)==EProp,MAIN_ALGORITHMS)
 end
+
+
+degree(EP::EnumerativeProblem; kwargs...) = DEGREE(EP; kwargs...)
+system(EP::EnumerativeProblem; kwargs...) = SYSTEM(EP; kwargs...)
+base_fibre(EP::EnumerativeProblem; kwargs...) = BASE_FIBRE(EP; kwargs...)
