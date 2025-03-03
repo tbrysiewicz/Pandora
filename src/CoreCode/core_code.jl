@@ -137,7 +137,7 @@ function user_given(EProp::EnumerativeProperty{T},value::T) where T
 end
 
 const user_given_datum = AlgorithmDatum(;
-alg_name = "User given",
+name = "User given",
 description = "The user declared this property",
 input_properties = Vector{EnumerativeProperty}([]),
 citation = NULL_CITATION,
@@ -238,8 +238,8 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
 end
 
 function populate!(EP::EnumerativeProblem; kwargs...)
-    learn!(EP,BASE_FIBRE; algorithm = POLYHEDRAL_HOMOTOPY, kwargs...)
-    learn!(EP,DEGREE; algorithm = N_SOLUTIONS, kwargs...)
+    learn!(EP,BASE_FIBRE; algorithm = polyhedral_homotopy, kwargs...)
+    learn!(EP,DEGREE; algorithm = n_solutions, kwargs...)
 end
 
 
@@ -355,6 +355,7 @@ end
 
 function know!(EP::EnumerativeProblem, EProp::EnumerativeProperty{T}, value::T) where T
     f = user_given(EProp,value)
+    ALGORITHM_DATA[f]=user_given_datum
     learn!(EP,EProp; algorithm = f)
 end
 
@@ -445,7 +446,7 @@ end
 
 function update_base_fibre!(EP::EnumerativeProblem,F::Fibre)
     know!(EP,BASE_FIBRE,F)
-    learn!(EP,DEGREE; algorithm = N_SOLUTIONS)
+    learn!(EP,DEGREE; algorithm = n_solutions)
 end
 
 include("solving.jl")

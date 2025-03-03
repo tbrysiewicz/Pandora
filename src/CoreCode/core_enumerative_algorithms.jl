@@ -3,7 +3,7 @@
 ######## Degree by counting points in the base fibre##########
 ##############################################################
 const n_solutions_datum = AlgorithmDatum(
-    name = "N_SOLUTIONS",
+    name = "n_solutions",
     input_properties = [BASE_FIBRE],
     output_property = DEGREE,
     reliability = :symbolic
