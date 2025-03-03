@@ -6,8 +6,6 @@ export #main types
 
 
 export 
-    degree,
-    system,
     algorithms_which_return
 
 ##############################################################
@@ -226,17 +224,23 @@ function populate!(EP::EnumerativeProblem; kwargs...)
     learn!(EP,DEGREE; algorithm = N_SOLUTIONS, kwargs...)
 end
 
-#Getters for EnumerativeProblems should only be implemented if we do not expect to
-#  hold a 'knowledge node' for them, since getting knowledge nodes is automatic. 
+
+degree(EP::EnumerativeProblem; kwargs...) = DEGREE(EP; kwargs...)
+system(EP::EnumerativeProblem; kwargs...) = SYSTEM(EP; kwargs...)
+base_fibre(EP::EnumerativeProblem; kwargs...) = BASE_FIBRE(EP; kwargs...)
+
+
 
 tracker_options(EP::EnumerativeProblem) = EP.hc_options[:tracker_options]
 knowledge(EP::EnumerativeProblem) = EP.knowledge
-ambient_dimension(EP::EnumerativeProblem) = length(variables(system(EP)))
-n_polynomials(EP::EnumerativeProblem) = length(expressions(system(EP)))
-n_parameters(EP::EnumerativeProblem) = length(parameters(system(EP)))
-variables(EP::EnumerativeProblem) = variables(system(EP))
-parameters(EP::EnumerativeProblem) = parameters(system(EP))
-expressions(EP::EnumerativeProblem) = expressions(system(EP))
+variables(EP::EnumerativeProblem) = variables(SYSTEM(EP))
+parameters(EP::EnumerativeProblem) = parameters(SYSTEM(EP))
+expressions(EP::EnumerativeProblem) = expressions(SYSTEM(EP))
+ambient_dimension(EP::EnumerativeProblem) = length(variables(EP))
+n_variables(EP::EnumerativeProblem) = ambient_dimension(EP)
+n_polynomials(EP::EnumerativeProblem) = length(expressions(EP))
+n_parameters(EP::EnumerativeProblem) = length(parameters(EP))
+
 
 
 
@@ -403,7 +407,7 @@ function Base.show(io::IO, EP::EnumerativeProblem)
     println(io,tenspaces," |")
     print(io,tenspaces," | π ")
     if knows(EP,DEGREE)
-        println(io,"  ",degree(EP),"-to-1")
+        println(io,"  ",DEGREE(EP),"-to-1")
     else
         println(io,"   ???-to-1")
     end
@@ -435,7 +439,3 @@ function algorithms_which_return(EProp::EnumerativeProperty)
     filter(EA->output_property(EA)==EProp,MAIN_ALGORITHMS)
 end
 
-
-degree(EP::EnumerativeProblem; kwargs...) = DEGREE(EP; kwargs...)
-system(EP::EnumerativeProblem; kwargs...) = SYSTEM(EP; kwargs...)
-base_fibre(EP::EnumerativeProblem; kwargs...) = BASE_FIBRE(EP; kwargs...)

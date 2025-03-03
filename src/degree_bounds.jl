@@ -1,27 +1,30 @@
-#Make an EnumerativeProperty for the property you want to compute
 
-#=
-function compute_bkk(EP::EnumerativeProblem)
-    paths_to_track(specialize(system(EP));only_torus=true)
-  end
-  
-  function compute_affine_bkk(EP::EnumerativeProblem)
-    paths_to_track(specialize(system(EP));only_torus=false)
-  end
-=#
+
+export 
+    bkk_bound,
+    affine_bkk_bound,
+    degree_sequence,
+    bezout_bound,
+    newton_polytopes
 
 
 const BKK_BOUND = EnumerativeProperty{Int}("bkk torus bound")
-const AFFINE_BKK_BOUND = EnumerativeProperty{Int}("bkk affine bound")
-const DEGREE_SEQUENCE = EnumerativeProperty{Vector{Int}}("degree sequence")
-const BEZOUT_BOUND = EnumerativeProperty{Int}("bezout bound")
 bkk_bound(EP::EnumerativeProblem; kwargs...) = BKK_BOUND(EP; kwargs...)
+
+const AFFINE_BKK_BOUND = EnumerativeProperty{Int}("bkk affine bound")
 affine_bkk_bound(EP::EnumerativeProblem; kwargs...) = AFFINE_BKK_BOUND(EP; kwargs...)
+
+const DEGREE_SEQUENCE = EnumerativeProperty{Vector{Int}}("degree sequence")
 degree_sequence(EP::EnumerativeProblem; kwargs...) = DEGREE_SEQUENCE(EP; kwargs...)
+
+const BEZOUT_BOUND = EnumerativeProperty{Int}("bezout bound")
 bezout_bound(EP::EnumerativeProblem; kwargs...) = BEZOUT_BOUND(EP; kwargs...)
+
 const NEWTON_POLYTOPES = EnumerativeProperty{Vector{Polyhedron}}("newton polytopes")
 newton_polytopes(EP::EnumerativeProblem; kwargs...) = NEWTON_POLYTOPES(EP; kwargs...)
-  
+
+
+
 function compute_bezout(F::System) :: Int64
   return(prod(degree_sequence(F)))
 end

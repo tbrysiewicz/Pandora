@@ -42,11 +42,12 @@ end
 
 include("CoreCode/core_code.jl")
 
-include("Automation/automation.jl")
+include("automation.jl")
 
 include("Examples/named_examples.jl")
 
-include("Algorithms/monodromy.jl")
+include("monodromy.jl")
+
 
 
 
