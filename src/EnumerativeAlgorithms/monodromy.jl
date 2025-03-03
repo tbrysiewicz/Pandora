@@ -160,4 +160,17 @@ function monodromy_group(EP::EnumerativeProblem)
     return(MONODROMY_GROUP(EP))
 end
 
+"""
+    galois_group(EP::EnumerativeProblem)
+
+This function returns the MONODROMY_GROUP of an enumerative problem which has type Oscar.PermGroup.
+
+Note: It is unknown which algorithm will be called to compute the MONODROMYGROUP of EP.
+    To see all available algorithms in Pandora, call algorithmswhichreturn(MONODROMY_GROUP)
+"""
+function galois_group(EP::EnumerativeProblem)
+  return(MONODROMY_GROUP(EP))
+end
+
+
 push!(MAIN_ALGORITHMS,GROUP_GENERATED_BY_MONODROMY_LOOPS)
