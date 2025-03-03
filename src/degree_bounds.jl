@@ -25,9 +25,15 @@ newton_polytopes(EP::EnumerativeProblem; kwargs...) = NEWTON_POLYTOPES(EP; kwarg
 
 
 
-function compute_bezout(F::System) :: Int64
-  return(prod(degree_sequence(F)))
-end
+#####################Compute Degree Sequence###########################
+const compute_degree_sequence_datum = AlgorithmDatum(
+name = "COMPUTE_DEGREE_SEQUENCE",
+input_properties = [SYSTEM],
+output_property = DEGREE_SEQUENCE,
+reliability = :symbolic
+)
+
+ALGORITHM_DATA[compute_degree_sequence]=compute_degree_sequence_datum
 
 function compute_degree_sequence(F::System) :: Vector{Int64}
   Ms = support_coefficients(F)[1]
@@ -37,26 +43,21 @@ end
 
 
 
-const COMPUTE_DEGREE_SEQUENCE = EnumerativeAlgorithm(
-name = "degree sequence",
+
+#####################Compute Bezout Bound###########################
+const compute_bezout_bound_datum = AlgorithmDatum(
+name = "compute bezout bound",
 input_properties = [SYSTEM],
-core_function = compute_degree_sequence,
-output_property = DEGREE_SEQUENCE,
-reliability = :symbolic
-)
-
-
-push!(MAIN_ALGORITHMS,COMPUTE_DEGREE_SEQUENCE)
-
-const BEZOUT_BOUND = EnumerativeAlgorithm(
-name = "bezout bound",
-input_properties = [SYSTEM],
-core_function = compute_bezout,
+core_function = compute_bezout_bound,
 output_property = BEZOUT_BOUND,
 reliability = :symbolic
 )
 
-push!(MAIN_ALGORITHMS,BEZOUT_BOUND)
+ALGORITHM_DATA[compute_bezout_bound]=compute_bezout_bound_datum
+
+function compute_bezout(F::System) :: Int64
+  return(prod(degree_sequence(F)))
+end
 
 
 function compute_bkk(EP::EnumerativeProblem)
@@ -67,7 +68,7 @@ function compute_affine_bkk(EP::EnumerativeProblem)
   paths_to_track(specialize(system(EP));only_torus=false)
 end
 
-function compute_bezout(EP::EnumerativeProblem)
+function compute_bezout_bound(EP::EnumerativeProblem)
     return(prod(degree_sequence(EP)))
 end
 

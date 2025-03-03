@@ -1,3 +1,16 @@
+
+
+
+
+
+
+
+
+
+
+
+
+###############################OLD################
 Pandora is designed as follows:
     AbstractEnumerativeProblems are objects for which generic parameters have a constant number d solutions
     EnumerativeProblems (EPs) realize this abstraction via branched covers of varieties onto parameter spaces
