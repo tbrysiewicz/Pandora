@@ -1,6 +1,14 @@
 export 
     TwentySevenLines,
-    TangentCircles
+    TangentCircles,
+    SphereProjection
+
+function SphereProjection()
+    @var x,y,z
+    @var a,b
+    F = System([x^2+y^2+z^2-1,x-a,y-b],variables = [x,y,z], parameters = [a,b])
+    return(EnumerativeProblem(F))
+end
     
 function TwentySevenLines()
     @var x,y,z
