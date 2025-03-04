@@ -48,6 +48,10 @@ include("Examples/named_examples.jl")
 
 include("monodromy.jl")
 
+include("solutions.jl")
+include("fibres.jl")
+include("fibre_visualization.jl")
+
 
 
 

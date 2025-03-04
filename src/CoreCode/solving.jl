@@ -80,7 +80,6 @@ function solve(EP::EnumerativeProblem, p::Vector{T} where T)
     if knows(EP,BASE_FIBRE)
         return(solve(EP,base_fibre(EP),p))
     else
-        println(AlterWarning)
         populate!(EP)
         return(solve(EP,p))
     end
@@ -91,7 +90,6 @@ function solve(EP::EnumerativeProblem, P::Vector{Vector{T}} where T)
     if knows(EP,BASE_FIBRE)
         return(solve(EP,base_fibre(EP),P))
     else
-        println(AlterWarning)
         populate!(EP)
         return(solve(EP,P))
     end

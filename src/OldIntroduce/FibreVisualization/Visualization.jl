@@ -28,62 +28,6 @@ function planar_restriction(EP::EnumerativeProblem)
 	return(restrict(EP,P))
 end
 
-function initialize_subdivision(EP::EnumerativeProblem, xlims::Vector, ylims::Vector, 
-								fibre_function = x->n_real_solutions(x), resolution = 1000)
-	xlength = xlims[2] - xlims[1]
-	ylength = ylims[2] - ylims[1]
-
-	if xlength == ylength
-		num_x_divs = Int(floor(sqrt(resolution)))
-		num_y_divs = Int(floor(sqrt(resolution)))
-	else
-		xlength_proportion = (xlength)/(xlength + ylength)
-		num_x_divs = sqrt((xlength_proportion*resolution)/(1 - xlength_proportion))
-		num_y_divs = resolution/num_x_divs
-		num_x_divs = Int(floor(num_x_divs))
-		num_y_divs = Int(floor(num_y_divs))
-	end
-			
-	x_values = range(xlims[1], xlims[2], num_x_divs)
-	y_values = range(ylims[1], ylims[2], num_y_divs)
-	shift_amount = (x_values[2] - x_values[1])/2
-	parameters_1 = [[i - isodd(findfirst(x->x==j, y_values))*shift_amount, j] for i in x_values for j in y_values]
-	subdivision_solutions = solve(EP, parameters_1)
-    function_cache = []
-	
-	for i in subdivision_solutions
-		push!(function_cache, (parameters_1[findfirst(x->x==i, subdivision_solutions)], fibre_function(i)))
-	end
-
-	polygons = []
-	
-	parameter_array = reshape(parameters_1, length(x_values), length(y_values))
-	for i in 1:length(x_values)-1
-		for j in 1:length(y_values)-1
-			tl = parameter_array[i,j]
-			tr = parameter_array[i+1,j]
-			bl = parameter_array[i, j+1]
-			br = parameter_array[i+1, j+1]
-			tl_index = findfirst(x->x[1] == tl, function_cache)
-			tr_index = findfirst(x->x[1] == tr, function_cache)
-			bl_index = findfirst(x->x[1] == bl, function_cache)
-			br_index = findfirst(x->x[1] == br, function_cache)
-
-			if isodd(i)
-				push!(polygons, [tl_index, tr_index, bl_index])
-				push!(polygons, [bl_index, tr_index, br_index])
-			else
-				push!(polygons, [tl_index, tr_index, br_index])
-				push!(polygons, [bl_index, tl_index, br_index])
-			end
-		end
-	end
-	
-	initial_graphmesh = GraphMesh(function_cache)
-	initial_subdivision = Subdivision(initial_graphmesh,polygons)
-	
-	return initial_subdivision
-end
 #=
 function draw_triangle(triangle, color_value; label = false, label_text = "real solutions")
 	triangle = Shape([(t[1], t[2]) for t in triangle])
@@ -139,17 +83,6 @@ function visualize(EP::EnumerativeProblem; xlims = [-2,2], ylims = [-2,2], fibre
 	return my_plot
 end
 =#
-function visualize(GM::GraphMesh)
-	scatter([p[1] for p in input_points(GM)],[p[2] for p in input_points(GM)],zcolor = output_values(GM), legend = false, colorbar=true)
-end
-
-#TODO: Write this cleanly
-function visualize(SD::Subdivision)
-	GM = graph_mesh(SD)
-	#scatter([p[1] for p in input_points(GM)],[p[2] for p in input_points(GM)],zcolor = output_values(GM), legend = false, colorbar=true)
-
-end
-
 
 
 
