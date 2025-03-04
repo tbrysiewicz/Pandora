@@ -1,6 +1,6 @@
 import Base: getindex
 
-using Plots : scatter
+using Plots: scatter
 
 export
     initialize_valued_subdivision,
