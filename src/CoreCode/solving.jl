@@ -62,13 +62,13 @@ end
 
 #Solve over many parameters P of  F(EP) from fibre = (S1,P1) -> {(?,p)}_{p in P}
 function solve(EP::EnumerativeProblem, fibre::Fibre, P::Vector{Vector{T}} where T <: Number)
-    S = solve(system(EP),solutions(fibre); start_parameters= parameters(fibre), target_parameters = P, tracker_options = tracker_options(EP))
+    S = solve(system(EP),solutions(fibre); start_parameters= parameters(fibre), target_parameters = P)
     return(map(x->solutions(x[1]),S))
 end
 
 #Solve over a single parameter p of  F(EP) from fibre = (S1,P1) -> (?,p)
 function solve(EP::EnumerativeProblem,fibre::Fibre, p::Vector{T} where T)
-    S = solve(system(EP),solutions(fibre); start_parameters= parameters(fibre), target_parameters = p, tracker_options = tracker_options(EP))
+    S = solve(system(EP),solutions(fibre); start_parameters= parameters(fibre), target_parameters = p)
     return(solutions(S))
 end
 
