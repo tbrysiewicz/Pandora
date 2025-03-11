@@ -57,19 +57,21 @@ function push_to_graph_mesh!(GM::GraphMesh, V::Tuple{Vector{Float64},Float64})
 end
 
 
-function initialize_valued_subdivision(EP::EnumerativeProblem; xlims::Vector = [-1,1], ylims::Vector = [-1,1], 
-								fibre_function = x->n_real_solutions(x), resolution = 1000)
+function initialize_valued_subdivision(EP::EnumerativeProblem; 
+	xlims::Vector = [-1,1], ylims::Vector = [-1,1], 
+	fibre_function = x->n_real_solutions(x), initial_resolution = 1000,kwargs...)
+
 	xlength = xlims[2] - xlims[1]
 	ylength = ylims[2] - ylims[1]
 
     #Decide how many x-vals vs y-vals to produce approximately 'resolution' many data pts
 	if xlength == ylength
-		num_x_divs = Int(floor(sqrt(resolution)))
-		num_y_divs = Int(floor(sqrt(resolution)))
+		num_x_divs = Int(floor(sqrt(initial_resolution)))
+		num_y_divs = Int(floor(sqrt(initial_resolution)))
 	else
 		xlength_proportion = (xlength)/(xlength + ylength)
-		num_x_divs = sqrt((xlength_proportion*resolution)/(1 - xlength_proportion))
-		num_y_divs = resolution/num_x_divs
+		num_x_divs = sqrt((xlength_proportion*initial_resolution)/(1 - xlength_proportion))
+		num_y_divs = initial_resolution/num_x_divs
 		num_x_divs = Int(floor(num_x_divs))
 		num_y_divs = Int(floor(num_y_divs))
 	end
@@ -181,13 +183,14 @@ function delaunay_triangulation!(SD::ValuedSubdivision)
 	return nothing
 end
 
-function refine!(SD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; fibre_function = x->n_real_solutions(x))
+function refine!(SD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; 
+	fibre_function = x->n_real_solutions(x), insertion_method = point_insertion,kwargs...)
 	new_parameters::Vector{Vector{Float64}} = []
 	resolution_used = 0
 	for T in polygons(SD)
 		resolution_used >= resolution && break #checking to see if there is any resolution "left" to insert another point
 		if is_complete(T, graph_mesh(SD)) == false
-			parameters_to_insert_in_polygon = point_insertion(T, graph_mesh(SD))
+			parameters_to_insert_in_polygon = insertion_method(T, graph_mesh(SD))
 			for i in parameters_to_insert_in_polygon 
 				push!(new_parameters, i)
 			end
@@ -204,19 +207,20 @@ function refine!(SD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int6
 end
 
 #PLOTTING
-function draw_triangle(triangle, color_value, GM::GraphMesh; label = false, label_text = "real solutions")
+function draw_triangle(triangle, color_value, GM::GraphMesh; label = false, 
+	label_text = "real solutions", kwargs...)
 	triangle = [input_points(GM)[i] for i in triangle]
 	triangle = Shape([(t[1], t[2]) for t in triangle])
 	c = cgrad(:thermal, rev = false)[color_value]
 	if label == true
-		plot!(triangle, fillcolor = c, linecolor = c, linewidth = false, label = label_text)
+		plot!(triangle, fillcolor = c, linecolor = c, linewidth = false, label = label_text;kwargs...)
 	else
-		plot!(triangle, fillcolor = c, linecolor = c, linewidth = false, label = false)
+		plot!(triangle, fillcolor = c, linecolor = c, linewidth = false, label = false; kwargs...)
 	end
 end
 
-function draw_valued_subdivision(SD::ValuedSubdivision; xlims = [-1,1], ylims = [-1,1]) #currently this function can only plot a ValuedSubdivision with a discrete fibre function
-	my_plot = plot(xlims = xlims, ylims = ylims, legend = true)
+function draw_valued_subdivision(SD::ValuedSubdivision; xlims = [-1,1],	ylims = [-1,1], kwargs...) #currently this function can only plot a ValuedSubdivision with a discrete fibre function
+	my_plot = plot(xlims = xlims, ylims = ylims; kwargs...)
 	plotting_values = unique(output_values(graph_mesh(SD)))
 	plotting_values = sort(plotting_values)
 	values_that_have_been_plotted = []
@@ -226,10 +230,10 @@ function draw_valued_subdivision(SD::ValuedSubdivision; xlims = [-1,1], ylims = 
 		for j in current_polygons
 			if is_complete(j, graph_mesh(SD))
 				if (i in values_that_have_been_plotted) == false
-					draw_triangle(j, color_value, graph_mesh(SD), label = true, label_text = "$i real solutions")
+					draw_triangle(j, color_value, graph_mesh(SD), label = true, label_text = "$i real solutions"; kwargs...)
 					push!(values_that_have_been_plotted, i)
 				else
-					draw_triangle(j, color_value, graph_mesh(SD), label = false)
+					draw_triangle(j, color_value, graph_mesh(SD), label = false; kwargs...)
 				end
 			else
 				continue
@@ -276,21 +280,29 @@ function visualize(GM::GraphMesh)
     zcolor = output_values(GM), legend = false, colorbar = true)
 end
 
+#=
+xlims = [-1,1], ylims = [-1,1], initial_resolution = 1000, 
+total_resolution = 3*initial_resolution, 
+fibre_function = x->n_real_solutions(x), kwargs...
+=#
 #TODO: Write this cleanly
-function visualize(EP::EnumerativeProblem; xlims = [-1,1], ylims = [-1,1], initial_resolution = 1000, total_resolution = 3*initial_resolution, fibre_function = x->n_real_solutions(x))
+function visualize(EP::EnumerativeProblem; xlims=[-1,1], ylims = [-1,1], 
+	initial_resolution = 1000,	total_resolution = 3*initial_resolution,  
+	fibre_function = x-> n_real_solutions(x),kwargs...)
 	if n_parameters(EP) > 2
 		println("EP consists of more than two parameters. Visualizing a random 2-plane in the parameter space.")
 		new_EP = planar_restriction(EP)
 	else
 		new_EP = EP
 	end
-	VSD = initialize_valued_subdivision(new_EP, xlims = xlims, ylims = ylims, resolution = initial_resolution, fibre_function = fibre_function)
+	VSD = initialize_valued_subdivision(new_EP; xlims = xlims, ylims = ylims, 
+	fibre_function = fibre_function, kwargs...)
 	remaining_resolution = total_resolution
 	while remaining_resolution > 0
-		resolution_used = refine!(VSD, new_EP, remaining_resolution, fibre_function = fibre_function)
+		resolution_used = refine!(VSD, new_EP, remaining_resolution; fibre_function = fibre_function, kwargs...)
 		remaining_resolution -= resolution_used
 	end
-	my_plot = draw_valued_subdivision(VSD, xlims = xlims, ylims = ylims)
+	my_plot = draw_valued_subdivision(VSD; xlims = xlims, ylims = ylims, kwargs...)
 	return (VSD, my_plot)
 end
 
