@@ -1,8 +1,10 @@
 import Base: getindex, iterate
 
-using Plots: scatter
-
+using Plots: scatter, plot, plot!, Shape, cgrad
 using DelaunayTriangulation: triangulate, each_solid_triangle, triangle_vertices, get_point
+using LinearAlgebra: qr
+
+
 
 export
     initialize_valued_subdivision,
@@ -201,6 +203,72 @@ function refine!(SD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int6
 	return resolution_used
 end
 
+#PLOTTING
+function draw_triangle(triangle, color_value, GM::GraphMesh; label = false, label_text = "real solutions")
+	triangle = [input_points(GM)[i] for i in triangle]
+	triangle = Shape([(t[1], t[2]) for t in triangle])
+	c = cgrad(:thermal, rev = false)[color_value]
+	if label == true
+		plot!(triangle, fillcolor = c, linecolor = c, linewidth = false, label = label_text)
+	else
+		plot!(triangle, fillcolor = c, linecolor = c, linewidth = false, label = false)
+	end
+end
+
+function draw_valued_subdivision(SD::ValuedSubdivision; xlims = [-1,1], ylims = [-1,1]) #currently this function can only plot a ValuedSubdivision with a discrete fibre function
+	my_plot = plot(xlims = xlims, ylims = ylims, legend = true)
+	plotting_values = unique(output_values(graph_mesh(SD)))
+	plotting_values = sort(plotting_values)
+	values_that_have_been_plotted = []
+	for i in plotting_values
+		current_polygons = filter(x->graph_mesh(SD)[x[1]][2] == i, polygons(SD)) #filters all polygons whose first vertices have the fibre function value i
+		color_value = findfirst(x->x == i, plotting_values)/length(plotting_values)
+		for j in current_polygons
+			if is_complete(j, graph_mesh(SD))
+				if (i in values_that_have_been_plotted) == false
+					draw_triangle(j, color_value, graph_mesh(SD), label = true, label_text = "$i real solutions")
+					push!(values_that_have_been_plotted, i)
+				else
+					draw_triangle(j, color_value, graph_mesh(SD), label = false)
+				end
+			else
+				continue
+			end
+		end
+	end
+	return my_plot
+end
+
+#RESTRICTING EPs
+#Note that these functions will have to be modified at some point so that a new EP isn't generated
+function gram_schmidt(basis_vectors::Vector)
+	M = hcat(basis_vectors...)
+	Q = Matrix(qr(M).Q)
+	return(collect(eachcol(Q)))
+end
+
+#Given P = [p_1...p_k] parameters, this function considers the affine span of P 
+#   as p_1+span(p_i-p_1) where span(p_i-p_1) = span(b_1...b_k-1) where the bi's are
+#   an orthonormal basis for the span. 
+
+#TODO: Which cache values can be inherited by the restriction?
+
+function restrict(EP::EnumerativeProblem,P::Vector{Vector{Float64}})
+	n = length(P)
+    @var t[1:n-1]
+    basis_vectors = gram_schmidt([(P[i]-P[1]) for i in 2:n])
+    affine_span = P[1] + sum([t[i].*basis_vectors[i] for i in 1:n-1])
+    new_expressions = [subs(f,parameters(EP)=>affine_span) for f in expressions(EP)]
+    return(EnumerativeProblem(System(new_expressions,variables=variables(EP),parameters=t)))
+end
+
+#If the user doesn't care WHICH plane to restrict to, do one through the current base
+# parameters so that EP inherits the solutions
+
+function planar_restriction(EP::EnumerativeProblem)
+	P = [randn(Float64,n_parameters(EP)) for i in 1:3]
+	return(restrict(EP,P))
+end
 
 #VISUALIZATION
 function visualize(GM::GraphMesh)
@@ -209,9 +277,21 @@ function visualize(GM::GraphMesh)
 end
 
 #TODO: Write this cleanly
-function visualize(VS::ValuedSubdivision)
-	GM = graph_mesh(VS)
-	#scatter([p[1] for p in input_points(GM)],[p[2] for p in input_points(GM)],zcolor = output_values(GM), legend = false, colorbar=true)
+function visualize(EP::EnumerativeProblem; xlims = [-1,1], ylims = [-1,1], initial_resolution = 1000, total_resolution = 3*initial_resolution, fibre_function = x->n_real_solutions(x))
+	if n_parameters(EP) > 2
+		println("EP consists of more than two parameters. Visualizing a random 2-plane in the parameter space.")
+		new_EP = planar_restriction(EP)
+	else
+		new_EP = EP
+	end
+	VSD = initialize_valued_subdivision(new_EP, xlims = xlims, ylims = ylims, resolution = initial_resolution, fibre_function = fibre_function)
+	remaining_resolution = total_resolution
+	while remaining_resolution > 0
+		resolution_used = refine!(VSD, new_EP, remaining_resolution, fibre_function = fibre_function)
+		remaining_resolution -= resolution_used
+	end
+	my_plot = draw_valued_subdivision(VSD, xlims = xlims, ylims = ylims)
+	return (VSD, my_plot)
 end
 
 
