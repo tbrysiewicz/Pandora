@@ -39,17 +39,23 @@ end
 #VALUEDSUBDIVISION
 mutable struct ValuedSubdivision
     GM :: GraphMesh
-    Polygons :: Vector{Vector{Int64}} #Indices 
+	CompletePolygons :: Vector{Vector{Int64}} #Indices
+	IncompletePolygons :: Vector{Vector{Int64}} 
 end
 
 #GETTERS
 graph_mesh(SD::ValuedSubdivision) = SD.GM
-polygons(SD::ValuedSubdivision) = SD.Polygons
+complete_polygons(SD::ValuedSubdivision) = SD.CompletePolygons
+incomplete_polygons(SD::ValuedSubdivision) = SD.IncompletePolygons
 function_cache(GM::GraphMesh) = GM.function_cache
 
 #SETTERS
-function set_polygons!(SD::ValuedSubdivision, P::Vector{Vector{Int64}})
-	SD.Polygons = P
+function set_complete_polygons!(SD::ValuedSubdivision, P::Vector{Vector{Int64}})
+	SD.CompletePolygons = P
+end
+
+function set_incomplete_polygons!(SD::ValuedSubdivision, P::Vector{Vector{Int64}})
+	SD.IncompletePolygons = P
 end
 
 function push_to_graph_mesh!(GM::GraphMesh, V::Tuple{Vector{Float64},Float64})
@@ -93,10 +99,11 @@ function initialize_valued_subdivision(EP::EnumerativeProblem;
     for i in eachindex(subdivision_solutions)
         push!(function_cache, (parameters_1[i], fibre_function(subdivision_solutions[i])))
     end
-
+	initial_graphmesh = GraphMesh(function_cache)
 
     #Create the polygons in the hexagonal lattice
-	polygons = []	
+	complete_polygons = []
+	incomplete_polygons = []
 	parameter_array = reshape(parameters_1, length(x_values), length(y_values))
 	for i in 1:length(x_values)-1
 		for j in 1:length(y_values)-1
@@ -110,17 +117,23 @@ function initialize_valued_subdivision(EP::EnumerativeProblem;
 			br_index = findfirst(x->x[1] == br, function_cache)
 
 			if isodd(i)
-				push!(polygons, [tl_index, tr_index, bl_index])
-				push!(polygons, [bl_index, tr_index, br_index])
+				#these statements add the triangles to complete_polygons or incomplete_polygons depending on whether is_complete returns true
+				is_complete([tl_index, tr_index, bl_index], initial_graphmesh) && push!(complete_polygons, [tl_index, tr_index, bl_index])
+				is_complete([tl_index, tr_index, bl_index], initial_graphmesh) || push!(incomplete_polygons, [tl_index, tr_index, bl_index])
+				
+				is_complete([bl_index, tr_index, br_index], initial_graphmesh) && push!(complete_polygons, [bl_index, tr_index, br_index])
+				is_complete([bl_index, tr_index, br_index], initial_graphmesh) || push!(incomplete_polygons, [bl_index, tr_index, br_index])
 			else
-				push!(polygons, [tl_index, tr_index, br_index])
-				push!(polygons, [bl_index, tl_index, br_index])
+				is_complete([tl_index, tr_index, br_index], initial_graphmesh) && push!(complete_polygons, [tl_index, tr_index, br_index])
+				is_complete([tl_index, tr_index, br_index], initial_graphmesh) || push!(incomplete_polygons, [tl_index, tr_index, br_index])
+
+				is_complete([bl_index, tl_index, br_index], initial_graphmesh) && push!(complete_polygons,[bl_index, tl_index, br_index])
+				is_complete([bl_index, tl_index, br_index], initial_graphmesh) || push!(incomplete_polygons, [bl_index, tl_index, br_index])
 			end
 		end
 	end
 	
-	initial_graphmesh = GraphMesh(function_cache)
-	initial_subdivision = ValuedSubdivision(initial_graphmesh,polygons)
+	initial_subdivision = ValuedSubdivision(initial_graphmesh,complete_polygons, incomplete_polygons)
 	
 	return initial_subdivision
 end
@@ -158,16 +171,17 @@ function triforce_point_insertion(p::Vector{Int}, GM::GraphMesh) #returns "trifo
 	midpoint_3 = midpoint(polygon_vertices[2], polygon_vertices[3])
 	return [midpoint_1, midpoint_2, midpoint_3]
 end
-
+#Have not made any changes to delaunay_triangulation yet
 function delaunay_triangulation!(SD::ValuedSubdivision)
     vertices = []
     for v in graph_mesh(SD)
-        push!(vertices, v[1])
+        v[1] in vertices || push!(vertices, v[1]) #ensuring that the triangulation will not contain duplicate points and the package won't give that annoying warning
     end
 	vertices = hcat(vertices...)
 	tri = triangulate(vertices)
 	triangle_iterator = each_solid_triangle(tri)
-	triangles::Vector{Vector{Int64}} = []
+	complete_triangles::Vector{Vector{Int64}} = []
+	incomplete_triangles::Vector{Vector{Int64}} = []
 	for T in triangle_iterator
 		i,j,k = triangle_vertices(T)
 		i,j,k = get_point(tri, i, j, k)
@@ -177,26 +191,31 @@ function delaunay_triangulation!(SD::ValuedSubdivision)
         index_1 = findfirst(x->x[1] == vertex_1, function_cache(graph_mesh(SD)))
         index_2 = findfirst(x->x[1] == vertex_2, function_cache(graph_mesh(SD)))
         index_3 = findfirst(x->x[1] == vertex_3, function_cache(graph_mesh(SD)))
-		push!(triangles, [index_1, index_2, index_3])
+		if is_complete([index_1, index_2, index_3], graph_mesh(SD))
+			push!(complete_triangles, [index_1, index_2, index_3])
+		else
+			push!(incomplete_triangles, [index_1, index_2, index_3])
+		end
 	end
-    set_polygons!(SD, triangles)
+    set_complete_polygons!(SD, complete_triangles)
+	set_incomplete_polygons!(SD, incomplete_triangles)
 	return nothing
 end
 
+#have not made any changes to the refine function yet
 function refine!(SD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; 
-	fibre_function = x->n_real_solutions(x), insertion_method = point_insertion,kwargs...)
+	fibre_function = x->n_real_solutions(x), insertion_method = triforce_point_insertion,kwargs...)
 	new_parameters::Vector{Vector{Float64}} = []
 	resolution_used = 0
-	for T in polygons(SD)
+	for T in incomplete_polygons(SD)
 		resolution_used >= resolution && break #checking to see if there is any resolution "left" to insert another point
-		if is_complete(T, graph_mesh(SD)) == false
-			parameters_to_insert_in_polygon = insertion_method(T, graph_mesh(SD))
-			for i in parameters_to_insert_in_polygon 
-				push!(new_parameters, i)
-			end
-			resolution_used +=length(parameters_to_insert_in_polygon)
+		parameters_to_insert_in_polygon = insertion_method(T, graph_mesh(SD))
+		for i in parameters_to_insert_in_polygon 
+			push!(new_parameters, i)
 		end
+		resolution_used += length(parameters_to_insert_in_polygon)
 	end
+	length(new_parameters) == 0 && error("Did not find any incomplete triangles")
 	inserted_point_solutions = solve(EP, new_parameters)
 	length(inserted_point_solutions) != length(new_parameters) && error("Did not solve for each parameter")
 	for i in eachindex(inserted_point_solutions)
@@ -225,19 +244,15 @@ function draw_valued_subdivision(SD::ValuedSubdivision; xlims = [-1,1],	ylims = 
 	plotting_values = sort(plotting_values)
 	values_that_have_been_plotted = []
 	for i in plotting_values
-		current_polygons = filter(x->graph_mesh(SD)[x[1]][2] == i, polygons(SD)) #filters all polygons whose first vertices have the fibre function value i
+		current_polygons = filter(x->graph_mesh(SD)[x[1]][2] == i, complete_polygons(SD)) #filters all polygons whose first vertices have the fibre function value i
 		color_value = findfirst(x->x == i, plotting_values)/length(plotting_values)
 		for j in current_polygons
-			if is_complete(j, graph_mesh(SD))
 				if (i in values_that_have_been_plotted) == false
 					draw_triangle(j, color_value, graph_mesh(SD), label = true, label_text = "$i real solutions"; kwargs...)
 					push!(values_that_have_been_plotted, i)
 				else
 					draw_triangle(j, color_value, graph_mesh(SD), label = false; kwargs...)
 				end
-			else
-				continue
-			end
 		end
 	end
 	return my_plot
