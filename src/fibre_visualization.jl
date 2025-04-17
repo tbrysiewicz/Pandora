@@ -3,6 +3,7 @@ import Base: getindex, iterate
 using Plots: scatter, plot, plot!, Shape, cgrad
 using DelaunayTriangulation: triangulate, each_solid_triangle, triangle_vertices, get_point
 using LinearAlgebra: qr
+using Graphs: SimpleGraph, add_edge!, connected_components
 
 
 
@@ -219,7 +220,7 @@ function refine!(SD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int6
 	inserted_point_solutions = solve(EP, new_parameters)
 	length(inserted_point_solutions) != length(new_parameters) && error("Did not solve for each parameter")
 	for i in eachindex(inserted_point_solutions)
-		push_to_graph_mesh!(graph_mesh(SD), (new_parameters[i], Float64(fibre_function(inserted_point_solutions[i]))))
+		(new_parameters[i] in input_points(graph_mesh(SD))) || push_to_graph_mesh!(graph_mesh(SD), (new_parameters[i], Float64(fibre_function(inserted_point_solutions[i])))) #checking to make sure we don't add duplicate points to graph_mesh
 	end
 	delaunay_triangulation!(SD)
 	return resolution_used
@@ -321,4 +322,42 @@ function visualize(EP::EnumerativeProblem; xlims=[-1,1], ylims = [-1,1],
 	return (VSD, my_plot)
 end
 
+function polygon_adjacency(polygon_1::Vector{Int64}, polygon_2::Vector{Int64}) #returns true if the two inputted polygons share any vertices and are therefore adjacent. Returns false otherwise.
+	polygon_1 = Set(polygon_1)
+	polygon_2 = Set(polygon_2)
+	if isempty(intersect(polygon_1, polygon_2)) == false
+		return true
+	else
+		return false
+	end
+end
 
+function triangulation_components(triangles::Vector{Vector{Int64}}) #given a list of triangles that may form a triangulation or the union of several triangulations, will return the connected components. E.g. if you gave it a list of all of the complete triangles that have 3 real solutions it will return a list of triangles partitioned by which chamber they belong to.
+	n = length(triangles)
+	G = SimpleGraph(n)
+	for i in 1:n-1
+		for j in i+1:n
+			polygon_adjacency(triangles[i], triangles[j]) && add_edge!(G, i, j)
+		end
+	end
+	components = connected_components(G)
+	components = [[triangles[c] for c in C] for C in components]
+	return components
+end
+
+function boundary_edges(triangles::Vector{Vector{Int64}}) #given a list of triangles from a triangulation, will return a list of boundary edges of the triangulation (as tuples of vertices)
+	edge_counter = Dict()
+	for t in triangles
+		edge_1 = (min(t[1], t[2]), max(t[1], t[2]))
+		edge_2 = (min(t[3], t[2]), max(t[3], t[2]))
+		edge_3 = (min(t[1], t[3]), max(t[1], t[3]))
+		get!(edge_counter, edge_1, 0)
+		get!(edge_counter, edge_2, 0)
+		get!(edge_counter, edge_3, 0)
+		edge_counter[edge_1] += 1
+		edge_counter[edge_2] += 1
+		edge_counter[edge_3] += 1
+	end
+	boundary_edges = [k for (k, v) in edge_counter if v == 1]
+	return boundary_edges
+end
