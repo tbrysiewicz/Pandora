@@ -353,7 +353,7 @@ function boundary_edges(triangles::Vector{Vector{Int64}}) #given a list of trian
 		edge_counter[edge_2] += 1
 		edge_counter[edge_3] += 1
 	end
-	boundary_edges = [k for (k, v) in edge_counter if v == 1]
+	boundary_edges::Vector{Tuple{Int64, Int64}} = [k for (k, v) in edge_counter if v == 1]
 	return boundary_edges
 end
 
@@ -381,4 +381,113 @@ function find_component(triangles::Vector{Vector{Int}})
 		end
 	end
 	return triangles_in_component
+end
+
+function ordered_boundary(edges::Vector{Tuple{Int, Int}}) #takes as input a list of boundary edges as given by boundary_edges function and returns an ordered list of vertices that make up the boundary
+	adjacency_dictionary = Dict()
+	for e in edges
+		push!(get!(adjacency_dictionary, e[1], Vector()), e[2])
+		push!(get!(adjacency_dictionary, e[2], Vector()), e[1])
+	end
+	start_vertex = first(keys(adjacency_dictionary))
+	ordered_vertices = [start_vertex]
+	current_vertex = start_vertex
+	while true
+		neighbors = adjacency_dictionary[current_vertex]
+		current_vertex = nothing
+		for neighbor in neighbors
+			if (neighbor in ordered_vertices) == false
+				push!(ordered_vertices, neighbor)
+				current_vertex = neighbor
+				break
+			end
+		end
+		if isnothing(current_vertex)
+			push!(ordered_vertices, ordered_vertices[1])
+			break
+		else
+			continue
+		end
+	end
+	return ordered_vertices
+end
+
+function boundary_indices_to_points(vertices::Vector{Int}, VSD::ValuedSubdivision) #takes as input a list of indices of boundary vertices and returns a vector containing the corresponding parameter points
+	boundary_points::Vector{Vector{Float64}} = []
+	for v in vertices
+		point = graph_mesh(VSD)[v][1]
+		push!(boundary_points, point)
+	end
+	return boundary_points
+end
+
+function triangle_indices_to_points(triangles::Vector{Vector{Int}}, VSD::ValuedSubdivision) #takes a list of triangles in index form and returns a vector containing the list of triangles as triples of points in the parameter space
+	GM = graph_mesh(VSD)
+	triangles_as_points::Vector{Vector{Vector{Float64}}} = []
+	for t in triangles
+		vertex_1 = GM[t[1]][1]
+		vertex_2 = GM[t[2]][1]
+		vertex_3 = GM[t[3]][1]
+		push!(triangles_as_points, [vertex_1, vertex_2, vertex_3])
+	end
+	return triangles_as_points
+end
+
+function signed_area(boundary_vertices::Vector{Vector{Float64}})
+	sum = 0
+	n = length(boundary_vertices)
+	if boundary_vertices[1] == boundary_vertices[n]
+		j = n - 1 #checks to see if the first vertex matches the last vertex and changes the iteration of the loop if so. This matters because the ordered_boundary function returns an ordered list of boundary vertices that includes the starting vertex twice (first index and last index)
+	else
+		j = n
+	end
+	for i in 1:j
+		x_1, y_1 = boundary_vertices[i]
+		x_2, y_2 = boundary_vertices[mod1(i+1, n)]
+		sum += (x_1*y_2 - x_2*y_1)
+	end
+	return 0.5*sum
+end
+
+function component_boundaries(triangles::Vector{Vector{Int}}, VSD::ValuedSubdivision) #takes as input the triangles of a connnected component (triangles consisting of indices) and returns the boundaries associated with the connected component. This will include the outer boundary (in counter-clockwise orientation) and any holes if there are any (in clockwise orientation)
+	boundary_edges1 = boundary_edges(triangles)
+	used_edges::Vector{Tuple{Int64, Int64}} = [] #the boundary may consist of several components (e.g. outer boundary, holes) so we need to track which edges are used
+	boundary_components = []
+	while isempty(setdiff(boundary_edges1, used_edges)) == false
+		current_boundary = ordered_boundary(setdiff(boundary_edges1, used_edges))
+		push!(boundary_components, current_boundary)
+		for e in boundary_edges1
+			if (e in used_edges) == false && (e[1] in current_boundary || e[2] in current_boundary)
+				push!(used_edges, e)
+			end
+		end
+	end
+	areas = []
+	signed_areas =[]
+	boundary_components_point_form = [] #at this statge the boundary components consist of lists of indices. We need the parameters associated with these indices in order to calculate areas.
+	for b in boundary_components
+		current_boundary_points = boundary_indices_to_points(b, VSD)
+		current_area = signed_area(current_boundary_points)
+		push!(signed_areas, current_area)
+		push!(areas, abs(current_area))
+		push!(boundary_components_point_form, current_boundary_points)
+	end
+	outer_boundary_index = findfirst(x->x == max(areas...), areas)
+	correctly_ordered_boundary_components = [] #while at this current stage each of the boundary components is ordered, we need to correct their orientations (ccw orientation for outer boundary, cw orientation for holes)
+	for i in eachindex(boundary_components_point_form)
+		if i == outer_boundary_index
+			if signed_areas[i] < 0
+				push!(correctly_ordered_boundary_components, [reverse(boundary_components_point_form[i])]) #we put the boundary vector into another vector because this is the format required for DelaunayTriangulation.jl
+			else
+				push!(correctly_ordered_boundary_components, [boundary_components_point_form[i]])
+			end
+		else
+			if signed_areas[i] < 0
+				push!(correctly_ordered_boundary_components, [boundary_components_point_form[i]])
+			else
+				push!(correctly_ordered_boundary_components, [reverse(boundary_components_point_form[i])])
+			end
+		end
+	end
+	return correctly_ordered_boundary_components
 end
