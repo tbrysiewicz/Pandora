@@ -3,7 +3,6 @@ import Base: getindex, iterate
 using Plots: scatter, plot, plot!, Shape, cgrad
 using DelaunayTriangulation: triangulate, each_solid_triangle, triangle_vertices, get_point
 using LinearAlgebra: qr
-using Graphs: SimpleGraph, add_edge!, connected_components
 
 
 
