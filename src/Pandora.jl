@@ -50,7 +50,7 @@ include("monodromy.jl")
 
 include("solutions.jl")
 include("fibres.jl")
-#include("fibre_visualization.jl")
+include("fibre_visualization.jl")
 
 
 

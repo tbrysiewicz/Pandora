@@ -1,7 +1,7 @@
 import Base: getindex, iterate
 
 using Plots: scatter, plot, plot!, Shape, cgrad
-using DelaunayTriangulation: triangulate, each_solid_triangle, triangle_vertices, get_point
+using DelaunayTriangulation: triangulate, each_solid_triangle, triangle_vertices, get_point, convert_boundary_points_to_indices
 using LinearAlgebra: qr
 
 
@@ -56,6 +56,10 @@ end
 
 function set_incomplete_polygons!(SD::ValuedSubdivision, P::Vector{Vector{Int64}})
 	SD.IncompletePolygons = P
+end
+
+function push_to_complete_polygons!(VSD::ValuedSubdivision, P::Vector{Int64}) #push a single polygon to complete polygons
+	push!(VSD.CompletePolygons, P)
 end
 
 function push_to_graph_mesh!(GM::GraphMesh, V::Tuple{Vector{Float64},Float64})
@@ -326,20 +330,7 @@ function polygon_adjacency(polygon_1::Vector{Int64}, polygon_2::Vector{Int64}) #
 	end
 end
 
-function triangulation_components(triangles::Vector{Vector{Int64}}) #given a list of triangles that may form a triangulation or the union of several triangulations, will return the connected components. E.g. if you gave it a list of all of the complete triangles that have 3 real solutions it will return a list of triangles partitioned by which chamber they belong to.
-	n = length(triangles)
-	G = SimpleGraph(n)
-	for i in 1:n-1
-		for j in i+1:n
-			polygon_adjacency(triangles[i], triangles[j]) && add_edge!(G, i, j)
-		end
-	end
-	components = connected_components(G)
-	components = [[triangles[c] for c in C] for C in components]
-	return components
-end
-
-function boundary_edges(triangles::Vector{Vector{Int64}}) #given a list of triangles from a triangulation, will return a list of boundary edges of the triangulation (as tuples of vertices)
+function boundary_edges(triangles::Vector{Vector{Int64}}) #given a list of triangles from a triangulation, will return a set of boundary edges of the triangulation (as tuples of vertices)
 	edge_counter = Dict()
 	for t in triangles
 		edge_1 = (min(t[1], t[2]), max(t[1], t[2]))
@@ -352,7 +343,7 @@ function boundary_edges(triangles::Vector{Vector{Int64}}) #given a list of trian
 		edge_counter[edge_2] += 1
 		edge_counter[edge_3] += 1
 	end
-	boundary_edges::Vector{Tuple{Int64, Int64}} = [k for (k, v) in edge_counter if v == 1]
+	boundary_edges = Set([k for (k, v) in edge_counter if v == 1])
 	return boundary_edges
 end
 
@@ -382,7 +373,43 @@ function find_component(triangles::Vector{Vector{Int}})
 	return triangles_in_component
 end
 
-function ordered_boundary(edges::Vector{Tuple{Int, Int}}) #takes as input a list of boundary edges as given by boundary_edges function and returns an ordered list of vertices that make up the boundary
+function find_components(triangles::Vector{Vector{Int}})
+	components = []
+	classified_triangles = Set{Int}() #indices
+	while length(classified_triangles) < length(triangles)
+		starting_triangle_index = findfirst(x->!(x in classified_triangles), 1:length(triangles))
+		current_component = [starting_triangle_index] #indices
+		vertices_in_component = Set(triangles[starting_triangle_index])
+		push!(classified_triangles, starting_triangle_index)
+		found_new_triangles = true
+		while found_new_triangles
+			found_new_triangles = false
+			for i in 1:length(triangles)
+				if !(i in classified_triangles)
+					shared = 0
+					for v in triangles[i]
+						shared += v in vertices_in_component ? 1 : 0
+						shared > 1 && break
+					end
+					if shared > 1
+						push!(current_component, i)
+						for v in triangles[i]
+							!(v in vertices_in_component) && push!(vertices_in_component, v)
+						end
+						push!(classified_triangles, i)
+						found_new_triangles = true
+					end
+				else
+					continue
+				end
+			end
+		end
+		push!(components, [triangles[i] for i in current_component])
+	end
+	return components
+end
+
+function ordered_boundary(edges::Set{Tuple{Int, Int}}) #takes as input a list of boundary edges as given by boundary_edges function and returns an ordered list of vertices that make up the boundary
 	adjacency_dictionary = Dict()
 	for e in edges
 		push!(get!(adjacency_dictionary, e[1], Vector()), e[2])
@@ -390,19 +417,21 @@ function ordered_boundary(edges::Vector{Tuple{Int, Int}}) #takes as input a list
 	end
 	start_vertex = first(keys(adjacency_dictionary))
 	ordered_vertices = [start_vertex]
+	classified_vertices = Set(ordered_vertices) #track which vertices have been added to the ordered boundary
 	current_vertex = start_vertex
 	while true
 		neighbors = adjacency_dictionary[current_vertex]
 		current_vertex = nothing
 		for neighbor in neighbors
-			if (neighbor in ordered_vertices) == false
+			if !(neighbor in classified_vertices)
 				push!(ordered_vertices, neighbor)
+				push!(classified_vertices, neighbor)
 				current_vertex = neighbor
 				break
 			end
 		end
 		if isnothing(current_vertex)
-			push!(ordered_vertices, ordered_vertices[1])
+			push!(ordered_vertices, ordered_vertices[1]) #if no more unclassified, adjacent vertices are found, ends boundary by adding the start vertex to the end
 			break
 		else
 			continue
@@ -412,24 +441,11 @@ function ordered_boundary(edges::Vector{Tuple{Int, Int}}) #takes as input a list
 end
 
 function boundary_indices_to_points(vertices::Vector{Int}, VSD::ValuedSubdivision) #takes as input a list of indices of boundary vertices and returns a vector containing the corresponding parameter points
-	boundary_points::Vector{Vector{Float64}} = []
-	for v in vertices
-		point = graph_mesh(VSD)[v][1]
-		push!(boundary_points, point)
-	end
-	return boundary_points
+	return [graph_mesh(VSD)[v][1] for v in vertices]
 end
 
 function triangle_indices_to_points(triangles::Vector{Vector{Int}}, VSD::ValuedSubdivision) #takes a list of triangles in index form and returns a vector containing the list of triangles as triples of points in the parameter space
-	GM = graph_mesh(VSD)
-	triangles_as_points::Vector{Vector{Vector{Float64}}} = []
-	for t in triangles
-		vertex_1 = GM[t[1]][1]
-		vertex_2 = GM[t[2]][1]
-		vertex_3 = GM[t[3]][1]
-		push!(triangles_as_points, [vertex_1, vertex_2, vertex_3])
-	end
-	return triangles_as_points
+	return [[graph_mesh(VSD)[t][1] for t in T] for T in triangles]
 end
 
 function signed_area(boundary_vertices::Vector{Vector{Float64}})
@@ -448,22 +464,22 @@ function signed_area(boundary_vertices::Vector{Vector{Float64}})
 	return 0.5*sum
 end
 
-function component_boundaries(triangles::Vector{Vector{Int}}, VSD::ValuedSubdivision) #takes as input the triangles of a connnected component (triangles consisting of indices) and returns the boundaries associated with the connected component. This will include the outer boundary (in counter-clockwise orientation) and any holes if there are any (in clockwise orientation)
+function component_boundaries(triangles::Vector{Vector{Int}}, VSD::ValuedSubdivision) #takes as input the triangles of a connected component (triangles consisting of indices) and returns the boundaries associated with the connected component. This will include the outer boundary (in counter-clockwise orientation) and any holes if there are any (in clockwise orientation)
 	boundary_edges1 = boundary_edges(triangles)
-	used_edges::Vector{Tuple{Int64, Int64}} = [] #the boundary may consist of several components (e.g. outer boundary, holes) so we need to track which edges are used
+	used_edges = Set() #the boundary may consist of several components (e.g. outer boundary, holes) so we need to track which edges are used
 	boundary_components = []
-	while isempty(setdiff(boundary_edges1, used_edges)) == false
+	while length(used_edges) < length(boundary_edges1)
 		current_boundary = ordered_boundary(setdiff(boundary_edges1, used_edges))
 		push!(boundary_components, current_boundary)
 		for e in boundary_edges1
-			if (e in used_edges) == false && (e[1] in current_boundary || e[2] in current_boundary)
+			if !(e in used_edges) && (e[1] in current_boundary || e[2] in current_boundary)
 				push!(used_edges, e)
 			end
 		end
 	end
 	areas = []
-	signed_areas =[]
-	boundary_components_point_form = [] #at this statge the boundary components consist of lists of indices. We need the parameters associated with these indices in order to calculate areas.
+	signed_areas = []
+	boundary_components_point_form = [] #at this stage the boundary components consist of lists of indices. We need the parameters associated with these indices in order to calculate areas.
 	for b in boundary_components
 		current_boundary_points = boundary_indices_to_points(b, VSD)
 		current_area = signed_area(current_boundary_points)
@@ -489,4 +505,130 @@ function component_boundaries(triangles::Vector{Vector{Int}}, VSD::ValuedSubdivi
 		end
 	end
 	return correctly_ordered_boundary_components
+end
+
+function refine_valued_subdivision!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int; fibre_function = x->n_real_solutions(x))
+	new_parameters::Vector{Vector{Float64}} = []
+	resolution_used = 0
+	for T in incomplete_polygons(VSD)
+		resolution_used >= resolution && break
+		parameters_to_insert_in_polygon = triforce_point_insertion(T, graph_mesh(VSD))
+		number_of_points_inserted = 0
+		for i in parameters_to_insert_in_polygon 
+			if !(i in new_parameters) && !(i in input_points(graph_mesh(VSD))) #check to make sure that the inserted parameters are not already inserted into another polygon or already in the graph mesh
+				push!(new_parameters, i)
+				number_of_points_inserted += 1
+			end
+		end
+		resolution_used += number_of_points_inserted
+	end
+	length(new_parameters) == 0 && error("Did not find any incomplete triangles")
+	inserted_point_solutions = solve(EP, new_parameters)
+	length(inserted_point_solutions) != length(new_parameters) && error("Did not solve for each parameter")
+	for i in eachindex(inserted_point_solutions)
+		push_to_graph_mesh!(graph_mesh(VSD), (new_parameters[i], Float64(fibre_function(inserted_point_solutions[i]))))
+	end
+
+	incomplete_vertices = Set(boundary_indices_to_points(vcat(incomplete_polygons(VSD)...), VSD)) #all vertices in incomplete_polygons
+	boundary_vertices = Set()
+	for p in new_parameters
+		push!(incomplete_vertices, p) #the new parameters that have been inserted will not be in the incomplete_vertices list yet so we must manually add them
+	end
+	incomplete_components = find_components(incomplete_polygons(VSD))
+	curves = []
+	for c in incomplete_components 
+		current_component_boundaries = component_boundaries(c, VSD)
+		for x in current_component_boundaries
+			push!(curves, x)
+			for y in x
+				for v in y
+					!(v in boundary_vertices) && push!(boundary_vertices, v) #we need to track which vertices are part of the boundary
+				end
+			end
+		end
+	end
+	interior_points_for_triangulation::Vector{Vector{Float64}} = []
+	for p in incomplete_vertices
+		!(p in boundary_vertices) && push!(interior_points_for_triangulation, p)
+	end
+	boundary_nodes, points = convert_boundary_points_to_indices(curves; existing_points = interior_points_for_triangulation)
+	tri = triangulate(points; boundary_nodes)
+	
+	triangle_iterator = each_solid_triangle(tri)
+	incomplete_triangles::Vector{Vector{Int64}} = []
+	for T in triangle_iterator
+		i,j,k = triangle_vertices(T)
+		i,j,k = get_point(tri, i, j, k)
+		vertex_1 = [i[1], i[2]]
+		vertex_2 = [j[1], j[2]]
+		vertex_3 = [k[1], k[2]]
+        index_1 = findfirst(x->x[1] == vertex_1, function_cache(graph_mesh(VSD)))
+        index_2 = findfirst(x->x[1] == vertex_2, function_cache(graph_mesh(VSD)))
+        index_3 = findfirst(x->x[1] == vertex_3, function_cache(graph_mesh(VSD)))
+		is_complete([index_1, index_2, index_3], graph_mesh(VSD)) ? push_to_complete_polygons!(VSD, [index_1, index_2, index_3]) : push!(incomplete_triangles, [index_1, index_2, index_3])
+	end
+	set_incomplete_polygons!(VSD, incomplete_triangles) #incomplete_polygons needs to be completely replaced after triangulation, complete_polygons does not
+
+	return resolution_used
+end
+
+function draw_visualization(VSD::ValuedSubdivision; xlims = [-1,1],	ylims = [-1,1])
+	my_plot = plot(xlims = xlims, ylims = ylims, aspect_ratio = :equal)
+	plotting_values = unique(output_values(graph_mesh(VSD)))
+	plotting_values = sort(plotting_values)
+	values_that_have_been_plotted = []
+	complete_components = find_components(complete_polygons(VSD))
+	for c in complete_components
+		boundaries = component_boundaries(c, VSD)
+		if length(boundaries) == 1
+			boundary_vertices = boundaries[1][1]
+			shape_1 = Shape([(x[1], x[2]) for x in boundary_vertices])
+			vertex_one_index = findfirst(x->x==boundary_vertices[1], input_points(graph_mesh(VSD)))
+			function_value_for_component = output_values(graph_mesh(VSD))[vertex_one_index]
+			color_value = findfirst(x->x == function_value_for_component, plotting_values)/length(plotting_values)
+			c = cgrad(:thermal, rev = false)[color_value]
+			if (function_value_for_component in values_that_have_been_plotted)
+				plot!(shape_1, fillcolor = c, linecolor = c, linewidth = false, label = false)
+			else
+				plot!(shape_1, fillcolor = c, linecolor = c, linewidth = false, label = "$function_value_for_component real solutions")
+				push!(values_that_have_been_plotted, function_value_for_component)
+			end
+		else
+			vertex_one_index = findfirst(x->x==c[1][1], input_points(graph_mesh(VSD)))
+			function_value_for_component = output_values(graph_mesh(VSD))[vertex_one_index]
+			color_value = findfirst(x->x == function_value_for_component, plotting_values)/length(plotting_values)
+			c = cgrad(:thermal, rev = false)[color_value]
+			for t in c
+				shape_1 = Shape([(x[1], x[2]) for x in t])
+				if (function_value_for_component in values_that_have_been_plotted)
+				plot!(shape_1, fillcolor = c, linecolor = c, linewidth = false, label = false)
+				else
+					plot!(shape_1, fillcolor = c, linecolor = c, linewidth = false, label = "$function_value_for_component real solutions")
+					push!(values_that_have_been_plotted, function_value_for_component)
+
+				end
+			end
+		end
+	end
+	return my_plot
+end
+
+function visualize_2(EP::EnumerativeProblem; xlims=[-1,1], ylims = [-1,1], 
+	initial_resolution = 1000,	total_resolution = 3*initial_resolution,  
+	fibre_function = x-> n_real_solutions(x))
+	if n_parameters(EP) > 2
+		println("EP consists of more than two parameters. Visualizing a random 2-plane in the parameter space.")
+		new_EP = planar_restriction(EP)
+	else
+		new_EP = EP
+	end
+	VSD = initialize_valued_subdivision(new_EP; xlims = xlims, ylims = ylims, 
+	fibre_function = fibre_function)
+	remaining_resolution = total_resolution
+	while remaining_resolution > 0
+		resolution_used = refine_valued_subdivision!(VSD, new_EP, remaining_resolution; fibre_function = fibre_function)
+		remaining_resolution -= resolution_used
+	end
+	my_plot = draw_visualization(VSD; xlims = xlims, ylims = ylims)
+	return (VSD, my_plot)
 end
