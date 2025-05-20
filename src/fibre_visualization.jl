@@ -14,7 +14,9 @@ export
     output_values,
     graph_mesh,
     polygons,
-	function_cache
+	function_cache,
+	complete_polygons,
+	incomplete_polygons
 
 #GRAPHMESH
 #Never re-order the function_cache
@@ -59,33 +61,32 @@ function set_incomplete_polygons!(SD::ValuedSubdivision, P::Vector{Vector{Int64}
 	SD.IncompletePolygons = P
 end
 
+#delete a specific polygon from IncompletePolygons
+function delete_from_incomplete_polygons!(VSD::ValuedSubdivision, P::Vector{Int64})
+	polygon_index = findfirst(x -> x == P, incomplete_polygons(VSD))
+	if polygon_index !== nothing
+		deleteat!(VSD.IncompletePolygons, polygon_index)
+	else
+		error("Polygon not found in IncompletePolygons!")
+	end
+end
+
 function push_to_complete_polygons!(VSD::ValuedSubdivision, P::Vector{Int64}) #push a single polygon to complete polygons
 	push!(VSD.CompletePolygons, P)
+end
+
+function push_to_incomplete_polygons!(VSD::ValuedSubdivision, P::Vector{Int64})
+	push!(VSD.IncompletePolygons, P)
 end
 
 function push_to_graph_mesh!(GM::GraphMesh, V::Tuple{Vector{Float64},Float64})
 	push!(GM.function_cache, V)
 end
 
+#region MESH FUNCTIONS
 function trihexagonal_mesh(;xlims::Vector = [-1,1], ylims::Vector = [-1,1], resolution = 1000, kwargs...)
 
-	xlength = xlims[2] - xlims[1]
-	ylength = ylims[2] - ylims[1]
-
-    #Decide how many x-vals vs y-vals to produce approximately 'resolution' many data pts
-	if xlength == ylength
-		num_x_divs = Int(floor(sqrt(resolution)))
-		num_y_divs = Int(floor(sqrt(resolution)))
-	else
-		xlength_proportion = (xlength)/(xlength + ylength)
-		num_x_divs = sqrt((xlength_proportion*resolution)/(1 - xlength_proportion))
-		num_y_divs = resolution/num_x_divs
-		num_x_divs = Int(floor(num_x_divs))
-		num_y_divs = Int(floor(num_y_divs))
-	end
-			
-	x_values = range(xlims[1], xlims[2], num_x_divs)
-	y_values = range(ylims[1], ylims[2], num_y_divs)
+	x_values, y_values = initial_parameter_distribution(xlims = xlims, ylims = ylims, resolution = resolution)
 
     #Shift x-values by half a step every-other-row to make hexagonal lattice
     shift_amount = (x_values[2] - x_values[1])/2 	
@@ -112,6 +113,46 @@ function trihexagonal_mesh(;xlims::Vector = [-1,1], ylims::Vector = [-1,1], reso
 		end
 	end
 	return(triangles,parameters)
+end
+
+function rectangular_mesh(;xlims::Vector = [-1,1], ylims::Vector = [-1,1], resolution = 1000, kwargs...)
+	x_values, y_values = initial_parameter_distribution(xlims = xlims, ylims = ylims, resolution = resolution)
+	parameters = [[i,j] for i in x_values for j in y_values]
+	parameters_as_matrix = reshape(parameters, length(x_values), length(y_values))
+	rectangles = Vector{Vector{Int}}([])
+	for i in 1:length(x_values)-1
+		for j in 1:length(y_values)-1
+			tl_index = findfirst(x->x == parameters_as_matrix[i,j], parameters)
+			tr_index = findfirst(x->x == parameters_as_matrix[i+1,j], parameters)
+			bl_index = findfirst(x->x == parameters_as_matrix[i, j+1], parameters)
+			br_index = findfirst(x->x == parameters_as_matrix[i+1, j+1], parameters)
+			push!(rectangles, [tl_index, tr_index, br_index, bl_index]) #choosing a standardized ordering for rectangle vertices matters
+		end
+	end
+	return (rectangles, parameters)
+end
+
+#determines initial parameters based on visualization window and resolution
+function initial_parameter_distribution(;xlims = [-1,1], ylims = [-1,1], resolution = 1000)
+	xlength = xlims[2] - xlims[1]
+	ylength = ylims[2] - ylims[1]
+
+    #Decide how many x-vals vs y-vals to produce approximately 'resolution' many data pts
+	if xlength == ylength
+		num_x_divs = Int(floor(sqrt(resolution)))
+		num_y_divs = Int(floor(sqrt(resolution)))
+	else
+		xlength_proportion = (xlength)/(xlength + ylength)
+		num_x_divs = sqrt((xlength_proportion*resolution)/(1 - xlength_proportion))
+		num_y_divs = resolution/num_x_divs
+		num_x_divs = Int(floor(num_x_divs))
+		num_y_divs = Int(floor(num_y_divs))
+	end
+			
+	x_values = range(xlims[1], xlims[2], num_x_divs)
+	y_values = range(ylims[1], ylims[2], num_y_divs)
+
+	return x_values, y_values
 end
 
 #TODO: Either use kwargs cleverly with the mesh function or eliminate it in the signature
@@ -147,19 +188,6 @@ function initialize_valued_subdivision(EP::EnumerativeProblem;
 	return initial_subdivision
 end
 
-#checks if all polygon vertices share the same fibre function value. 
-#TODO: Make it work for non-discrete valued functions
-function is_complete(p::Vector{Int}, GM::GraphMesh) 
-	v1_value = GM[p[1]][2]
-	for i in p[2:end]
-		vval = GM[i][2]
-		if vval!=v1_value
-			return(false)
-		end
-	end
-	return(true)
-end
-
 #RESTRICTING EPS
 #Note that these functions will have to be modified at some point so that a new EP isn't generated
 function gram_schmidt(basis_vectors::Vector)
@@ -187,7 +215,6 @@ function planar_restriction(EP::EnumerativeProblem)
 	P = [randn(Float64,n_parameters(EP)) for i in 1:3]
 	return(restrict(EP,P))
 end
-
 
 #PLOTTING
 function draw_triangle(triangle, color_value, GM::GraphMesh; label = false, 
@@ -222,58 +249,85 @@ function draw_valued_subdivision(SD::ValuedSubdivision; xlims = [-1,1],	ylims = 
 	return my_plot
 end
 
-#TODO: Really use kwargs... here for passing xlims/ylims to initialize valued subdivision
-function visualize(EP::EnumerativeProblem; xlims=[-1,1], ylims = [-1,1], 
-	initial_resolution = 1000,	total_resolution = 3*initial_resolution,  
-	fibre_function = x-> n_real_solutions(x), refine_function! = refine!,
-	kwargs...)
+#REFINEMENT FUNCTIONS
 
-	#Check enumerative problem is visualizable
-	if n_parameters(EP) > 2
-		println("EP consists of more than two parameters. Visualizing a random 2-plane in the parameter space.")
-		new_EP = planar_restriction(EP)
-	else
-		new_EP = EP
+function global_delaunay_refine!(SD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; 
+	fibre_function = x->n_real_solutions(x), insertion_method = triforce_point_insertion,kwargs...)
+	new_parameters, resolution_used = refinement_parameters(SD, insertion_method, resolution)
+	length(new_parameters) == 0 && error("Did not find any incomplete triangles")
+	inserted_point_solutions = solve(EP, new_parameters)
+	length(inserted_point_solutions) != length(new_parameters) && error("Did not solve for each parameter")
+	for i in eachindex(inserted_point_solutions)
+		push_to_graph_mesh!(graph_mesh(SD), (new_parameters[i], Float64(fibre_function(inserted_point_solutions[i]))))
 	end
+	retriangulate_valued_subdivision!(SD)
+	return resolution_used
+end
 
-	VSD = initialize_valued_subdivision(new_EP; xlims = xlims, ylims = ylims, 
-	fibre_function = fibre_function, kwargs...)
-
-	remaining_resolution = total_resolution
-	while remaining_resolution > 0
-		resolution_used = refine_function!(VSD, new_EP, remaining_resolution; fibre_function = fibre_function, kwargs...)
-		remaining_resolution -= resolution_used
+function rectangular_refine!(SD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; 
+	fibre_function = x->n_real_solutions(x), insertion_method = rectangular_refine!,kwargs...)
+	new_parameters, resolution_used, selected_incomplete_rectangles, newly_created_rectangles = refinement_parameters_and_new_rectangles(SD, resolution)
+	length(new_parameters) == 0 && error("Did not find any incomplete triangles")
+	inserted_point_solutions = solve(EP, new_parameters)
+	length(inserted_point_solutions) != length(new_parameters) && error("Did not solve for each parameter")
+	for i in eachindex(inserted_point_solutions)
+		push_to_graph_mesh!(graph_mesh(SD), (new_parameters[i], Float64(fibre_function(inserted_point_solutions[i]))))
 	end
-
-	my_plot = draw_valued_subdivision(VSD; xlims = xlims, ylims = ylims, kwargs...)
-	return (VSD, my_plot)
+	for R in selected_incomplete_rectangles
+		delete_from_incomplete_polygons!(SD, R)
+	end
+	for R in newly_created_rectangles
+		rectangle = [findfirst(x->x[1] == y, function_cache(graph_mesh(SD))) for y in R]
+		is_complete(rectangle, graph_mesh(SD)) ? push_to_complete_polygons!(SD, rectangle) : push_to_incomplete_polygons!(SD, rectangle)
+	end
+	return resolution_used
 end
 
-
-
-
-
-
-function point_insertion(p::Vector{Int}, GM::GraphMesh) #returns a random point in the convex hull of a triangle from the graphmesh
-	polygon_vertices = [GM[x][1] for x in p]
-	c = randn(Float64, 3)
-	c = map(abs, c)
-	c = c./sum(c)
-	random_convex_combination = [polygon_vertices[i].*c[i] for i in 1:3]
-	random_convex_combination = sum(random_convex_combination)
-	return [random_convex_combination]
+#determines the parameters to be inserted into the graph mesh in a single stage of refinement
+#TODO: Need to fix this so that polygons are randomly selected from the incomplete_polygons list. 
+function refinement_parameters(VSD::ValuedSubdivision, insertion_method = triforce_point_insertion, resolution = 1000)
+	new_parameters::Vector{Vector{Float64}} = []
+	resolution_used = 0
+	for T in incomplete_polygons(VSD)
+		resolution_used >= resolution && break #checking to see if there is any resolution "left" to insert another point
+		parameters_to_insert_in_polygon = insertion_method(T, graph_mesh(VSD))
+		number_of_points_inserted = 0
+		for i in parameters_to_insert_in_polygon 
+			if !(i in new_parameters) && !(i in input_points(graph_mesh(VSD))) #check to make sure that the inserted parameters are not already inserted into another polygon or already in the graph mesh
+				push!(new_parameters, i)
+				number_of_points_inserted += 1
+			end
+		end
+		resolution_used += number_of_points_inserted
+	end
+	return new_parameters, resolution_used
 end
 
-function midpoint(p,q)
-    return((p+q)./2)
-end
-
-function triforce_point_insertion(p::Vector{Int}, GM::GraphMesh) #returns "triforce" points
-	polygon_vertices = [GM[x][1] for x in p]
-	midpoint_1 = midpoint(polygon_vertices[1], polygon_vertices[2])
-	midpoint_2 = midpoint(polygon_vertices[1], polygon_vertices[3])
-	midpoint_3 = midpoint(polygon_vertices[2], polygon_vertices[3])
-	return [midpoint_1, midpoint_2, midpoint_3]
+#determines the parameters to be inserted into the graph mesh for rectangular refinement and also tracks which rectangles need to be deleted and added
+#TODO: Need to fix this so that polygons are randomly selected from the incomplete_polygons list. 
+function refinement_parameters_and_new_rectangles(VSD::ValuedSubdivision, resolution = 1000)
+	new_parameters::Vector{Vector{Float64}} = []
+	selected_incomplete_rectangles::Vector{Vector{Int64}} = []
+	newly_created_rectangles::Vector{Vector{Vector{Float64}}} = []
+	resolution_used = 0
+	for T in incomplete_polygons(VSD)
+		resolution_used >= resolution && break #checking to see if there is any resolution "left" to insert another point
+		parameters_to_insert_in_polygon = rectangular_point_insertion(T, graph_mesh(VSD))
+		number_of_points_inserted = 0
+		for i in parameters_to_insert_in_polygon 
+			if !(i in new_parameters) && !(i in input_points(graph_mesh(VSD))) #check to make sure that the inserted parameters are not already inserted into another polygon or already in the graph mesh
+				push!(new_parameters, i)
+				number_of_points_inserted += 1
+			end
+		end
+		resolution_used += number_of_points_inserted
+		number_of_points_inserted > 0 && push!(selected_incomplete_rectangles, T)
+		push!(newly_created_rectangles, [graph_mesh(VSD)[T[1]][1], parameters_to_insert_in_polygon[1], parameters_to_insert_in_polygon[5], parameters_to_insert_in_polygon[4]])
+		push!(newly_created_rectangles, [parameters_to_insert_in_polygon[1], graph_mesh(VSD)[T[2]][1], parameters_to_insert_in_polygon[2], parameters_to_insert_in_polygon[5]])
+		push!(newly_created_rectangles, [parameters_to_insert_in_polygon[5], parameters_to_insert_in_polygon[2], graph_mesh(VSD)[T[3]][1], parameters_to_insert_in_polygon[3]])
+		push!(newly_created_rectangles, [parameters_to_insert_in_polygon[4], parameters_to_insert_in_polygon[5], parameters_to_insert_in_polygon[3], graph_mesh(VSD)[T[4]][1]])
+	end
+	return new_parameters, resolution_used, selected_incomplete_rectangles, newly_created_rectangles
 end
 
 function delaunay_valued_subdivision(GM::GraphMesh)
@@ -302,47 +356,60 @@ function delaunay_valued_subdivision(GM::GraphMesh)
 	return(VSD)
 end
 
-
 #TODO: Why did VSD = delaunay_valued_subdivision(graph_mesh(VSD))
 #  not overwrite VSD?
 function retriangulate_valued_subdivision!(VSD::ValuedSubdivision)
 	new_VSD = delaunay_valued_subdivision(graph_mesh(VSD))
-	VSD.CompletePolygons = new_VSD.CompletePolygons
-	VSD.IncompletePolygons = new_VSD.IncompletePolygons
+	set_complete_polygons!(VSD, complete_polygons(new_VSD))
+	set_incomplete_polygons!(VSD, incomplete_polygons(new_VSD))
 end
 
+function point_insertion(p::Vector{Int}, GM::GraphMesh) #returns a random point in the convex hull of a triangle from the graphmesh
+	polygon_vertices = [GM[x][1] for x in p]
+	c = randn(Float64, 3)
+	c = map(abs, c)
+	c = c./sum(c)
+	random_convex_combination = [polygon_vertices[i].*c[i] for i in 1:3]
+	random_convex_combination = sum(random_convex_combination)
+	return [random_convex_combination]
+end
 
+function midpoint(p,q)
+    return((p+q)./2)
+end
 
+ #returns "triforce" points
+function triforce_point_insertion(p::Vector{Int}, GM::GraphMesh)
+	polygon_vertices = [GM[x][1] for x in p]
+	midpoint_1 = midpoint(polygon_vertices[1], polygon_vertices[2])
+	midpoint_2 = midpoint(polygon_vertices[1], polygon_vertices[3])
+	midpoint_3 = midpoint(polygon_vertices[2], polygon_vertices[3])
+	return [midpoint_1, midpoint_2, midpoint_3]
+end
 
+#inserts 4 points into rectangle (center of rectangle and midpoint of each edge)
+function rectangular_point_insertion(p::Vector{Int}, GM::GraphMesh)
+	rectangle_vertices = [GM[x][1] for x in p]
+	center = [sum([x[1] for x in rectangle_vertices])/4, sum([x[2] for x in rectangle_vertices])/4]
+	midpoint1 = midpoint(GM[p[1]][1], GM[p[2]][1])
+	midpoint2 = midpoint(GM[p[2]][1], GM[p[3]][1])
+	midpoint3 = midpoint(GM[p[3]][1], GM[p[4]][1])
+	midpoint4 = midpoint(GM[p[4]][1], GM[p[1]][1])
+	return [midpoint1, midpoint2, midpoint3, midpoint4, center] #is this the right formatting? Should there be another set of brackets around this?
+end
 
-
-#have not made any changes to the refine function yet
-function refine!(SD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; 
-	fibre_function = x->n_real_solutions(x), insertion_method = triforce_point_insertion,kwargs...)
-	new_parameters::Vector{Vector{Float64}} = []
-	resolution_used = 0
-	for T in incomplete_polygons(SD)
-		resolution_used >= resolution && break #checking to see if there is any resolution "left" to insert another point
-		parameters_to_insert_in_polygon = insertion_method(T, graph_mesh(SD))
-		number_of_points_inserted = 0
-		for i in parameters_to_insert_in_polygon 
-			if (i in new_parameters) == false && (i in input_points(graph_mesh(SD))) == false #check to make sure that the inserted parameters are not already inserted into another polygon or already in the graph mesh
-				push!(new_parameters, i)
-				number_of_points_inserted += 1
-			end
+#checks if all polygon vertices share the same fibre function value. 
+#TODO: Make it work for non-discrete valued functions
+function is_complete(p::Vector{Int}, GM::GraphMesh) 
+	v1_value = GM[p[1]][2]
+	for i in p[2:end]
+		vval = GM[i][2]
+		if vval!=v1_value
+			return(false)
 		end
-		resolution_used += number_of_points_inserted
 	end
-	length(new_parameters) == 0 && error("Did not find any incomplete triangles")
-	inserted_point_solutions = solve(EP, new_parameters)
-	length(inserted_point_solutions) != length(new_parameters) && error("Did not solve for each parameter")
-	for i in eachindex(inserted_point_solutions)
-		push_to_graph_mesh!(graph_mesh(SD), (new_parameters[i], Float64(fibre_function(inserted_point_solutions[i]))))
-	end
-	retriangulate_valued_subdivision!(SD)
-	return resolution_used
+	return(true)
 end
-
 
 #VISUALIZATION
 function visualize(GM::GraphMesh)
@@ -350,6 +417,35 @@ function visualize(GM::GraphMesh)
     zcolor = output_values(GM), legend = false, colorbar = true)
 end
 
+#TODO: Really use kwargs... here for passing xlims/ylims to initialize valued subdivision
+function visualize(EP::EnumerativeProblem; xlims=[-1,1], ylims = [-1,1], 
+	initial_resolution = 1000,	total_resolution = 4*initial_resolution,  
+	fibre_function = x-> n_real_solutions(x), refine_function! = global_delaunay_refine!, mesh_function = trihexagonal_mesh,
+	kwargs...)
+
+	#Check enumerative problem is visualizable
+	if n_parameters(EP) > 2
+		println("EP consists of more than two parameters. Visualizing a random 2-plane in the parameter space.")
+		new_EP = planar_restriction(EP)
+	else
+		new_EP = EP
+	end
+
+	VSD = initialize_valued_subdivision(new_EP; xlims = xlims, ylims = ylims, 
+	fibre_function = fibre_function, mesh_function = mesh_function, kwargs...)
+
+	remaining_resolution = total_resolution - initial_resolution
+	while remaining_resolution > 0
+		resolution_used = refine_function!(VSD, new_EP, remaining_resolution; fibre_function = fibre_function, kwargs...)
+		remaining_resolution -= resolution_used
+	end
+
+	my_plot = draw_valued_subdivision(VSD; xlims = xlims, ylims = ylims, kwargs...)
+	return (VSD, my_plot)
+end
+
+
+#Everything after this point is written for local Delaunay refinement (better name?)
 
 function polygon_adjacency(polygon_1::Vector{Int64}, polygon_2::Vector{Int64}) #returns true if the two inputted polygons share any vertices and are therefore adjacent. Returns false otherwise.
 	polygon_1 = Set(polygon_1)
