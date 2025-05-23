@@ -15,7 +15,8 @@ end
 #This is the function which increments all relevant step datum in an optimizer data
 #  prior to running an improvement step
 function increment!(OD::OptimizerData, N::Int) 
-    OD.step = OD.step+1
+    OD.step = OD.
+    step+1
     OD.steps_no_major_progress = OD.steps_no_major_progress+1
     OD.steps_no_progress = OD.steps_no_progress+1
 
@@ -151,7 +152,7 @@ function update_optimizer!(optimizer :: Optimizer, new_fibres :: Vector{Fibre})
             println("Major progress")
         end
         optimizer.record_fibre = new_fibres[best_score_index[1]]
-        optimizer.record_objective = weighted_objective(optimizer)(record_fibre(optimizer5555555555555555555555555555555555))
+        optimizer.record_objective = weighted_objective(optimizer)(record_fibre(optimizer))
     end
 
 
