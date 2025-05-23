@@ -1,62 +1,42 @@
 
-
-
-
-
-
-
-
-
-
-
-
-###############################OLD################
-Pandora is designed as follows:
-    AbstractEnumerativeProblems are objects for which generic parameters have a constant number d solutions
-    EnumerativeProblems (EPs) realize this abstraction via branched covers of varieties onto parameter spaces
-    EP's have properties called EnumerativeProperty(s) (EProp(s)) e.g. the monodromy group or degree of an enumerative problem
-
-    An EP holds within itself the field 'knowledge' which is a vector of KnowledgeNodes
-
-    A KnowledgeNode represents a conclusion about EP like 
-        "The algorithm A produced the knowledge KCONCLUSION from the knowledges KHYPOTHESES. This algorithm is
-          a :symbolic calculation (its result is a proof) a :theorem (no calculation required, also a proof),
-          :numerical (subject to numerical errors like path-crossing in HC or checking if a float is zero), 
-          :probability_one, etc. The justification for this algorithm is CITATION"
+############################################
+Pandora is designed as follows
+    An AbstractEnumerativeProblem is an object which represents a branched covers
+        so that there is a function which analytically continues a fibre along a path 
+        in the base of the cover
+    If you code an abstract enumerative problem E, representing pi:X -> Y then there
+        should be a function E(y) which gives pi^{-1}(y) along with other functions 
+        for tracking a fibre S_1 over y_1 to the fibre over y_2 etc
     
-    And thus, we have EnumerativeAlgorithm(s) (EA(s)) and Citations(s)
+    Enumerative problems have enumerative properties, like say, 'degree'
+    The degree of an enumerative problem is a natural number, and so there is no need
+        to make a new structure for degree. It is coded as an enumerative problem like
+            degree = EnumerativeProblem{Int}("degree")
+        and more generally as 
+            effective_name = EnumerativeProperty{T}(name) where name is an internal name and effective_name is 
+                user facing. T is the type that the enumerative problem is.
+        
+    If EP is an EnumerativeProperty and E is an enumerative problem, you can call
+        EP(E)
+    Of course, Pandora needs to know how an algorithm to compute EP of an enumerative problem E. 
+    So as a developer, in order to make this work, you need to write a function 
+        compute_EP(E::EnumerativeProblem)
+    and provide meta-data in an AlgorithmDatum struct 
+        compute_EP_AD = AlgorithmDatum(...)
+    and push the key-value pair 
+        compute_EP=>compute_EP_AD
+    into the global constant ALGORITHM_DATA
+    
+    Now EP(E) will work, since
+        EnumerativeProperty(E::EnumerativeProblem)
+    when called like
+        EP(E)
+    automatically searches the dictionary ALGORITHM_DATA for an algorithm
+    whose metadata indicates it computes EP and runs it. 
 
-Here's an example:
-Suppose you have a function `compute_monodromy_group' which can compute the monodromy group of an enumerative problem.
-The type of the monodromy group is an Oscar PermGroup, and in order to compute the monodromy group, you must have 
-a sample of permutations. 
 
-1) Caste the input of your function in terms of EnumerativeProperties
-    a) if you need to solve the enumerative problem, use SYSTEM and BASE_FIBRE
-    b) for having a sample of permutations, we can either decide to make MONODROMY_SAMPLE its own EnumerativeProperty
-        or we can go straight from [SYSTEM,BASE_FIBRE]
-2) Create the output as its own enumerative problem with a 'name' which is printed in the REPL and the LaTeX summary
-    const MONODROMY_GROUP = EnumerativeProperty{PermGroup}("monodromy group") 
-3) Wrap the calling of MONODROMY_GROUP(EP::EnumerativeProblem) with a function that you can add documentation to
-    #Documentation for monodromy group mathematically
-    function monodromy_group(EP::EnumerativeProblem)     #Easy to write, always is function blah(EP) = BLAH(EP)
-       MONODROMY_GROUP(EP)                               #EnumerativeProperty can be called on EnumerativeProblems
-    end
-   MONDOROMY_GROUP(EP) is automatically a function (really a struct pretending to be a function) which searches
-   through the known algorithms whose output is MONODROMY_GROUP and carefully selects the best one, unless EP 
-   already has a MONODROMY_GROUP knowledge node, in which case it outputs that value. 
-4) Dually (instead of wrapping a function around an object call), wrap an object call around your function
-        'compute_monodromy_group' by creating COMPUTE_MONODROMY_GROUP as an EnumerativeAlgorithm. This struct
-        will collect meta-data
-             name::String #don't just name this "monodromy_group" since there are lots of algorithms, in theory, which  
-                            #can compute a monodromy group. Instead, do "monodromy group from samples" or something
-	         input_properties::Vector{EnumerativeProperty}  #these are the input enumerative properties you were asked 
-                                                            #to think about in step 1
-	         default_kwargs :: Dict{Symbol,Any}     #Include any optional keyword arguments along with their defaults
-                                                    #into the core function
-	         core_function :: Function              #This is the core function, compute_monodromy_group
-             output_property :: EnumerativeProperty #The output is MONODROMY_GROUP
-	         citation :: Citation #Cite the algorithm, theorem, or definition whereby this algorithm inherits credibility
-	         reliability :: Symbol  #assess its credibility
+
+
+
 
 
