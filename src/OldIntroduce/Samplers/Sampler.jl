@@ -1,3 +1,5 @@
+#export Sampler
+
 abstract type Sampler end
 
 function real_uniform(n::Int,n_samples::Int)
@@ -17,15 +19,35 @@ function complex_normal(n::Int,n_samples::Int)
 end
 
 mutable struct EllipseSampler{T<: Number} <: Sampler
-    n :: Int
+    n :: Int                                            # n is the dimension of the parameter space, i.e., the length of a vector in the sample produced. 
     n_samples :: Int
     predistribution 
     transform_matrix :: Matrix{T} 
     translation :: Vector{T}
 end
 
+function n(ell_sampler::EllipseSampler)
+    ell_sampler.n
+end
+
+function n_samples(ell_sampler::EllipseSampler)
+    ell_sampler.n_samples
+end
+
+function predistribution(ell_sampler::EllipseSampler)
+    ell_sampler.predistribution
+end
+
+function transform_matrix(ell_sampler::EllipseSampler)
+    ell_sampler.transform_matrix
+end
+
+function translation(ell_sampler::EllipseSampler)
+    ell_sampler.translation
+end
+
 function sample(S::EllipseSampler)
-    map(x->Vector{ComplexF64}(S.transform_matrix*x+S.translation), S.predistribution(S.n,S.n_samples))
+    map(x->Vector{ComplexF64}(transform_matrix(S)*x+translation(S)), predistribution(S)(S.n,n_samples(S)))
 end
 
 function is_real(S::Sampler)

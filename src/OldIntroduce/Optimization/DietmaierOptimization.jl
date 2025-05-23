@@ -1,3 +1,5 @@
+#export dietmaier_scheme, initialize_real_optimizer
+
 
 function dietmaier_scheme(EP::EnumerativeProblem) :: ScoringScheme
     objective = dietmaier_pair
