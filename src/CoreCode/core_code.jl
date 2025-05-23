@@ -6,7 +6,9 @@ export #main types
 
 
 export 
-    algorithms_which_return
+    algorithms_which_return,
+    base_parameters,
+    base_fibre
 
 ##############################################################
 #############  Warning and Error Messages ####################
@@ -257,6 +259,7 @@ ambient_dimension(EP::EnumerativeProblem) = length(variables(EP))
 n_variables(EP::EnumerativeProblem) = ambient_dimension(EP)
 n_polynomials(EP::EnumerativeProblem) = length(expressions(EP))
 n_parameters(EP::EnumerativeProblem) = length(parameters(EP))
+base_parameters(EP::EnumerativeProblem) = base_fibre(EP)[2]
 
 
 
