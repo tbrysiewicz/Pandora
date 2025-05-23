@@ -15,11 +15,9 @@ end
 #This is the function which increments all relevant step datum in an optimizer data
 #  prior to running an improvement step
 function increment!(OD::OptimizerData, N::Int) 
-    OD.step = OD.
-    step+1
+    OD.step = OD.step+1
     OD.steps_no_major_progress = OD.steps_no_major_progress+1
     OD.steps_no_progress = OD.steps_no_progress+1
-
     OD.parameters_solved = OD.parameters_solved + N
 end
 
