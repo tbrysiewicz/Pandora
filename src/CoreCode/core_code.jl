@@ -8,7 +8,9 @@ export #main types
 export 
     algorithms_which_return,
     base_parameters,
-    base_fibre
+    base_fibre,
+    system,
+    degree
 
 ##############################################################
 #############  Warning and Error Messages ####################
