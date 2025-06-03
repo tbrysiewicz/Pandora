@@ -335,7 +335,7 @@ function local_triangle_refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem, 
 	refinement_threshold = 0.0
 	if fibre_function_type(VSD) == :continuous
 		polygons = vcat(complete_polygons(VSD), incomplete_polygons(VSD)) #this does not include the newly created incomplete rectangles that have been added at the current stage of refinement. Perhaps it should
-		refinement_threshold = continuous_fibre_function_refinement_threshold(GM, polygons)
+		refinement_threshold = continuous_fibre_function_refinement_threshold(graph_mesh(VSD), polygons)
 		for T in newly_created_triangles
 		triangle = [findfirst(x->x[1] == y, function_cache(graph_mesh(VSD))) for y in T]
 		is_complete(triangle, graph_mesh(VSD); fibre_function_type = :continuous, continuous_function_refinement_threshold = refinement_threshold) ? push_to_complete_polygons!(VSD, rectangle) : push_to_incomplete_polygons!(VSD, rectangle)
@@ -558,13 +558,20 @@ function is_continuous(GM::GraphMesh)
 end
 =#
 function is_continuous(GM::GraphMesh)
-	repeat_dict = Dict()
+	value_tally = Dict()
 	for v in output_values(GM)
-		get!(repeat_dict, v, 0)
-		repeat_dict[v] += 1
+		get!(value_tally, v, 0)
+		value_tally[v] += 1
 	end
-	number_of_repeated_values = length(filter(x->repeat_dict[x] > 1, keys(repeat_dict)))
-	number_of_repeated_values/length(keys(repeat_dict)) < 0.2 ? (return true) : (return false)
+	println("n distinct values: ", length(keys(value_tally)))
+	if 	length(keys(value_tally)) < 50 
+		println("Not continuous")
+		return false 
+	else
+		println("Continuous")
+		 (return true) 
+	end
+	#if there are less than 50 unique values, then the fibre function is discrete
 end
 
 #determines a threshold for which polygons should be refined based on the difference in fibre function values across each polygon
