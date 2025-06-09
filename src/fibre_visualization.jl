@@ -185,9 +185,9 @@ function initialize_valued_subdivision(EP::EnumerativeProblem;
 	incomplete_polygons::Vector{Vector{Int}} = []
 	
 	if fibre_function_type == :continuous
-		threshold = continuous_fibre_function_refinement_threshold(initial_graphmesh, polygons)
+		refinement_threshold = continuous_fibre_function_refinement_threshold(initial_graphmesh, polygons)
 		for t in polygons
-			is_complete(t, initial_graphmesh; fibre_function_type = :continuous, continuous_function_refinement_threshold = threshold) ? push!(complete_polygons, t) : push!(incomplete_polygons, t)
+			is_complete(t, initial_graphmesh; tol = refinement_threshold) ? push!(complete_polygons, t) : push!(incomplete_polygons, t)
 		end
 	else
 		for t in polygons
@@ -279,166 +279,120 @@ end
 
 #REFINEMENT FUNCTIONS
 
-function global_delaunay_refine!(SD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; 
-	fibre_function = x->n_real_solutions(x), insertion_method = triforce_point_insertion,kwargs...)
-	new_parameters, resolution_used = refinement_parameters(SD, insertion_method, resolution)
-	length(new_parameters) == 0 && return resolution_used
-	inserted_point_solutions = solve(EP, new_parameters)
-	length(inserted_point_solutions) != length(new_parameters) && error("Did not solve for each parameter")
-	for i in eachindex(inserted_point_solutions)
-		push_to_graph_mesh!(graph_mesh(SD), (new_parameters[i], Float64(fibre_function(inserted_point_solutions[i]))))
+function global_delaunay_refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; 
+	fibre_function = x->n_real_solutions(x), insertion_method = sierpinski_point_insertion, kwargs...)
+	new_parameters_to_solve::Vector{Vector{Float64}} = []
+	resolution_used = 0
+	for T in incomplete_polygons(VSD)
+		T_parameters = [graph_mesh(VSD)[v][1] for v in T]
+		new_params, new_polygons = insertion_method(T_parameters)
+		if length(new_params) > 0
+			for p in new_params
+				if !(p in new_parameters_to_solve) && !(p in input_points(graph_mesh(VSD)))
+					push!(new_parameters_to_solve, p)
+					resolution_used += 1
+				end
+			end
+			resolution_used >= resolution && break
+		else
+			continue
+		end
 	end
-	retriangulate_valued_subdivision!(SD)
+	length(new_parameters_to_solve) == 0 && return resolution_used
+	inserted_point_solutions = solve(EP, new_parameters_to_solve)
+	length(inserted_point_solutions) != length(new_parameters_to_solve) && error("Did not solve for each parameter")
+	for i in eachindex(inserted_point_solutions)
+		push_to_graph_mesh!(graph_mesh(VSD), (new_parameters_to_solve[i], Float64(fibre_function(inserted_point_solutions[i]))))
+	end
+	retriangulate_valued_subdivision!(VSD)
 	return resolution_used
 end
 
-function rectangular_refine!(SD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; 
-	fibre_function = x->n_real_solutions(x), insertion_method = rectangular_refine!,kwargs...)
-	new_parameters, resolution_used, selected_incomplete_rectangles, newly_created_rectangles = refinement_parameters_and_new_rectangles(SD, resolution)
-	length(new_parameters) == 0 && return resolution_used
-	inserted_point_solutions = solve(EP, new_parameters)
-	length(inserted_point_solutions) != length(new_parameters) && error("Did not solve for each parameter")
-	for i in eachindex(inserted_point_solutions)
-		push_to_graph_mesh!(graph_mesh(SD), (new_parameters[i], Float64(fibre_function(inserted_point_solutions[i]))))
-	end
-	for R in selected_incomplete_rectangles
-		delete_from_incomplete_polygons!(SD, R)
-	end
-	refinement_threshold = 0.0
-	if fibre_function_type(SD) == :continuous
-		polygons = vcat(complete_polygons(SD), incomplete_polygons(SD)) #this does not include the newly created incomplete rectangles that have been addeda the current stage of refinement. Perhaps it should
-		refinement_threshold = continuous_fibre_function_refinement_threshold(graph_mesh(SD), polygons)
-		for R in newly_created_rectangles
-		rectangle = [findfirst(x->x[1] == y, function_cache(graph_mesh(SD))) for y in R]
-		is_complete(rectangle, graph_mesh(SD); fibre_function_type = :continuous, continuous_function_refinement_threshold = refinement_threshold) ? push_to_complete_polygons!(SD, rectangle) : push_to_incomplete_polygons!(SD, rectangle)
-		end
-	else
-		for R in newly_created_rectangles
-		rectangle = [findfirst(x->x[1] == y, function_cache(graph_mesh(SD))) for y in R]
-		is_complete(rectangle, graph_mesh(SD)) ? push_to_complete_polygons!(SD, rectangle) : push_to_incomplete_polygons!(SD, rectangle)
+function locally_refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; fibre_function = x->n_real_solutions(x), local_refinement_method = rectangular_refine!)
+	refined_polygons::Vector{Vector{Int64}} = []
+	polygons_to_solve_and_sort::Vector{Vector{Vector{Float64}}} = []
+	new_parameters_to_solve::Vector{Vector{Float64}} = []
+	resolution_used = 0
+	for P in incomplete_polygons(VSD)
+		P_parameters = [graph_mesh(VSD)[v][1] for v in P]
+		new_params, new_polygons = local_refinement_method(P_parameters)
+		if length(new_params) > 0
+			push!(refined_polygons, P)
+			push!(polygons_to_solve_and_sort, new_polygons...)
+			for p in new_params
+				if !(p in new_parameters_to_solve) && !(p in input_points(graph_mesh(VSD)))
+					push!(new_parameters_to_solve, p)
+					resolution_used += 1
+				end
+			end
+			resolution_used >= resolution && break
+		else
+			continue
 		end
 	end
-	return resolution_used
-end
-
-function local_triangle_refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; fibre_function = x->n_real_solutions(x), insertion_method = triforce_point_insertion,kwargs...)
-	new_parameters, resolution_used, selected_incomplete_triangles, newly_created_triangles = refinement_parameters_and_triangles(VSD, resolution; triangular_point_insertion = insertion_method)
-	length(new_parameters) == 0 && return resolution_used
-	inserted_point_solutions = solve(EP, new_parameters)
-	length(inserted_point_solutions) != length(new_parameters) && error("Did not solve for each parameter")
-	for i in eachindex(inserted_point_solutions)
-		push_to_graph_mesh!(graph_mesh(VSD), (new_parameters[i], Float64(fibre_function(inserted_point_solutions[i]))))
+	length(new_parameters_to_solve) == 0 && return resolution_used
+	new_parameters_solutions = solve(EP, new_parameters_to_solve)
+	length(new_parameters_solutions) != length(new_parameters_to_solve) && error("Did not solve for each parameter")
+	for i in eachindex(new_parameters_solutions)
+		push_to_graph_mesh!(graph_mesh(VSD), (new_parameters_to_solve[i], Float64(fibre_function(new_parameters_solutions[i]))))
 	end
-	for T in selected_incomplete_triangles
-		delete_from_incomplete_polygons!(VSD, T)
+	for P in refined_polygons
+		delete_from_incomplete_polygons!(VSD, P)
 	end
-	refinement_threshold = 0.0
+	refinement_tol = 0.0
 	if fibre_function_type(VSD) == :continuous
-		polygons = vcat(complete_polygons(VSD), incomplete_polygons(VSD)) #this does not include the newly created incomplete rectangles that have been added at the current stage of refinement. Perhaps it should
-		refinement_threshold = continuous_fibre_function_refinement_threshold(graph_mesh(VSD), polygons)
-		for T in newly_created_triangles
-		triangle = [findfirst(x->x[1] == y, function_cache(graph_mesh(VSD))) for y in T]
-		is_complete(triangle, graph_mesh(VSD); fibre_function_type = :continuous, continuous_function_refinement_threshold = refinement_threshold) ? push_to_complete_polygons!(VSD, rectangle) : push_to_incomplete_polygons!(VSD, rectangle)
-		end
-	else
-		for T in newly_created_triangles
-		triangle = [findfirst(x->x[1] == y, function_cache(graph_mesh(VSD))) for y in T]
-		is_complete(triangle, graph_mesh(VSD)) ? push_to_complete_polygons!(VSD, triangle) : push_to_incomplete_polygons!(VSD, triangle)
-		end
+		polygons = vcat(complete_polygons(VSD), incomplete_polygons(VSD)) #this does not include the newly created incomplete rectangles that have been added during the current stage of refinement. Perhaps it should
+		refinement_tol = continuous_fibre_function_refinement_threshold(graph_mesh(VSD), polygons)
+	end
+	for P in polygons_to_solve_and_sort
+		polygon = [findfirst(x->x[1]==y, function_cache(graph_mesh(VSD))) for y in P]
+		is_complete(polygon, graph_mesh(VSD); tol = refinement_tol) ? push_to_complete_polygons!(VSD, polygon) : push_to_incomplete_polygons!(VSD, polygon)
 	end
 	return resolution_used
 end
 
-function local_triforce_refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; fibre_function = x->n_real_solutions(x),kwargs...)
-	return local_triangle_refine!(VSD, EP, resolution; fibre_function = fibre_function, insertion_method = triforce_point_insertion, kwargs...)
+function quadtree_insertion(P::Vector{Vector{Float64}})
+	center = [sum([x[1] for x in P])/4, sum([x[2] for x in P])/4]
+	midpoint1 = midpoint([P[1], P[2]])
+	midpoint2 = midpoint([P[2], P[3]])
+	midpoint3 = midpoint([P[3], P[4]])
+	midpoint4 = midpoint([P[4], P[1]])
+	rectangle_1 = [P[1], midpoint1, center, midpoint4]
+	rectangle_2 = [P[2], midpoint2, center, midpoint1]
+	rectangle_3 = [P[3], midpoint3, center, midpoint2]
+	rectangle_4 = [P[4], midpoint4, center, midpoint3]
+	return [midpoint1, midpoint2, midpoint3, midpoint4, center], [rectangle_1, rectangle_2, rectangle_3, rectangle_4]
 end
 
-function local_barycenter_refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; fibre_function = x->n_real_solutions(x),kwargs...)
-	return local_triangle_refine!(VSD, EP, resolution; fibre_function = fibre_function, insertion_method = barycenter_point_insertion, kwargs...)
+function random_point_insertion(P::Vector{Vector{Float64}})
+	c = randn(Float64, length(P))
+	c = map(abs, c)
+	c = c./sum(c)
+	random_convex_combination = [P[i].*c[i] for i in eachindex(P)]
+	random_convex_combination = sum(random_convex_combination)
+	triangle_1 = [P[1], P[2], random_convex_combination]
+	triangle_2 = [P[2], P[3], random_convex_combination]
+	triangle_3 = [P[3], P[1], random_convex_combination]
+	return [random_convex_combination], [triangle_1, triangle_2, triangle_3]
 end
 
-function local_random_refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; fibre_function = x->n_real_solutions(x),kwargs...)
-	return local_triangle_refine!(VSD, EP, resolution; fibre_function = fibre_function, insertion_method = random_point_insertion, kwargs...)
+function sierpinski_point_insertion(P::Vector{Vector{Float64}})
+	midpoint_1 = midpoint([P[1], P[2]])
+	midpoint_2 = midpoint([P[1], P[3]])
+	midpoint_3 = midpoint([P[2], P[3]])
+	triangle_1 = [P[1], midpoint_1, midpoint_2]
+	triangle_2 = [P[2], midpoint_3, midpoint_1]
+	triangle_3 = [P[3], midpoint_2, midpoint_3]
+	return [midpoint_1, midpoint_2, midpoint_3], [triangle_1, triangle_2, triangle_3]
 end
 
-#determines the parameters to be inserted into the graph mesh in a single stage of refinement
-#TODO: Need to fix this so that polygons are randomly selected from the incomplete_polygons list. 
-function refinement_parameters(VSD::ValuedSubdivision, insertion_method = triforce_point_insertion, resolution = 1000)
-	new_parameters::Vector{Vector{Float64}} = []
-	resolution_used = 0
-	for T in incomplete_polygons(VSD)
-		resolution_used >= resolution && break #checking to see if there is any resolution "left" to insert another point
-		parameters_to_insert_in_polygon = insertion_method(T, graph_mesh(VSD))
-		number_of_points_inserted = 0
-		for i in parameters_to_insert_in_polygon 
-			if !(i in new_parameters) && !(i in input_points(graph_mesh(VSD))) #check to make sure that the inserted parameters are not already inserted into another polygon or already in the graph mesh
-				push!(new_parameters, i)
-				number_of_points_inserted += 1
-			end
-		end
-		resolution_used += number_of_points_inserted
-	end
-	return new_parameters, resolution_used
+function barycenter_point_insertion(P::Vector{Vector{Float64}})
+	barycenter = midpoint([v for v in P])
+	triangle_1 = [P[1], P[2], barycenter]
+	triangle_2 = [P[2], P[3], barycenter]
+	triangle_3 = [P[3], P[1], barycenter]
+	return [barycenter], [triangle_1, triangle_2, triangle_3]
 end
-
-#determines the parameters to be inserted into the graph mesh for rectangular refinement and also tracks which rectangles need to be deleted and added
-#TODO: Need to fix this so that polygons are randomly selected from the incomplete_polygons list. 
-function refinement_parameters_and_new_rectangles(VSD::ValuedSubdivision, resolution = 1000)
-	new_parameters::Vector{Vector{Float64}} = []
-	selected_incomplete_rectangles::Vector{Vector{Int64}} = []
-	newly_created_rectangles::Vector{Vector{Vector{Float64}}} = []
-	resolution_used = 0
-	for T in incomplete_polygons(VSD)
-		resolution_used >= resolution && break #checking to see if there is any resolution "left" to insert another point
-		parameters_to_insert_in_polygon = rectangular_point_insertion(T, graph_mesh(VSD))
-		number_of_points_inserted = 0
-		for i in parameters_to_insert_in_polygon 
-			if !(i in new_parameters) && !(i in input_points(graph_mesh(VSD))) #check to make sure that the inserted parameters are not already inserted into another polygon or already in the graph mesh
-				push!(new_parameters, i)
-				number_of_points_inserted += 1
-			end
-		end
-		resolution_used += number_of_points_inserted
-		number_of_points_inserted > 0 && push!(selected_incomplete_rectangles, T)
-		push!(newly_created_rectangles, [graph_mesh(VSD)[T[1]][1], parameters_to_insert_in_polygon[1], parameters_to_insert_in_polygon[5], parameters_to_insert_in_polygon[4]])
-		push!(newly_created_rectangles, [parameters_to_insert_in_polygon[1], graph_mesh(VSD)[T[2]][1], parameters_to_insert_in_polygon[2], parameters_to_insert_in_polygon[5]])
-		push!(newly_created_rectangles, [parameters_to_insert_in_polygon[5], parameters_to_insert_in_polygon[2], graph_mesh(VSD)[T[3]][1], parameters_to_insert_in_polygon[3]])
-		push!(newly_created_rectangles, [parameters_to_insert_in_polygon[4], parameters_to_insert_in_polygon[5], parameters_to_insert_in_polygon[3], graph_mesh(VSD)[T[4]][1]])
-	end
-	return new_parameters, resolution_used, selected_incomplete_rectangles, newly_created_rectangles
-end
-
-#for local triangle refinement, the newly inserted parameters as well as the triangles into which they are inserted need to be tracked (this is because those triangles need to be deleted from the VSD and replaced by the new triangles)
-function refinement_parameters_and_triangles(VSD::ValuedSubdivision, resolution = 1000; triangular_point_insertion = triforce_point_insertion)
-	new_parameters::Vector{Vector{Float64}} = []
-	selected_incomplete_triangles::Vector{Vector{Int64}} = []
-	newly_created_triangles::Vector{Vector{Vector{Float64}}} = []
-	resolution_used = 0
-	for T in incomplete_polygons(VSD)
-		resolution_used >= resolution && break #checking to see if there is any resolution "left" to insert another point
-		parameters_to_insert_in_polygon = triangular_point_insertion(T, graph_mesh(VSD))
-		number_of_points_inserted = 0
-		for i in parameters_to_insert_in_polygon 
-			if !(i in new_parameters) && !(i in input_points(graph_mesh(VSD))) #check to make sure that the inserted parameters are not already inserted into another polygon or already in the graph mesh
-				push!(new_parameters, i)
-				number_of_points_inserted += 1
-			end
-		end
-		resolution_used += number_of_points_inserted
-		number_of_points_inserted > 0 && push!(selected_incomplete_triangles, T)
-		if triangular_point_insertion == triforce_point_insertion
-			push!(newly_created_triangles, [graph_mesh(VSD)[T[1]][1], parameters_to_insert_in_polygon[1], parameters_to_insert_in_polygon[2]])
-			push!(newly_created_triangles, [parameters_to_insert_in_polygon[1], graph_mesh(VSD)[T[2]][1], parameters_to_insert_in_polygon[3]])
-			push!(newly_created_triangles, [parameters_to_insert_in_polygon[2], parameters_to_insert_in_polygon[3], graph_mesh(VSD)[T[3]][1]])
-		elseif triangular_point_insertion == random_point_insertion || triangular_point_insertion == barycenter_point_insertion
-			push!(newly_created_triangles, [graph_mesh(VSD)[T[1]][1], graph_mesh(VSD)[T[2]][1], parameters_to_insert_in_polygon[1]])
-			push!(newly_created_triangles, [parameters_to_insert_in_polygon[1], graph_mesh(VSD)[T[2]][1], graph_mesh(VSD)[T[3]][1]])
-			push!(newly_created_triangles, [graph_mesh(VSD)[T[1]][1], parameters_to_insert_in_polygon[1], graph_mesh(VSD)[T[3]][1]])
-		end
-	end
-	return new_parameters, resolution_used, selected_incomplete_triangles, newly_created_triangles
-end
-
 
 function delaunay_valued_subdivision(GM::GraphMesh, fibre_function_type)
 	vertices = []
@@ -464,9 +418,9 @@ function delaunay_valued_subdivision(GM::GraphMesh, fibre_function_type)
 			polygon = [index_1,index_2,index_3]
 			push!(triangles, polygon)
 		end
-		refinement_threshold = continuous_fibre_function_refinement_threshold(GM, triangles)
+		refinement_tol = continuous_fibre_function_refinement_threshold(GM, triangles)
 		for t in triangles
-			is_complete(t, GM; fibre_function_type = :continuous, continuous_function_refinement_threshold = refinement_threshold) ? push!(complete_triangles, t) : push!(incomplete_triangles, t)
+			is_complete(t, GM; tol = refinement_tol) ? push!(complete_triangles, t) : push!(incomplete_triangles, t)
 		end
 	else
 		for T in triangle_iterator
@@ -486,69 +440,21 @@ function delaunay_valued_subdivision(GM::GraphMesh, fibre_function_type)
 	return(VSD)
 end
 
-#TODO: Why did VSD = delaunay_valued_subdivision(graph_mesh(VSD))
-#  not overwrite VSD?
 function retriangulate_valued_subdivision!(VSD::ValuedSubdivision)
 	new_VSD = delaunay_valued_subdivision(graph_mesh(VSD), fibre_function_type(VSD))
 	set_complete_polygons!(VSD, complete_polygons(new_VSD))
 	set_incomplete_polygons!(VSD, incomplete_polygons(new_VSD))
 end
 
-function random_point_insertion(p::Vector{Int}, GM::GraphMesh) #returns a random point in the convex hull of a triangle from the graphmesh
-	polygon_vertices = [GM[x][1] for x in p]
-	c = randn(Float64, 3)
-	c = map(abs, c)
-	c = c./sum(c)
-	random_convex_combination = [polygon_vertices[i].*c[i] for i in 1:3]
-	random_convex_combination = sum(random_convex_combination)
-	return [random_convex_combination]
-end
-
 function midpoint(P::Vector{Vector{Float64}})
     return((sum(P))./length(P))
 end
 
- #returns "triforce" points
-function triforce_point_insertion(p::Vector{Int}, GM::GraphMesh)
-	polygon_vertices = [GM[x][1] for x in p]
-	midpoint_1 = midpoint([polygon_vertices[1], polygon_vertices[2]])
-	midpoint_2 = midpoint([polygon_vertices[1], polygon_vertices[3]])
-	midpoint_3 = midpoint([polygon_vertices[2], polygon_vertices[3]])
-	return [midpoint_1, midpoint_2, midpoint_3]
-end
-
-#inserts 4 points into rectangle (center of rectangle and midpoint of each edge)
-function rectangular_point_insertion(p::Vector{Int}, GM::GraphMesh)
-	rectangle_vertices = [GM[x][1] for x in p]
-	center = [sum([x[1] for x in rectangle_vertices])/4, sum([x[2] for x in rectangle_vertices])/4]
-	midpoint1 = midpoint([rectangle_vertices[1], rectangle_vertices[2]])
-	midpoint2 = midpoint([rectangle_vertices[2], rectangle_vertices[3]])
-	midpoint3 = midpoint([rectangle_vertices[3], rectangle_vertices[4]])
-	midpoint4 = midpoint([rectangle_vertices[4], rectangle_vertices[1]])
-	return [midpoint1, midpoint2, midpoint3, midpoint4, center] #is this the right formatting? Should there be another set of brackets around this?
-end
-
-function barycenter_point_insertion(p::Vector{Int}, GM::GraphMesh)
-	polygon_vertices = [GM[x][1] for x in p]
-	return [midpoint([x for x in polygon_vertices])]
-end
-
-#checks if all polygon vertices share the same fibre function value. 
-#TODO: Make it work for non-discrete valued functions
-function is_complete(p::Vector{Int}, GM::GraphMesh; fibre_function_type = :discrete, continuous_function_refinement_threshold = 0.0) 
-	if fibre_function_type == :discrete
-		v1_value = GM[p[1]][2]
-		for i in p[2:end]
-			vval = GM[i][2]
-			if vval!=v1_value
-				return(false)
-			end
-		end
-		return(true)
-	elseif fibre_function_type == :continuous
-		vertex_function_values = sort([GM[x][2] for x in p])
-		vertex_function_values[end] - vertex_function_values[1] <= continuous_function_refinement_threshold ? (return true) : (return false)
-	end
+#checks if the max difference between vertex fibre function values is less than some tolerance. If so returns true, 
+#otherwise returns false
+function is_complete(p::Vector{Int}, GM::GraphMesh; tol = 0.0) 
+	vertex_function_values = sort([GM[x][2] for x in p])
+	vertex_function_values[end] - vertex_function_values[1] <= tol ? (return true) : (return false)
 end
 
 #CONTINUOUS FIBRE FUNCTION VISUALIZATION
@@ -586,7 +492,6 @@ function continuous_fibre_function_refinement_threshold(GM::GraphMesh, polygons:
 	return polygon_difference_values[threshold_index]
 end
 
-
 #VISUALIZATION
 function visualize(GM::GraphMesh)
     scatter(first.(input_points(GM)), last.(input_points(GM)), 
@@ -596,7 +501,7 @@ end
 #TODO: Really use kwargs... here for passing xlims/ylims to initialize valued subdivision
 function visualizer(EP::EnumerativeProblem; xlims=[-1,1], ylims = [-1,1], 
 	initial_resolution = 1000,	total_resolution = 4*initial_resolution,  
-	fibre_function = x-> n_real_solutions(x), refine_function! = global_delaunay_refine!, mesh_function = trihexagonal_mesh,
+	fibre_function = x-> n_real_solutions(x), refine_function = global_delaunay_refine!, mesh_function = trihexagonal_mesh, local_insertion_function = quadtree_insertion,
 	kwargs...)
 
 	#Check enumerative problem is visualizable
@@ -608,11 +513,13 @@ function visualizer(EP::EnumerativeProblem; xlims=[-1,1], ylims = [-1,1],
 	end
 
 	VSD = initialize_valued_subdivision(new_EP; xlims = xlims, ylims = ylims, 
-	fibre_function = fibre_function, mesh_function = mesh_function, kwargs...)
+	fibre_function = fibre_function, initial_resolution = initial_resolution, mesh_function = mesh_function, kwargs...)
+	println("initial subdivision complete")
 
 	remaining_resolution = total_resolution - initial_resolution
 	while remaining_resolution > 0
-		resolution_used = refine_function!(VSD, new_EP, remaining_resolution; fibre_function = fibre_function, kwargs...)
+		resolution_used = refine_function(VSD, new_EP, remaining_resolution; fibre_function = fibre_function, local_refinement_method = local_insertion_function, kwargs...)
+		println("Refinement step complete")
 		if resolution_used > 0
 			remaining_resolution -= resolution_used
 		else
@@ -626,28 +533,30 @@ end
 
 function visualize(EP::EnumerativeProblem; xlims=[-1,1], ylims = [-1,1], 
 	initial_resolution = 1000,	total_resolution = 4*initial_resolution,  
-	fibre_function = x-> n_real_solutions(x), refine_function! = global_delaunay_refine!, mesh_function = trihexagonal_mesh, strategy = nothing,
+	fibre_function = x-> n_real_solutions(x), refine_function = global_delaunay_refine!, mesh_function = trihexagonal_mesh, strategy = nothing,
 	kwargs...)
 	if isnothing(strategy)
 		return visualizer(EP::EnumerativeProblem; xlims=xlims, ylims = ylims, 
 		initial_resolution = initial_resolution, total_resolution = total_resolution,  
-		fibre_function = fibre_function, refine_function! = refine_function!, mesh_function = mesh_function,
+		fibre_function = fibre_function, refine_function = refine_function, mesh_function = mesh_function,
 		kwargs...)
 	elseif strategy == :quadtree
 		return visualizer(EP::EnumerativeProblem; xlims = xlims, ylims = ylims, initial_resolution = initial_resolution, total_resolution = total_resolution,
-		fibre_function = fibre_function, refine_function! = rectangular_refine!, mesh_function = rectangular_mesh, kwargs...)
+		fibre_function = fibre_function, refine_function = locally_refine!, mesh_function = rectangular_mesh, local_insertion_function = quadtree_insertion, kwargs...)
 	elseif strategy == :barycentric
 		return visualizer(EP::EnumerativeProblem; xlims = xlims, ylims = ylims, initial_resolution = initial_resolution, total_resolution = total_resolution,
-		fibre_function = fibre_function, refine_function! = local_barycenter_refine!, mesh_function = trihexagonal_mesh, kwargs...)
+		fibre_function = fibre_function, refine_function = locally_refine!, mesh_function = trihexagonal_mesh,
+		local_insertion_function = barycenter_point_insertion, kwargs...)
 	elseif strategy == :sierpinski
 		return visualizer(EP::EnumerativeProblem; xlims = xlims, ylims = ylims, initial_resolution = initial_resolution, total_resolution = total_resolution,
-		fibre_function = fibre_function, refine_function! = local_triforce_refine!, mesh_function = trihexagonal_mesh, kwargs...)
+		fibre_function = fibre_function, refine_function = locally_refine!, mesh_function = trihexagonal_mesh, 
+		local_insertion_function = sierpinski_point_insertion, kwargs...)
 	elseif strategy == :random
 		return visualizer(EP::EnumerativeProblem; xlims = xlims, ylims = ylims, initial_resolution = initial_resolution, total_resolution = total_resolution,
-		fibre_function = fibre_function, refine_function! = local_random_refine!, mesh_function = trihexagonal_mesh, kwargs...)
+		fibre_function = fibre_function, refine_function = locally_refine!, mesh_function = trihexagonal_mesh, local_insertion_function = random_point_insertion, kwargs...)
 	elseif strategy == :delaunay||strategy == :Delaunay
 		return visualizer(EP::EnumerativeProblem; xlims = xlims, ylims = ylims, initial_resolution = initial_resolution, total_resolution = total_resolution,
-		fibre_function = fibre_function, refine_function! = global_delaunay_refine!, mesh_function = trihexagonal_mesh, kwargs...)
+		fibre_function = fibre_function, refine_function = global_delaunay_refine!, mesh_function = trihexagonal_mesh, kwargs...)
 	else
 		println("Invalid strategy entered. Valid strategies include: ")
 		println(":quadtree")
