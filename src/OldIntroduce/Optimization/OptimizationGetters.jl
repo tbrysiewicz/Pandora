@@ -10,7 +10,7 @@
     improvement_proportion :: Float64 = 1.0
 end
 
-### The mutable struct SCoringScheme
+# The mutable struct ScoringScheme
 
 mutable struct ScoringScheme
     objective                       #function we really want to optimize
@@ -20,6 +20,22 @@ mutable struct ScoringScheme
     error_checker
     goal
     name :: String
+end
+
+#Constructor for ScoringScheme
+
+function ScoringScheme(objective; 
+    barrier = zero_function, barrier_weight = 0.0, 
+    taboo = zero_function, error_checker = false_function,
+    goal = nothing, name = "")
+    function more_than_one_hundred_steps(O::Optimizer)
+        step(optimizer_data(O)) >100
+    end
+    if goal == nothing
+        ScoringScheme(objective,barrier,barrier_weight,taboo,error_checker, more_than_one_hundred_steps,name)
+    else
+        ScoringScheme(objective,barrier,barrier_weight,taboo,error_checker, goal,name)
+    end
 end
 
 ### The mutable struct Optimizer:
@@ -81,6 +97,8 @@ end
     improvement_proportion :: Float64 = 1.0
 end
 =#
+
+
 
 function step(OD::OptimizerData)
     OD.step

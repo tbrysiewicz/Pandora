@@ -14,7 +14,7 @@ using HomotopyContinuation: System,  @var
 #HC exports
 export System, @var
 
-using LinearAlgebra: norm, isapprox
+using LinearAlgebra: norm, isapprox, nullspace
 
 using Oscar: Perm, PermGroupElem, PermGroup, symmetric_group, sub,  order
 import Oscar: perm, degree
@@ -60,6 +60,9 @@ include("fibre_visualization.jl")
 #include("OldIntroduce/Optimization/Optimizer.jl")
 #include("OldIntroduce/Optimization/DietmaierOptimization.jl")
 
+include("samplers.jl")
+include("optimization_structs.jl")
+#include("optimization.jl")
 
 
 end # module Pandora

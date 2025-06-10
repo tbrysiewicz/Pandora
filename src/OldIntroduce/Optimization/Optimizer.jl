@@ -1,4 +1,4 @@
-function ScoringScheme(objective; 
+#=function ScoringScheme(objective; 
     barrier = zero_function, barrier_weight = 0.0, 
     taboo = zero_function, error_checker = false_function,
     goal = nothing, name = "")
@@ -11,7 +11,9 @@ function ScoringScheme(objective;
         ScoringScheme(objective,barrier,barrier_weight,taboo,error_checker, goal,name)
     end
 end
+=#   ##Copied to the code
 
+#=
 #This is the function which increments all relevant step datum in an optimizer data
 #  prior to running an improvement step
 function increment!(OD::OptimizerData, N::Int) 
@@ -20,9 +22,9 @@ function increment!(OD::OptimizerData, N::Int)
     OD.steps_no_progress = OD.steps_no_progress+1
     OD.parameters_solved = OD.parameters_solved + N
 end
+=# #copied to code
 
-
-
+#=
 function improve!(optimizer::Optimizer) 
 
     #Extract relevant names
@@ -46,8 +48,9 @@ function improve!(optimizer::Optimizer)
 
     return(optimizer)
 end
+=# #copied to the code
 
-
+#=
 function optimize!(O::Optimizer; max_steps = 100)
     G = goal(O)
     while G(O)==false && steps_no_major_progress(optimizer_data(O))<max_steps
@@ -56,8 +59,9 @@ function optimize!(O::Optimizer; max_steps = 100)
     end
     return(O)
 end
+=#  #copied to the code
 
-
+#=
 function update_settings!(optimizer,new_fibres)
     OD = optimizer_data(optimizer)
     S = sampler(optimizer)
@@ -85,6 +89,7 @@ function update_settings!(optimizer,new_fibres)
         S.translation = parameters(record_fibre(optimizer))
     end
 end
+=#  #copied to code
 
 function partition_optimizer_samples(optimizer:: Optimizer, new_fibres :: Vector{Fibre}) 
     n = length(new_fibres)
@@ -123,6 +128,7 @@ function partition_optimizer_samples(optimizer:: Optimizer, new_fibres :: Vector
 
 end
 
+#=
 function update_optimizer!(optimizer :: Optimizer, new_fibres :: Vector{Fibre})
     OD = optimizer_data(optimizer)
     N = length(new_fibres)
@@ -155,3 +161,4 @@ function update_optimizer!(optimizer :: Optimizer, new_fibres :: Vector{Fibre})
 
 
 end
+=#   #added to the code
