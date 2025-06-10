@@ -98,35 +98,14 @@ end
 end
 =#
 
+step(OD::OptimizerData) = OD.step
+parameters_solved(OD::OptimizerData) = OD.parameters_solved
+steps_no_progress(OD::OptimizerData) = OD.steps_no_progress
+steps_no_major_progress(OD::OptimizerData) = OD.steps_no_major_progress
+error_proportion(OD::OptimizerData) = OD.error_proportion
+taboo_proportion(OD::OptimizerData) = OD.taboo_proportion
+improvement_proportion(OD::OptimizerData) = OD.improvement_proportion
 
-
-function step(OD::OptimizerData)
-    OD.step
-end
-
-function parameters_solved(OD::OptimizerData)
-    OD.parameters_solved
-end
-
-function steps_no_progress(OD::OptimizerData)
-    OD.steps_no_progress
-end
-
-function steps_no_major_progress(OD::OptimizerData)
-    OD.steps_no_major_progress
-end
-
-function error_proportion(OD::OptimizerData)
-    OD.error_proportion
-end
-
-function taboo_proportion(OD::OptimizerData)
-    OD.taboo_proportion
-end
-
-function improvement_proportion(OD::OptimizerData)
-    OD.improvement_proportion
-end
 
 ### Getters for the struct Scoring scheme:
 #=
