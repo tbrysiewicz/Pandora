@@ -1,6 +1,6 @@
 import Base: getindex, iterate
 
-using Plots: scatter, plot, plot!, Shape, cgrad
+using Plots: scatter, scatter!, plot, plot!, Shape, cgrad
 using DelaunayTriangulation: triangulate, each_solid_triangle, triangle_vertices, get_point, convert_boundary_points_to_indices
 using LinearAlgebra: qr
 
@@ -240,7 +240,7 @@ function draw_triangle(triangle, color_value, GM::GraphMesh; label = false,
 	end
 end
 
-function draw_valued_subdivision(SD::ValuedSubdivision; xlims = [-1,1],	ylims = [-1,1], kwargs...) #currently this function can only plot a ValuedSubdivision with a discrete fibre function
+function draw_valued_subdivision(SD::ValuedSubdivision; xlims = [-1,1],	ylims = [-1,1], plot_log_transform = false, kwargs...) 
 	my_plot = plot(xlims = xlims, ylims = ylims, aspect_ratio = :equal; kwargs...)
 	if fibre_function_type(SD) == :discrete
 		plotting_values = unique(output_values(graph_mesh(SD)))
@@ -263,16 +263,24 @@ function draw_valued_subdivision(SD::ValuedSubdivision; xlims = [-1,1],	ylims = 
 		polygons = vcat(complete_polygons(SD), incomplete_polygons(SD))
 		values = []
 		for p in polygons
-			vertex_values = [graph_mesh(SD)[v][2] for v in p]
+			if plot_log_transform == true
+				vertex_values = [log(graph_mesh(SD)[v][2]) for v in p]
+			else
+				vertex_values = [graph_mesh(SD)[v][2] for v in p]
+			end
 			polygon_value = sum(vertex_values)/length(p)
 			push!(values, polygon_value)
 		end
+		
 		max_value = max(values...)
 		min_value = min(values...)
+		println("max value: $max_value")
+		println("min value: $min_value")
 		for i in eachindex(polygons)
 			color_value = values[i]/(max_value - min_value)
 			draw_triangle(polygons[i], color_value, graph_mesh(SD))
 		end
+		scatter!([0.0], [0.0]; zcolor = [min_value, max_value], color = cgrad(:thermal, rev = false), markersize = 0, colorbar = true, label = false)
 		return my_plot
 	end
 end
@@ -514,12 +522,10 @@ function visualizer(EP::EnumerativeProblem; xlims=[-1,1], ylims = [-1,1],
 
 	VSD = initialize_valued_subdivision(new_EP; xlims = xlims, ylims = ylims, 
 	fibre_function = fibre_function, initial_resolution = initial_resolution, mesh_function = mesh_function, kwargs...)
-	println("initial subdivision complete")
 
 	remaining_resolution = total_resolution - initial_resolution
 	while remaining_resolution > 0
 		resolution_used = refine_function(VSD, new_EP, remaining_resolution; fibre_function = fibre_function, local_refinement_method = local_insertion_function, kwargs...)
-		println("Refinement step complete")
 		if resolution_used > 0
 			remaining_resolution -= resolution_used
 		else
