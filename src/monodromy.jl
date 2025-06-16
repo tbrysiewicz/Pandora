@@ -4,6 +4,7 @@ export
     monodromy,
     large_monodromy_sample,
     monodromy_group,
+    galois_group,
     monodromy_sample
 
 mutable struct MonodromyLoop

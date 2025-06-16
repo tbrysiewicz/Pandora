@@ -1,3 +1,6 @@
+export 
+    summarize
+
 struct LatexDocumentMetadata
     title::String
     author::String
