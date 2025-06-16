@@ -29,16 +29,15 @@ function compute_bezout_bound(F::System)::Int
     prod(deg_seq)
 end
 
-bezout_datum = AlgorithmDatum(
-    name = "Bézout Bound",
+compute_bezout_bound_datum = AlgorithmDatum(
+    name = "Bezout Bound",
     description = "Product of total degrees of the input polynomials",
     input_properties = [SYSTEM],
-    default_kwargs = Dict{Symbol,Any}(),
     output_property = BEZOUT_BOUND,
     reliability = :certified
 )
 
-ALGORITHM_DATA[compute_bezout_bound] = bezout_datum
+ALGORITHM_DATA[compute_bezout_bound] = compute_bezout_bound_datum
 
 
 
