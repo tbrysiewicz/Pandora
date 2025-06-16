@@ -104,9 +104,6 @@ function Base.show(io::IO, AD::AlgorithmDatum)
     println(io,"Algorithm Datum:        ",name(AD))
     println(io,description(AD))
     println(io,"Input:            ")
-    if reliability(AD)==:user_given
-    print("None (the algorithm always returns the user-given value) \n")
-    end
     for i in input_properties(AD)
         println(io,"                  ",i)
     end
@@ -116,27 +113,25 @@ function Base.show(io::IO, AD::AlgorithmDatum)
     println(io,"Reliability:      ",reliability(AD))
 end
 
-
-function user_given(EProp::EnumerativeProperty{T},value::T) where T 
-    function c()
-        return(value)
-    end
-    return(c)
+#Intentionally Empty
+function user_given() 
 end
 
-function user_given_datum(EProp::EnumerativeProperty) 
+const ANY = EnumerativeProperty{Any}("any")
+
+const user_given_datum =
     AlgorithmDatum(;
         name = "User given",
         description = "The user declared this property",
         input_properties = Vector{EnumerativeProperty}([]),
-        output_property = EProp,
+        output_property = ANY,
         citation = NULL_CITATION,
         reliability = :user_given
     )
-end
 
 
 global ALGORITHM_DATA = Dict{Function,AlgorithmDatum}([])
+ALGORITHM_DATA[user_given] = user_given_datum
 
 name(F::Function) = haskey(ALGORITHM_DATA, F) ? name(ALGORITHM_DATA[F]) : error(NOALG)
 description(F::Function) = haskey(ALGORITHM_DATA, F) ? description(ALGORITHM_DATA[F]) : error(NOALG)
@@ -356,10 +351,8 @@ function know!(EP::EnumerativeProblem,K::KnowledgeNode)
 end
 
 function know!(EP::EnumerativeProblem, EProp::EnumerativeProperty{T}, value::T) where T
-    f = user_given(EProp,value)
-    UGD = user_given_datum(EProp)
-    ALGORITHM_DATA[f]=UGD
-    learn!(EP,EProp; algorithm = f)
+    K = KnowledgeNode(EProp,value,Vector{KnowledgeNode}(), Dict{Symbol,Any}(), user_given)
+    know!(EP,K)
 end
 
 
