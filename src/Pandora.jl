@@ -6,9 +6,9 @@ const PROJECT_TOML = Pkg.TOML.parsefile(joinpath(@__DIR__, "..", "Project.toml")
 const VERSION_NUMBER = VersionNumber(PROJECT_TOML["version"])
 
 #Use from HC only
-using HomotopyContinuation: TrackerOptions, Result, subs, coefficients
+using HomotopyContinuation: TrackerOptions, Result, subs, coefficients, support_coefficients
 #Use and extend from HC
-import HomotopyContinuation: expressions, variables, parameters, solve, solutions
+import HomotopyContinuation: expressions, variables, parameters, solve, solutions, evaluate
 #Use from HC with intent to export
 using HomotopyContinuation: System,  @var
 #HC exports
@@ -16,9 +16,9 @@ export System, @var
 
 using LinearAlgebra: norm, isapprox, nullspace
 
-using Oscar: Perm, PermGroupElem, PermGroup, symmetric_group, sub,  order
+using Oscar: Perm, PermGroupElem, PermGroup, symmetric_group, sub,  order, Polyhedron
 import Oscar: perm, degree
-export gens, order, is_primitive, is_transitive
+export gens, order, is_primitive, is_transitive, describe
 
 function __init__()
 	print(raw"
@@ -43,6 +43,7 @@ function __init__()
 end
 
 include("CoreCode/core_code.jl")
+include("degree_bounds.jl")
 
 include("automation.jl")
 

@@ -1,24 +1,61 @@
 
 
 export 
-    bkk_bound,
-    affine_bkk_bound,
-    degree_sequence,
-    bezout_bound,
-    newton_polytopes
+#    bkk_bound,
+#    affine_bkk_bound,
+#    degree_sequence,
+#    newton_polytopes,
+    bezout_bound
 
 
-const BKK_BOUND = EnumerativeProperty{Int}("bkk torus bound")
+
+
+const BEZOUT_BOUND = EnumerativeProperty{Int}("bezout_bound")
+
+"""
+    bezout_bound(EP::EnumerativeProblem; kwargs...)
+
+Return the Bézout bound of the enumerative problem — the product of the total degrees of the input polynomials.
+"""
+function bezout_bound(EP::EnumerativeProblem; kwargs...)
+    BEZOUT_BOUND(EP; kwargs...)
+end
+
+# Core computation function takes only the input property System
+function compute_bezout_bound(F::System)::Int
+    G = specialize(F)
+    Ms = support_coefficients(G)[1]
+    deg_seq = [maximum(sum, eachcol(M)) for M in Ms]
+    prod(deg_seq)
+end
+
+bezout_datum = AlgorithmDatum(
+    name = "Bézout Bound",
+    description = "Product of total degrees of the input polynomials",
+    input_properties = [SYSTEM],
+    default_kwargs = Dict{Symbol,Any}(),
+    output_property = BEZOUT_BOUND,
+    reliability = :certified
+)
+
+ALGORITHM_DATA[compute_bezout_bound] = bezout_datum
+
+
+
+
+
+#=
+
+
+
+const BKK_BOUND = EnumerativeProperty{Int}("bkk (torus bound)")
 bkk_bound(EP::EnumerativeProblem; kwargs...) = BKK_BOUND(EP; kwargs...)
 
-const AFFINE_BKK_BOUND = EnumerativeProperty{Int}("bkk affine bound")
+const AFFINE_BKK_BOUND = EnumerativeProperty{Int}("bkk (affine bound)")
 affine_bkk_bound(EP::EnumerativeProblem; kwargs...) = AFFINE_BKK_BOUND(EP; kwargs...)
 
 const DEGREE_SEQUENCE = EnumerativeProperty{Vector{Int}}("degree sequence")
 degree_sequence(EP::EnumerativeProblem; kwargs...) = DEGREE_SEQUENCE(EP; kwargs...)
-
-const BEZOUT_BOUND = EnumerativeProperty{Int}("bezout bound")
-bezout_bound(EP::EnumerativeProblem; kwargs...) = BEZOUT_BOUND(EP; kwargs...)
 
 const NEWTON_POLYTOPES = EnumerativeProperty{Vector{Polyhedron}}("newton polytopes")
 newton_polytopes(EP::EnumerativeProblem; kwargs...) = NEWTON_POLYTOPES(EP; kwargs...)
@@ -77,3 +114,5 @@ function degree_sequence(EP::EnumerativeProblem)
     deg_seq = [max(map(x->sum(x),eachcol(M))...) for M in Ms]
     return(deg_seq)
 end
+
+=#

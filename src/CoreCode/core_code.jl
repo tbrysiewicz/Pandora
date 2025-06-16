@@ -10,7 +10,8 @@ export
     base_parameters,
     base_fibre,
     system,
-    degree
+    degree,
+    specialize
 
 ##############################################################
 #############  Warning and Error Messages ####################
@@ -67,33 +68,16 @@ global NULL_CITATION = Citation([""],"","",0)
 ###################      AlgorithmDatum     ##################
 ##############################################################
 
-struct AlgorithmDatum
-    name :: String
-    description :: String
-    input_properties :: Vector{EnumerativeProperty}
-    default_kwargs :: Dict{Symbol,Any}
-    output_property :: EnumerativeProperty
-	citation :: Citation #the citation for this algorithm (if follows from definitions, give citation for definition)
-	reliability :: Symbol
+Base.@kwdef struct AlgorithmDatum
+    name::String = "Unnamed Algorithm"
+    description::String = " an algorithm"
+    input_properties::Vector{EnumerativeProperty} = EnumerativeProperty[]
+    default_kwargs::Dict{Symbol,Any} = Dict{Symbol,Any}()
+    output_property::EnumerativeProperty = NULL_ENUMERATIVE_PROPERTY
+    citation::Citation = NULL_CITATION
+    reliability::Symbol = :null
 end
 
-function AlgorithmDatum(;
-    name :: String  = "Unnamed Algorithm",
-    description :: String = " an algorithm",
-    input_properties::Union{Vector{EnumerativeProperty},Vector{EnumerativeProperty{T}}} where T  = Vector{EnumerativeProperty}([]),
-	default_kwargs :: Dict{Symbol,Any} = Dict{Symbol,Any}(), # a dictionary of non-EP field inputs (e.g. # loops, etc) and the default values
-	output_property :: EnumerativeProperty = NULL_ENUMERATIVE_PROPERTY,  #the EP field which is the output of this algorithm 
-	citation :: Citation = NULL_CITATION, #the citation for this algorithm (if follows from definitions, give citation for definition)
-	reliability :: Symbol = :null)
-    AlgorithmDatum(
-        name,
-        description,
-        input_properties,
-        default_kwargs,
-        output_property,
-        citation,
-        reliability)
-end
 
 name(AD::AlgorithmDatum) = AD.name
 description(AD::AlgorithmDatum) = AD.description
@@ -140,13 +124,16 @@ function user_given(EProp::EnumerativeProperty{T},value::T) where T
     return(c)
 end
 
-const user_given_datum = AlgorithmDatum(;
-name = "User given",
-description = "The user declared this property",
-input_properties = Vector{EnumerativeProperty}([]),
-citation = NULL_CITATION,
-reliability = :user_given
-)
+function user_given_datum(EProp::EnumerativeProperty) 
+    AlgorithmDatum(;
+        name = "User given",
+        description = "The user declared this property",
+        input_properties = Vector{EnumerativeProperty}([]),
+        output_property = EProp,
+        citation = NULL_CITATION,
+        reliability = :user_given
+    )
+end
 
 
 global ALGORITHM_DATA = Dict{Function,AlgorithmDatum}([])
@@ -265,6 +252,13 @@ base_parameters(EP::EnumerativeProblem) = base_fibre(EP)[2]
 
 
 
+function specialize(F::System; P = nothing)
+    if P==nothing   
+        P = randn(Float64,length(parameters(F)))
+    end
+    return(System(evaluate(expressions(F), parameters(F)=>P)))
+end
+
 
 export knowledge, ambient_dimension, n_polynomials, n_parameters, variables, parameters, expressions, degree
 
@@ -332,11 +326,15 @@ end
 function learn!(EP::EnumerativeProblem, EProp::EnumerativeProperty{T}; 
     algorithm = nothing, kwargs...)      where T
 
+    #If the algorithm is not given, find an algorithm known to Pandora which
+    #  computes the given enumerative property
     if algorithm === nothing
         algorithm = find_algorithm(EProp,EP)  #find and algorithm which will obtain it
     end
-    
     f = algorithm
+
+    @assert(ALGORITHM_DATA[f].output_property==EProp)
+
     input_knowledge = [get_knowledge!(i,EP) for i in input_properties(f)]
     input_knowledge_values = [value(kn) for kn in input_knowledge]
     kwargs_to_pass = copy(default_kwargs(f))
@@ -359,7 +357,8 @@ end
 
 function know!(EP::EnumerativeProblem, EProp::EnumerativeProperty{T}, value::T) where T
     f = user_given(EProp,value)
-    ALGORITHM_DATA[f]=user_given_datum
+    UGD = user_given_datum(EProp)
+    ALGORITHM_DATA[f]=UGD
     learn!(EP,EProp; algorithm = f)
 end
 
