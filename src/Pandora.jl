@@ -5,8 +5,10 @@ using Pkg
 const PROJECT_TOML = Pkg.TOML.parsefile(joinpath(@__DIR__, "..", "Project.toml"))
 const VERSION_NUMBER = VersionNumber(PROJECT_TOML["version"])
 
+using Dates: today
+
 #Use from HC only
-using HomotopyContinuation: TrackerOptions, Result, subs, coefficients, support_coefficients, paths_to_track, degrees
+using HomotopyContinuation: TrackerOptions, Result, subs, coefficients, support_coefficients, paths_to_track, degrees, Expression, Variable
 #Use and extend from HC
 import HomotopyContinuation: expressions, variables, parameters, solve, solutions, evaluate
 #Use from HC with intent to export
@@ -65,6 +67,8 @@ include("samplers.jl")
 include("optimization_structs.jl")
 #include("optimization.jl")
 
+
+include("Summarization/summarize.jl")
 
 end # module Pandora
 
