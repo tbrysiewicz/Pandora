@@ -6,7 +6,7 @@ const PROJECT_TOML = Pkg.TOML.parsefile(joinpath(@__DIR__, "..", "Project.toml")
 const VERSION_NUMBER = VersionNumber(PROJECT_TOML["version"])
 
 #Use from HC only
-using HomotopyContinuation: TrackerOptions, Result, subs, coefficients, support_coefficients
+using HomotopyContinuation: TrackerOptions, Result, subs, coefficients, support_coefficients, paths_to_track, degrees
 #Use and extend from HC
 import HomotopyContinuation: expressions, variables, parameters, solve, solutions, evaluate
 #Use from HC with intent to export
@@ -16,7 +16,7 @@ export System, @var
 
 using LinearAlgebra: norm, isapprox, nullspace
 
-using Oscar: Perm, PermGroupElem, PermGroup, symmetric_group, sub,  order, Polyhedron, describe
+using Oscar: Perm, PermGroupElem, PermGroup, symmetric_group, sub,  order, Polyhedron, describe, convex_hull
 import Oscar: perm, degree
 export gens, order, is_primitive, is_transitive, describe
 
