@@ -93,6 +93,18 @@ mutable struct ScoringScheme
     name :: String                          # name of the ScoringScheme.
 end 
 
+
+# Base.show for ScoringScheme
+
+function Base.show(io::IO, SS::ScoringScheme)
+    if SS.name==""
+        print(io,"A scoring scheme with barrier weight ",SS.barrier_weight,".")
+    else
+        print(io,"The ",SS.name," scoring scheme with barrier weight ",SS.barrier_weight, ".")
+    end
+end
+
+
 # Getters for ScoringScheme
 
 function objective(SS:: ScoringScheme)
@@ -138,6 +150,7 @@ end
 
 
 
+
 # The mutable struct Optimizer:
 
 @kwdef mutable struct Optimizer
@@ -170,7 +183,7 @@ end
 
 
         optimizer.record_fibre = (EP(p),p)
-        optimizer.record_objective = SS.objective(optimizer.record_fibre)
+        optimizer.record_objective = SS.objective(optimizer.record_fibre[1])
         optimizer.path=[p]
 
         optimizer.optimizer_data = OptimizerData()
@@ -178,12 +191,39 @@ end
         return(optimizer)
     end
     
-    function Optimizer(EP::EnumerativeProblem, sampler :: Sampler, objective)
-        SS = ScoringScheme(objective)
+    function Optimizer(EP::EnumerativeProblem, sampler :: Sampler, objective; goal = nothing)
+        SS = ScoringScheme(objective, goal = goal)
         Optimizer(EP,sampler,SS)
     end
 
 end
+
+# Base.show for Optimizer
+
+function Base.show(io::IO, optimizer::Optimizer)
+    tenspaces="          "
+    println(io,"Optimizer setup for an enumerative problem of degree ",degree(optimizer.EP),".")
+    print(io,"\n\n")
+    println(io,tenspaces,tenspaces,"Progress Data",tenspaces)
+    println("---------------------------------------------------------")
+    println(io,"  Current score: ",optimizer.record_objective)
+    od = optimizer.optimizer_data
+    println("                         Step #:  ",od.step)
+    println("        Total parameters solved:  ",od.parameters_solved)
+    println("Steps since last minor progress:  ",od.steps_no_progress)
+    println("      since last major progress:  ",od.steps_no_major_progress)
+    println("          Last error proportion:  ",od.error_proportion)
+    println("          Last taboo proportion:  ",od.taboo_proportion)
+    println("    Last improvement proportion:  ",od.improvement_proportion)
+    println("                         Radius:  ", maximum(abs, vec(optimizer.sampler.transform_matrix)))
+    println("The parameters of the record fibre is:")
+    display(optimizer.record_fibre[2])
+    #info regarding radius or last improvement size 
+    #info regarding conditioning of the ellipse sampler
+    #interpretive information 
+    #soft-goal info
+end
+
 
 ##The getters for the struct Optimizer.
 
@@ -267,19 +307,36 @@ end
 
 
 ## Constructor for ScoringScheme
-function ScoringScheme( objective; 
+function ScoringScheme(objective; 
     barrier = zero_function,
     barrier_weight = 0.0, 
     taboo = zero_function, 
     error_checker = false_function,
     goal = nothing, 
     name = "")
-function more_than_one_hundred_steps(O::Optimizer)
-step(optimizer_data(O)) >100
+
+    function more_than_one_hundred_steps(O::Optimizer)
+        step(optimizer_data(O)) > 100
+    end
+
+    if goal == nothing
+        ScoringScheme(objective,
+                      barrier,
+                      barrier_weight,
+                      taboo,
+                      error_checker, 
+                      more_than_one_hundred_steps,
+                      name)
+    else
+        ScoringScheme(objective,
+                      barrier,
+                      barrier_weight,
+                      taboo,
+                      error_checker, 
+                      goal,
+                      name)
+    end
 end
-if goal == nothing
-ScoringScheme(objective,barrier,barrier_weight,taboo,error_checker, more_than_one_hundred_steps,name)
-else
-ScoringScheme(objective,barrier,barrier_weight,taboo,error_checker, goal,name)
-end
-end
+
+
+dietmaier_pair(p::Vector{ComplexF64}) = dietmaier_pair([p])

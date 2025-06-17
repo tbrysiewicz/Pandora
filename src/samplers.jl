@@ -25,6 +25,23 @@ mutable struct EllipseSampler{T<: Number} <: Sampler
                                                         # desired ellipse sample.
 end
 
+# Base.show for ScoringScheme
+
+function Base.show(io::IO, S::EllipseSampler)
+    tenspaces="          "
+    print(io,"\n")
+    println(io, tenspaces, "A sampler with the following values  ")
+    println("---------------------------------------------------------")
+    println(io,"Dimesion of the parameter space    : ", S.n )
+    println(io,"Number of samples                  : ", S.n_samples)
+    println(io, "Predistribution                    : ", S.predistribution)
+    println(io, "\nTransform_matrix: \n")
+    display(S.transform_matrix)
+    println(io, "\nTranslation vector: \n")
+    display(S.translation)
+end
+
+
 #Getters for EllipseSampler
 
 function n(ell_sampler::EllipseSampler)
