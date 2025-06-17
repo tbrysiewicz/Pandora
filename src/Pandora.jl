@@ -18,7 +18,7 @@ export System, @var
 
 using LinearAlgebra: norm, isapprox, nullspace
 
-using Oscar: Perm, PermGroupElem, PermGroup, symmetric_group, sub,  order, Polyhedron, describe, convex_hull
+using Oscar: Perm, PermGroupElem, PermGroup, symmetric_group, sub,  order, Polyhedron, describe, convex_hull, gens, is_transitive, orbits
 import Oscar: perm, degree
 export gens, order, is_primitive, is_transitive, describe
 

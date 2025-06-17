@@ -138,7 +138,7 @@ function subgroup(perms::Vector{PermGroupElem})
 end
 
 function group_generated_by_monodromy_loops(MLS::Vector{MonodromyLoop})
-    return(subgroup([ML.sigma for ML in MLS]))
+    return(subgroup(unique([ML.sigma for ML in MLS])))
 end
 
 const MONODROMY_GROUP = EnumerativeProperty{PermGroup}("monodromy group")
@@ -169,3 +169,6 @@ const group_generated_by_monodromy_loops_datum = AlgorithmDatum(
 )
 
 ALGORITHM_DATA[group_generated_by_monodromy_loops]=group_generated_by_monodromy_loops_datum
+
+
+include("monodromy_components.jl")
