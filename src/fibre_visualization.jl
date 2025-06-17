@@ -19,7 +19,6 @@ export
 	incomplete_polygons
 
 #GRAPHMESH
-#Never re-order the function_cache
 mutable struct GraphMesh
     function_cache :: Vector{Tuple{Vector{Float64},Float64}}
 end
@@ -316,7 +315,7 @@ function global_delaunay_refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem,
 	return resolution_used
 end
 
-function locally_refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; fibre_function = x->n_real_solutions(x), local_refinement_method = rectangular_refine!)
+function locally_refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; fibre_function = x->n_real_solutions(x), local_refinement_method = quadtree_insertion)
 	refined_polygons::Vector{Vector{Int64}} = []
 	polygons_to_solve_and_sort::Vector{Vector{Vector{Float64}}} = []
 	new_parameters_to_solve::Vector{Vector{Float64}} = []
