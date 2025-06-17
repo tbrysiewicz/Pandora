@@ -1,3 +1,6 @@
+export 
+    branched_cover_decomposition
+
 function restrict(G::PermGroup,O::Vector{Int64})
     S = sort(collect(O))
     relabel = Dict{Int,Int}()
@@ -11,7 +14,7 @@ function restrict(G::PermGroup,O::Vector{Int64})
 end
 
 
-function compute_components(EP::EnumerativeProblem)
+function branched_cover_decomposition(EP::EnumerativeProblem)
     G = galois_group(EP)
     if is_transitive(G)
         return([EP])

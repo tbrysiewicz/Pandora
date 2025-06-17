@@ -251,7 +251,7 @@ function draw_valued_subdivision(SD::ValuedSubdivision; xlims = [-1,1],	ylims = 
 			color_value = findfirst(x->x == i, plotting_values)/length(plotting_values)
 			for j in current_polygons
 					if (i in values_that_have_been_plotted) == false
-						draw_triangle(j, color_value, graph_mesh(SD), label = true, label_text = "$i real solutions"; kwargs...)
+						draw_triangle(j, color_value, graph_mesh(SD), label = true, label_text = "$i"; kwargs...)
 						push!(values_that_have_been_plotted, i)
 					else
 						draw_triangle(j, color_value, graph_mesh(SD), label = false; kwargs...)
@@ -466,11 +466,6 @@ function is_complete(p::Vector{Int}, GM::GraphMesh; tol = 0.0)
 end
 
 #CONTINUOUS FIBRE FUNCTION VISUALIZATION
-#=
-function is_continuous(GM::GraphMesh)
-	length(unique(output_values(GM)))/length(output_values(GM)) > 0.85 ? (return true) : (return false)
-end
-=#
 function is_continuous(GM::GraphMesh)
 	value_tally = Dict()
 	for v in output_values(GM)
@@ -852,7 +847,7 @@ function draw_visualization(VSD::ValuedSubdivision; xlims = [-1,1],	ylims = [-1,
 			if (function_value_for_component in values_that_have_been_plotted)
 				plot!(shape_1, fillcolor = c, linecolor = c, linewidth = false, label = false)
 			else
-				plot!(shape_1, fillcolor = c, linecolor = c, linewidth = false, label = "$function_value_for_component real solutions")
+				plot!(shape_1, fillcolor = c, linecolor = c, linewidth = false, label = "$function_value_for_component")
 				push!(values_that_have_been_plotted, function_value_for_component)
 			end
 		else
@@ -865,7 +860,7 @@ function draw_visualization(VSD::ValuedSubdivision; xlims = [-1,1],	ylims = [-1,
 				if (function_value_for_component in values_that_have_been_plotted)
 				plot!(shape_1, fillcolor = c, linecolor = c, linewidth = false, label = false)
 				else
-					plot!(shape_1, fillcolor = c, linecolor = c, linewidth = false, label = "$function_value_for_component real solutions")
+					plot!(shape_1, fillcolor = c, linecolor = c, linewidth = false, label = "$function_value_for_component")
 					push!(values_that_have_been_plotted, function_value_for_component)
 
 				end
