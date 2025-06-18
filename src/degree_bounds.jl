@@ -15,7 +15,7 @@ export
 const BEZOUT_BOUND = EnumerativeProperty{Int}("bezout_bound")
 
 """
-    bezout_bound(EP::EnumerativeProblem; kwargs...)
+    bezout_bound(EP::EnumerativeProblem)
 
 Return the Bézout bound of the enumerative problem — the product of the total degrees of the input polynomials.
 """
@@ -48,7 +48,7 @@ ALGORITHM_DATA[compute_bezout_bound] = compute_bezout_bound_datum
 const BKK_BOUND = EnumerativeProperty{Int}("bkk_bound")
 
 """
-    bkk_bound(EP::EnumerativeProblem; kwargs...)
+    bkk_bound(EP::EnumerativeProblem)
 
 Return the bkk_bound of the enumerative problem.
 """
@@ -75,7 +75,7 @@ ALGORITHM_DATA[compute_bkk_bound] = compute_bkk_bound_datum
 const AFFINE_BKK_BOUND = EnumerativeProperty{Int}("affine_bkk_bound")
 
 """
-    affine_bkk_bound(EP::EnumerativeProblem; kwargs...)
+    affine_bkk_bound(EP::EnumerativeProblem)
 
 Return the affine_bkk_bound of the enumerative problem.
 """
@@ -103,7 +103,7 @@ ALGORITHM_DATA[compute_affine_bkk_bound] = compute_affine_bkk_bound_datum
 const DEGREE_SEQUENCE = EnumerativeProperty{Vector{Int}}("degree_sequence")
 
 """
-    degree_sequence(EP::EnumerativeProblem; kwargs...)
+    degree_sequence(EP::EnumerativeProblem)
 
 Return the degree_sequence of the enumerative problem.
 """
@@ -132,7 +132,7 @@ ALGORITHM_DATA[compute_degree_sequence] = compute_degree_sequence_datum
 const SUPPORT = EnumerativeProperty{Vector{Matrix{Int}}}("support")
 
 """
-    support(EP::EnumerativeProblem; kwargs...)
+    support(EP::EnumerativeProblem)
 
 Return the support of the enumerative problem.
 """
@@ -160,7 +160,7 @@ ALGORITHM_DATA[compute_support] = compute_support_datum
 const NEWTON_POLYTOPES = EnumerativeProperty{Vector{Polyhedron}}("newton_polytopes")
 
 """
-    newton_polytopes(EP::EnumerativeProblem; kwargs...)
+    newton_polytopes(EP::EnumerativeProblem)
 
 Return the newton_polytopes of the enumerative problem.
 """
