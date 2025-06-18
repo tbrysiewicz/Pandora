@@ -206,18 +206,7 @@ function gram_schmidt(basis_vectors::Vector)
 	return(collect(eachcol(Q)))
 end
 
-#Given P = [p_1...p_k] parameters, this function considers the affine span of P 
-#   as p_1+span(p_i-p_1) where span(p_i-p_1) = span(b_1...b_k-1) where the bi's are
-#   an orthonormal basis for the span. 
-#TODO: Which cache values can be inherited by the restriction?
-function restrict(EP::EnumerativeProblem,P::Vector{Vector{Float64}})
-	n = length(P)
-    @var t[1:n-1]
-    basis_vectors = gram_schmidt([(P[i]-P[1]) for i in 2:n])
-    affine_span = P[1] + sum([t[i].*basis_vectors[i] for i in 1:n-1])
-    new_expressions = [subs(f,parameters(EP)=>affine_span) for f in expressions(EP)]
-    return(EnumerativeProblem(System(new_expressions,variables=variables(EP),parameters=t)))
-end
+
 
 #If the user doesn't care WHICH plane to restrict to, do one through the current base
 # parameters so that EP inherits the solutions

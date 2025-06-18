@@ -52,6 +52,7 @@ include("automation.jl")
 include("Examples/named_examples.jl")
 
 include("monodromy.jl")
+include("enumerative_problem_constructors.jl")
 
 include("solutions.jl")
 include("fibres.jl")
