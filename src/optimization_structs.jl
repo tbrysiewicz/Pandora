@@ -13,33 +13,13 @@ end
 
 ##Getters for the OptimizerData
 
-function step(OD::OptimizerData)
-    OD.step
-end
-
-function parameters_solved(OD::OptimizerData)
-    OD.parameters_solved
-end
-
-function steps_no_progress(OD::OptimizerData)
-    OD.steps_no_progress
-end
-
-function steps_no_major_progress(OD::OptimizerData)
-    OD.steps_no_major_progress
-end
-
-function error_proportion(OD::OptimizerData)
-    OD.error_proportion
-end
-
-function taboo_proportion(OD::OptimizerData)
-    OD.taboo_proportion
-end
-
-function improvement_proportion(OD::OptimizerData)
-    OD.improvement_proportion
-end
+step(OD::OptimizerData) = OD.step
+parameters_solved(OD::OptimizerData) = OD.parameters_solved
+steps_no_progress(OD::OptimizerData) = OD.steps_no_progress
+steps_no_major_progress(OD::OptimizerData) = OD.steps_no_major_progress
+error_proportion(OD::OptimizerData) = OD.error_proportion
+taboo_proportion(OD::OptimizerData) = OD.taboo_proportion
+improvement_proportion(OD::OptimizerData) = OD.improvement_proportion
 
 ##Setters for OptimizerData
 
@@ -107,33 +87,13 @@ end
 
 # Getters for ScoringScheme
 
-function objective(SS:: ScoringScheme)
-    SS.objective
-end
-
-function barrier(SS::ScoringScheme)
-    SS.barrier
-end
-
-function barrier_weight(SS::ScoringScheme)
-    SS.barrier_weight
-end
-
-function taboo(SS::ScoringScheme)
-    SS.taboo
-end
-
-function error_checker(SS::ScoringScheme)
-    SS.error_checker
-end
-
-function goal(SS::ScoringScheme)
-    SS.goal
-end
-
-function name(SS::ScoringScheme)
-    SS.name
-end
+objective(SS:: ScoringScheme) = SS.objective
+barrier(SS::ScoringScheme) = SS.barrier
+barrier_weight(SS::ScoringScheme) = SS.barrier_weight
+taboo(SS::ScoringScheme) = SS.taboo
+error_checker(SS::ScoringScheme) = SS.error_checker
+goal(SS::ScoringScheme) = SS.goal
+name(SS::ScoringScheme) = SS.name
 
 ### Function weighted objective:
 
@@ -216,8 +176,9 @@ function Base.show(io::IO, optimizer::Optimizer)
     println("          Last taboo proportion:  ",od.taboo_proportion)
     println("    Last improvement proportion:  ",od.improvement_proportion)
     println("                         Radius:  ", maximum(abs, vec(optimizer.sampler.transform_matrix)))
-    println("The parameters of the record fibre is:")
+    #=println("The parameters of the record fibre is:")
     display(optimizer.record_fibre[2])
+    =#
     #info regarding radius or last improvement size 
     #info regarding conditioning of the ellipse sampler
     #interpretive information 
@@ -227,83 +188,29 @@ end
 
 ##The getters for the struct Optimizer.
 
-function enumerative_problem(optimizer::Optimizer)
-    optimizer.EP
-end
-
-function solver_fibre(optimizer::Optimizer)
-    optimizer.solver_fibre
-end
-
-function record_fibre(optimizer::Optimizer)
-    optimizer.record_fibre
-end
-
-function record_objective(optimizer::Optimizer)
-    optimizer.record_objective
-end
-
-function path(optimizer::Optimizer)
-    optimizer.path
-end
-
-function sampler(optimizer::Optimizer)
-    optimizer.sampler
-end
+enumerative_problem(optimizer::Optimizer) = optimizer.EP
+solver_fibre(optimizer::Optimizer) = optimizer.solver_fibre
+record_fibre(optimizer::Optimizer) = optimizer.record_fibre
+record_objective(optimizer::Optimizer) = optimizer.record_objective
+path(optimizer::Optimizer) = optimizer.path
+sampler(optimizer::Optimizer) = optimizer.sampler
+scoring_scheme(optimizer::Optimizer) = optimizer.scoring_scheme
+optimizer_data(optimizer::Optimizer) = optimizer.optimizer_data
 
 ### For sampler:
-function sample(optimizer::Optimizer)
-    sample(sampler(optimizer))
-end
-
-
-
-function scoring_scheme(optimizer::Optimizer)
-    optimizer.scoring_scheme
-end
+sample(optimizer::Optimizer) = sample(sampler(optimizer))
 
 ### For scoring_scheme:
-function objective_function(optimizer::Optimizer)
-    objective(scoring_scheme(optimizer))
-end
-
-function barrier(optimizer::Optimizer)
-    barrier(scoring_scheme(optimizer))
-end
-
-function barrier_weight(optimizer::Optimizer)
-    barrier_weight(scoring_scheme(optimizer))
-end
-
-function taboo(optimizer::Optimizer)
-    taboo(scoring_scheme(optimizer))
-end
-
-function error_checker(optimizer::Optimizer)
-    error_checker(scoring_scheme(optimizer))
-end
-
-function goal(optimizer::Optimizer)
-    goal(scoring_scheme(optimizer))
-end
-
-function name(optimizer::Optimizer)
-    name(scoring_scheme(optimizer))
-end
+objective_function(optimizer::Optimizer) = objective(scoring_scheme(optimizer))
+barrier(optimizer::Optimizer) = barrier(scoring_scheme(optimizer))
+barrier_weight(optimizer::Optimizer) = barrier_weight(scoring_scheme(optimizer))
+taboo(optimizer::Optimizer) = taboo(scoring_scheme(optimizer))
+error_checker(optimizer::Optimizer) = error_checker(scoring_scheme(optimizer))
+goal(optimizer::Optimizer) = goal(scoring_scheme(optimizer))
+name(optimizer::Optimizer) = name(scoring_scheme(optimizer))
 
 
-function weighted_objective(optimizer::Optimizer)
-    weighted_objective(scoring_scheme(optimizer))
-end
-
-##
-function optimizer_data(optimizer::Optimizer)
-    optimizer.optimizer_data
-end
-
-
-
-
+weighted_objective(optimizer::Optimizer) = weighted_objective(scoring_scheme(optimizer))
 
 
 ## Constructor for ScoringScheme
@@ -338,5 +245,3 @@ function ScoringScheme(objective;
     end
 end
 
-
-dietmaier_pair(p::Vector{ComplexF64}) = dietmaier_pair([p])

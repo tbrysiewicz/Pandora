@@ -155,6 +155,7 @@ function partition_samples(optimizer:: Optimizer, new_fibres :: Vector{Fibre})
                                                       wo_record, 
                                                       N)
     
+
     (best_score_index) = find_best_score_index(wo_score_list, improvement_fibres)
 
     return (error_fibres,
@@ -166,11 +167,71 @@ function partition_samples(optimizer:: Optimizer, new_fibres :: Vector{Fibre})
 end
 
 
-# The function updates_from_proportions! updates the sampler to help make sure 
-# the (error,taboo) proportions lay within the defined limits. It is called 
-# in the function update_sampler!.
 
-function updates_from_proportions!(optimizer::Optimizer)
+import LinearAlgebra: diagm, svd
+
+# function update_optimizer! updates the fields of the optimizer::Optimizer according
+# to the new fibres; especially the fields of the optimizer_data::OptimizerData.
+
+function update_optimizer!(optimizer :: Optimizer, new_fibres :: Vector{Fibre})
+    OD = optimizer_data(optimizer)
+    N = length(new_fibres)
+
+    #Make a default increment update to optimizer data (steps += 1, params solved +=N)
+    increment!(OD,N)
+
+    #Get the values of the folllowing using the function partition_samples
+    (error_fibs,
+     taboo_fibs,                          #Check where this is used again.
+     min_improv, 
+     maj_improv,
+     non_improv, 
+     best_score_index) = partition_samples(optimizer,new_fibres)
+    
+    #Updating OD, to include the proportion of error fibres, taboo fibres, and
+    #improved fibres to the total number of fibres N.
+    OD.error_proportion = length(error_fibs)/N                           #Setters to be added.
+    OD.taboo_proportion = length(taboo_fibs)/N
+    OD.improvement_proportion = (length(min_improv)+length(maj_improv))/N
+
+    #Update record fibre/solver fibre
+    if OD.improvement_proportion>0.0
+        OD.steps_no_progress=0                                           #Setters to be added.
+        println("Minor progress")
+        if length(maj_improv)>0
+            OD.steps_no_major_progress = 0                               #Setters to be added.
+            println("Major progress")
+        end
+        optimizer.sampler.translation = 2*new_fibres[best_score_index[1]][2] - record_fibre(optimizer)[2]
+        optimizer.record_fibre = new_fibres[best_score_index[1]]         #Setters to be added.
+        optimizer.record_objective = weighted_objective(optimizer)(record_fibre(optimizer)[1])
+    end
+
+    #shaping the samples according to non-error non-taboo samples using SVD.
+    non_error_taboo_fibre_values = new_fibres[union(min_improv,
+                                                    maj_improv, 
+                                                    non_improv)]
+    A = reduce(hcat,([non_error_taboo_fibre_values[i][2] for i in 1:length(non_error_taboo_fibre_values)]))
+    u,s,v = svd(A)
+    optimizer.sampler.transform_matrix = u*diagm(s)
+    
+    
+    
+    #Updating the path
+    optimizer.path = push!(path(optimizer), record_fibre(optimizer)[2])
+    
+    return optimizer
+end
+
+
+
+# update_sampler! - the function that updates the sampler. Specifically, this
+# functions deals with updating the transform_matrix field of the sampler,
+# 1) to make sure the new samples are biased towards the direction of the record,
+# 2) to make sure that the proportions (such as taboo and errors) stay within the bounds we define.
+
+
+function update_sampler!(optimizer,new_fibres)
     #Gets the optimizer_data and the sampler.
     OD = optimizer_data(optimizer)
     S = sampler(optimizer)
@@ -199,91 +260,6 @@ function updates_from_proportions!(optimizer::Optimizer)
         println("Since there was an improvement, we need to adjust the translator of sampler")
         S.translation = parameters(record_fibre(optimizer))
     end
-    return nothing
-end
-
-
-# function update_optimizer! updates the fields of the optimizer::Optimizer according
-# to the new fibres; especially the fields of the optimizer_data::OptimizerData.
-
-function update_optimizer!(optimizer :: Optimizer, new_fibres :: Vector{Fibre})
-    OD = optimizer_data(optimizer)
-    N = length(new_fibres)
-
-    #Make a default increment update to optimizer data (steps += 1, params solved +=N)
-    increment!(OD,N)
-
-    #Get the values of the folllowing using the function partition_samples
-    (error_fibs,
-     taboo_fibs,                          #Check where this is used again.
-     min_improv, 
-     maj_improv,
-     non_improv, 
-     best_score_index) = partition_samples(optimizer,new_fibres)
-    
-    #Updating OD, to include the proportion of error fibres, taboo fibres, and
-    #improved fibres to the total number of fibres N.
-    OD.error_proportion = length(error_fibs)/N                           #Setters to be added.
-    OD.taboo_proportion = length(taboo_fibs)/N
-    OD.improvement_proportion = (length(min_improv)+length(maj_improv))/N
-
-    #Update record fibre/solver fibre
-
-    if OD.improvement_proportion>0.0
-        OD.steps_no_progress=0                                           #Setters to be added.
-        println("Minor progress")
-        if length(maj_improv)>0
-            OD.steps_no_major_progress = 0                               #Setters to be added.
-            println("Major progress")
-        end
-        optimizer.record_fibre = new_fibres[best_score_index[1]]         #Setters to be added.
-        optimizer.record_objective = weighted_objective(optimizer)(record_fibre(optimizer)[1])
-    end
-    optimizer.path = push!(path(optimizer), record_fibre(optimizer)[2])
-    return optimizer
-end
-
-
-
-# update_sampler! - the function that updates the sampler. Specifically, this
-# functions deals with updating the transform_matrix field of the sampler,
-# 1) to make sure the new samples are biased towards the direction of the record,
-# 2) to make sure that the proportions (such as taboo and errors) stay within the bounds we define.
-
-
-import LinearAlgebra: diagm
-
-function update_sampler!(optimizer,new_fibres)
-    #getting the data
-    vec = record_fibre(optimizer)[2]
-    S = sampler(optimizer)
-    
-    #Fixing the singular values for scaling
-    σ1 = 2.0
-    σ0 = 1.0
-    U = hcat(vec,nullspace(transpose(vec)))
-    Σ = diagm(vcat(σ1,[σ0 for i in 2:length(vec)]))
-    B = U*Σ*transpose(U)
-
-    #SVD computation
-    #=
-    param_of_fibres = [new_fibres[i][2] for i in 1:length(new_fibres)]
-    mean_param = sum(params for params in param_of_fibres)/length(param_of_fibres)
-    A = stack([w_obj(params).*(params-mean_param) for params in param_of_fibres])
-    u, s, v = svd(A, full = true)
-    Σ = diagm(s)                                    # To obtain the diagonal matrix with the
-    n = length(s)                                                # diagonal entries given by s.
-    for i in (n+1):N
-        Σ = hcat(Σ, [0 for k in 1:n])
-    end
-    =#
-
-    # S.transform_matrix updated according to the SVD.
-    S.transform_matrix = B
-    # S.translation needs to be updated, probably to the parameter of the record_fibre.
-
-    #Warnings and modifications to optimizer due to (error, taboo etc.) proportions.
-    #updates_from_proportions!(optimizer)
 end
 
 
@@ -310,7 +286,7 @@ function improve!(optimizer::Optimizer)
     #Update optimizer data values and record fibre
     update_optimizer!(optimizer,new_fibres)
     #Update sampler and solver fibre
-    #update_sampler!(optimizer,new_fibres)
+    update_sampler!(optimizer,new_fibres)
 
     return(optimizer)
 end
@@ -367,96 +343,6 @@ end
 
 ##
 
-#=
-
-@kwdef mutable struct OptimizerData
-    step :: Int = 0                             #Step count 
-    parameters_solved :: Int = 0                
-    steps_no_progress :: Int = 0
-    steps_no_major_progress :: Int = 0
-    error_proportion :: Float64 = 0.0
-    taboo_proportion :: Float64 = 0.0
-    improvement_proportion :: Float64 = 1.0
-end
-
-
-### The mutable struct ScoringScheme
-mutable struct ScoringScheme
-    objective                       #function that we really want to optimize
-    barrier                         #barrier penalty
-    barrier_weight :: Float64       #weight of barrier penalty
-    taboo
-    error_checker                   #function that checks for errors
-    goal                            #goal (:: Union{Bool, Nothing}) that stops 
-                                        the optimizer, when it achieves the value "true".
-    name :: String                  #name of the ScoringScheme
-end
-
-
-
-### The mutable struct Optimizer:
-@kwdef mutable struct Optimizer
-    EP::EnumerativeProblem
-
-    solver_fibre :: Fibre
-
-    record_fibre :: Fibre
-    record_objective :: Any
-    path :: Vector{Vector{ComplexF64}}
-
-    sampler :: Sampler                       #used to sample parameter space (frequently updated)
-    scoring_scheme :: ScoringScheme
-    optimizer_data :: OptimizerData
-
-
-    function Optimizer(EP::EnumerativeProblem, sampler :: Sampler, SS :: ScoringScheme)
-        optimizer = new()
-
-        optimizer.scoring_scheme = SS
-
-        optimizer.EP = EP
-        optimizer.solver_fibre = base_fibre(EP)
-        optimizer.sampler=sampler
-        p = base_parameters(EP)
-        
-        if is_real(sampler)
-            p = Vector{ComplexF64}(real(p))
-        end
-
-
-        optimizer.record_fibre = (EP(p),p)
-        optimizer.record_objective = SS.objective(optimizer.record_fibre)
-        optimizer.path=[p]
-
-        optimizer.optimizer_data = OptimizerData()
-
-        return(optimizer)
-    end
-    
-    function Optimizer(EP::EnumerativeProblem, sampler :: Sampler, objective)
-        SS = ScoringScheme(objective)
-        Optimizer(EP,sampler,SS)
-    end
-
-end
-
-
-
-function ScoringScheme(objective; 
-    barrier = zero_function, barrier_weight = 0.0, 
-    taboo = zero_function, error_checker = false_function,
-    goal = nothing, name = "")
-    function more_than_one_hundred_steps(O::Optimizer)
-        step(optimizer_data(O)) >100
-    end
-    if goal == nothing
-        ScoringScheme(objective,barrier,barrier_weight,taboo,error_checker, more_than_one_hundred_steps,name)
-    else
-        ScoringScheme(objective,barrier,barrier_weight,taboo,error_checker, goal,name)
-    end
-end
-
-=#
 
 
 
