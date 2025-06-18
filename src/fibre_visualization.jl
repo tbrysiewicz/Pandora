@@ -1,6 +1,6 @@
 import Base: getindex, iterate
 
-using Plots: scatter, scatter!, plot, plot!, Shape, cgrad
+using Plots: scatter, scatter!, plot, plot!, Shape, cgrad, Plot
 using DelaunayTriangulation: triangulate, each_solid_triangle, triangle_vertices, get_point, convert_boundary_points_to_indices
 using LinearAlgebra: qr
 
@@ -877,3 +877,4 @@ function visualize_2(EP::EnumerativeProblem; xlims=[-1,1], ylims = [-1,1],
 	my_plot = draw_visualization(VSD; xlims = xlims, ylims = ylims)
 	return (VSD, my_plot)
 end
+

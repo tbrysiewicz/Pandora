@@ -171,4 +171,3 @@ const group_generated_by_monodromy_loops_datum = AlgorithmDatum(
 ALGORITHM_DATA[group_generated_by_monodromy_loops]=group_generated_by_monodromy_loops_datum
 
 
-include("monodromy_components.jl")

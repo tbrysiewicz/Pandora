@@ -44,3 +44,6 @@ function restrict(EP::EnumerativeProblem,P::Vector{Vector{Float64}})
     new_expressions = [subs(f,parameters(EP)=>affine_span) for f in expressions(EP)]
     return(EnumerativeProblem(System(new_expressions,variables=variables(EP),parameters=t)))
 end
+
+#TODO: Fibre powers
+#
