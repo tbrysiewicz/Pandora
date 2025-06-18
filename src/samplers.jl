@@ -3,17 +3,14 @@ export Sampler, EllipseSampler
 abstract type Sampler end
 
 # Getter for Sampler
-
-function n_samples(S::Sampler) 
-    S.n_samples
-end
+n_samples(S::Sampler) = S.n_samples
 
 # A concrete subtype of the type Sampler, that samples points 
 # from an ellipse, say for example, by using an ellipse whose 
 # axes are directed matching to the the previous step in sampling.
 
 mutable struct EllipseSampler{T<: Number} <: Sampler
-    n :: Int                                            # n is the dimension of the parameter space, 
+    dimen :: Int                                            # n is the dimension of the parameter space, 
                                                         # i.e., the length of a vector in the sample produced. 
     n_samples :: Int                                    # n_samples is the number of sample points.
     predistribution                                     # predistribution is the method used to sample points
@@ -25,33 +22,37 @@ mutable struct EllipseSampler{T<: Number} <: Sampler
                                                         # desired ellipse sample.
 end
 
+# Base.show for ScoringScheme
+
+function Base.show(io::IO, S::EllipseSampler)
+    tenspaces="          "
+    print(io,"\n")
+    println(io, tenspaces, "A sampler with the following values  ")
+    println("---------------------------------------------------------")
+    println(io,"Dimesion of the parameter space    : ", S.dimen )
+    println(io,"Number of samples                  : ", S.n_samples)
+    println(io, "Predistribution                    : ", S.predistribution)
+    println(io, "\nTransform_matrix: \n")
+    display(S.transform_matrix)
+    println(io, "\nTranslation vector: \n")
+    display(S.translation)
+end
+
+
 #Getters for EllipseSampler
 
-function n(ell_sampler::EllipseSampler)
-    ell_sampler.n
-end
+dimen(ell_sampler::EllipseSampler) = ell_sampler.dimen
+n_samples(ell_sampler::EllipseSampler) = ell_sampler.n_samples
+predistribution(ell_sampler::EllipseSampler) = ell_sampler.predistribution
+transform_matrix(ell_sampler::EllipseSampler) = ell_sampler.transform_matrix
+translation(ell_sampler::EllipseSampler) = ell_sampler.translation
 
-function n_samples(ell_sampler::EllipseSampler)
-    ell_sampler.n_samples
-end
-
-function predistribution(ell_sampler::EllipseSampler)
-    ell_sampler.predistribution
-end
-
-function transform_matrix(ell_sampler::EllipseSampler)
-    ell_sampler.transform_matrix
-end
-
-function translation(ell_sampler::EllipseSampler)
-    ell_sampler.translation
-end
 
 # Function that transforms our predistribution to our required
 # ellipse sample by using the fields in S::EllipseSampler.
 
 function sample(S::EllipseSampler)
-    map(x->Vector{ComplexF64}(transform_matrix(S)*x+translation(S)), predistribution(S)(S.n,n_samples(S)))
+    map(x->Vector{ComplexF64}(transform_matrix(S)*x+translation(S)), predistribution(S)(dimen(S),n_samples(S)))
 end
 
 

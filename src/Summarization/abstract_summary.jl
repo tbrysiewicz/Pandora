@@ -1,3 +1,7 @@
+export 
+    abstract_summary
+#########ABSTRACT SUMMARY####################
+
 function abstract_summary(EP::EnumerativeProblem;kwargs...)
     abstract = raw"""This \LaTeX document, created automatically by Pandora.jl, describes several properties of an 
                      enumerative problem."""

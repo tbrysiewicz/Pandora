@@ -19,7 +19,6 @@ export
 	incomplete_polygons
 
 #GRAPHMESH
-#Never re-order the function_cache
 mutable struct GraphMesh
     function_cache :: Vector{Tuple{Vector{Float64},Float64}}
 end
@@ -251,7 +250,7 @@ function draw_valued_subdivision(SD::ValuedSubdivision; xlims = [-1,1],	ylims = 
 			color_value = findfirst(x->x == i, plotting_values)/length(plotting_values)
 			for j in current_polygons
 					if (i in values_that_have_been_plotted) == false
-						draw_triangle(j, color_value, graph_mesh(SD), label = true, label_text = "$i real solutions"; kwargs...)
+						draw_triangle(j, color_value, graph_mesh(SD), label = true, label_text = "$i"; kwargs...)
 						push!(values_that_have_been_plotted, i)
 					else
 						draw_triangle(j, color_value, graph_mesh(SD), label = false; kwargs...)
@@ -316,7 +315,7 @@ function global_delaunay_refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem,
 	return resolution_used
 end
 
-function locally_refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; fibre_function = x->n_real_solutions(x), local_refinement_method = rectangular_refine!)
+function locally_refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; fibre_function = x->n_real_solutions(x), local_refinement_method = quadtree_insertion)
 	refined_polygons::Vector{Vector{Int64}} = []
 	polygons_to_solve_and_sort::Vector{Vector{Vector{Float64}}} = []
 	new_parameters_to_solve::Vector{Vector{Float64}} = []
@@ -466,11 +465,6 @@ function is_complete(p::Vector{Int}, GM::GraphMesh; tol = 0.0)
 end
 
 #CONTINUOUS FIBRE FUNCTION VISUALIZATION
-#=
-function is_continuous(GM::GraphMesh)
-	length(unique(output_values(GM)))/length(output_values(GM)) > 0.85 ? (return true) : (return false)
-end
-=#
 function is_continuous(GM::GraphMesh)
 	value_tally = Dict()
 	for v in output_values(GM)
@@ -852,7 +846,7 @@ function draw_visualization(VSD::ValuedSubdivision; xlims = [-1,1],	ylims = [-1,
 			if (function_value_for_component in values_that_have_been_plotted)
 				plot!(shape_1, fillcolor = c, linecolor = c, linewidth = false, label = false)
 			else
-				plot!(shape_1, fillcolor = c, linecolor = c, linewidth = false, label = "$function_value_for_component real solutions")
+				plot!(shape_1, fillcolor = c, linecolor = c, linewidth = false, label = "$function_value_for_component")
 				push!(values_that_have_been_plotted, function_value_for_component)
 			end
 		else
@@ -865,7 +859,7 @@ function draw_visualization(VSD::ValuedSubdivision; xlims = [-1,1],	ylims = [-1,
 				if (function_value_for_component in values_that_have_been_plotted)
 				plot!(shape_1, fillcolor = c, linecolor = c, linewidth = false, label = false)
 				else
-					plot!(shape_1, fillcolor = c, linecolor = c, linewidth = false, label = "$function_value_for_component real solutions")
+					plot!(shape_1, fillcolor = c, linecolor = c, linewidth = false, label = "$function_value_for_component")
 					push!(values_that_have_been_plotted, function_value_for_component)
 
 				end

@@ -1,3 +1,6 @@
+
+#########BACKGROUND SUMMARY####################
+
 function background_summary(EP::EnumerativeProblem;kwargs...)
     n = ambient_dimension(EP)
     k = n_polynomials(EP)
@@ -103,4 +106,3 @@ function latex_polynomials(EP::EnumerativeProblem;kwargs...)
     return(s)
         
 end
-
