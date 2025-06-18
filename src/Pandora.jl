@@ -65,8 +65,7 @@ include("fibre_visualization.jl")
 #include("OldIntroduce/Optimization/DietmaierOptimization.jl")
 
 include("samplers.jl")
-include("optimization_structs.jl")
-include("optimization.jl")
+#include("optimization.jl")
 
 
 include("Summarization/summarize.jl")

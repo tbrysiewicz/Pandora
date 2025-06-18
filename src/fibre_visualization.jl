@@ -4,133 +4,128 @@ using Plots: scatter, scatter!, plot, plot!, Shape, cgrad, Plot
 using DelaunayTriangulation: triangulate, each_solid_triangle, triangle_vertices, get_point, convert_boundary_points_to_indices
 using LinearAlgebra: qr
 
-
-
 export
-	ValuedSubdivision,
-	refine!,
+    ValuedSubdivision,
+    refine!,
     visualize,
     input_points,
     output_values,
     polygons,
-	fibre_function_cache,
-	complete_polygons,
-	incomplete_polygons,
-	fibre_function_type
+    function_cache,
+    complete_polygons,
+    incomplete_polygons,
+    is_discrete
 
-#VALUEDSUBDIVISION
+# VALUEDSUBDIVISION
 mutable struct ValuedSubdivision
-    FibreFunctionCache :: Vector{Tuple{Vector{Float64},Float64}}
-	CompletePolygons :: Vector{Vector{Int64}} #Indices
-	IncompletePolygons :: Vector{Vector{Int64}}
-	FibreFunctionType :: Symbol
+    function_cache::Vector{Tuple{Vector{Float64},Float64}}
+    complete_polygons::Vector{Vector{Int64}} # Indices
+    incomplete_polygons::Vector{Vector{Int64}}
+    is_discrete::Symbol
 
-	function ValuedSubdivision(EP::EnumerativeProblem; 
-	xlims::Vector = [-1,1], ylims::Vector = [-1,1], 
-	fibre_function = x->n_real_solutions(x), 
-	resolution = 1000,
-	mesh_function = trihexagonal_mesh)
+    function ValuedSubdivision(EP::EnumerativeProblem;
+        xlims::Vector = [-1,1], ylims::Vector = [-1,1],
+        function_oracle = x->n_real_solutions(x),
+        resolution = 1000,
+        mesh_function = trihexagonal_mesh)
 
-	VSD = new()
+        VSD = new()
 
-	(polygons,parameters) = mesh_function(;xlims = xlims, ylims = ylims, resolution = resolution)
-	
-    #Solve for all pts in the initial hexagonal lattice
-    subdivision_solutions = solve(EP, parameters)
+        (polygons, parameters) = mesh_function(;xlims = xlims, ylims = ylims, resolution = resolution)
 
-    length(subdivision_solutions) != length(parameters) && error("Did not solve for each parameter")
+        # Solve for all pts in the initial hexagonal lattice
+        subdivision_solutions = solve(EP, parameters)
+        length(subdivision_solutions) != length(parameters) && error("Did not solve for each parameter")
 
-	#Create fibre function cache
-    fibre_function_cache = []
-    for i in eachindex(subdivision_solutions)
-        push!(fibre_function_cache, (parameters[i], fibre_function(subdivision_solutions[i])))
+        # Create function cache
+        function_cache = []
+        for i in eachindex(subdivision_solutions)
+            push!(function_cache, (parameters[i], function_oracle(subdivision_solutions[i])))
+        end
+
+        # Checking whether the function is continuous or discrete
+        is_discrete = false
+        output_values = getindex.(function_cache, 2)
+        function_value_tally = Dict()
+        for v in output_values
+            get!(function_value_tally, v, 0)
+            function_value_tally[v] += 1
+        end
+        if length(keys(function_value_tally)) < 50
+            is_discrete = true
+        end
+
+        # Now we scroll through polygons and establish completeness
+        complete_polygons::Vector{Vector{Int}} = []
+        incomplete_polygons::Vector{Vector{Int}} = []
+
+        tol = 0.0
+        if is_discrete == false
+            # determining a tolerance for establishing completeness for continuous function
+            polygon_difference_values::Vector{Float64} = []
+            for p in polygons
+                vertex_values = sort([function_cache[v][2] for v in p])
+                push!(polygon_difference_values, vertex_values[end] - vertex_values[1])
+            end
+            polygon_difference_values = sort(polygon_difference_values)
+            tol_index = Int(ceil(0.5*length(polygon_difference_values)))
+            tol = polygon_difference_values[tol_index]
+        end
+
+        for p in polygons # determining completeness of polygons using computed tol
+            vertex_function_values = sort([function_cache[v][2] for v in p])
+            if (vertex_function_values[end] - vertex_function_values[1]) <= tol
+                push!(complete_polygons, p)
+            else
+                push!(incomplete_polygons, p)
+            end
+        end
+
+        VSD.function_cache = function_cache
+        VSD.complete_polygons = complete_polygons
+        VSD.incomplete_polygons = incomplete_polygons
+        VSD.is_discrete = is_discrete
+        return VSD
     end
-
-	#Checking whether the fibre function is continuous or discrete
-	fibre_function_type = 0
-	output_values = getindex.(fibre_function_cache, 2)
-	fibre_function_value_tally = Dict()
-	for v in output_values
-		get!(fibre_function_value_tally, v, 0)
-		fibre_function_value_tally[v] += 1
-	end
-	if 	length(keys(fibre_function_value_tally)) < 50 
-		fibre_function_type = :discrete 
-	else
-		fibre_function_type = :continuous
-	end
-
-	#Now we scroll through polygons and establish completeness
-	complete_polygons::Vector{Vector{Int}} = []
-	incomplete_polygons::Vector{Vector{Int}} = []
-	
-	tol = 0.0
-	if fibre_function_type == :continuous
-		#determining a tolerance for establishing completeness for continuous fibre function
-		polygon_difference_values::Vector{Float64} = []
-		for p in polygons
-			vertex_values = sort([fibre_function_cache[v][2] for v in p])
-			push!(polygon_difference_values, vertex_values[end] - vertex_values[1])
-		end
-		polygon_difference_values = sort(polygon_difference_values)
-		tol_index = Int(ceil(0.5*length(polygon_difference_values)))
-		tol = polygon_difference_values[tol_index]
-	end
-
-	for p in polygons #determining completeness of polygons using computed tol
-		vertex_fibre_function_values = sort([fibre_function_cache[v][2] for v in p])
-		if (vertex_fibre_function_values[end] - vertex_fibre_function_values[1]) <= tol
-			push!(complete_polygons, p)
-		else
-			push!(incomplete_polygons, p)
-		end
-	end
-
-	VSD.FibreFunctionCache = fibre_function_cache
-	VSD.CompletePolygons = complete_polygons
-	VSD.IncompletePolygons = incomplete_polygons
-	VSD.FibreFunctionType = fibre_function_type
-	return VSD
-	end
 end
 
-#GETTERS
-fibre_function_cache(VSD::ValuedSubdivision) = VSD.FibreFunctionCache
-complete_polygons(VSD::ValuedSubdivision) = VSD.CompletePolygons
-incomplete_polygons(VSD::ValuedSubdivision) = VSD.IncompletePolygons
-fibre_function_type(VSD::ValuedSubdivision) = VSD.FibreFunctionType
-input_points(VSD::ValuedSubdivision) = getindex.(VSD.FibreFunctionCache, 1)
-output_values(VSD::ValuedSubdivision) = getindex.(VSD.FibreFunctionCache, 2)
+# GETTERS
+function_cache(VSD::ValuedSubdivision) = VSD.function_cache
+complete_polygons(VSD::ValuedSubdivision) = VSD.complete_polygons
+incomplete_polygons(VSD::ValuedSubdivision) = VSD.incomplete_polygons
+is_discrete(VSD::ValuedSubdivision) = VSD.is_discrete
+input_points(VSD::ValuedSubdivision) = getindex.(VSD.function_cache, 1)
+output_values(VSD::ValuedSubdivision) = getindex.(VSD.function_cache, 2)
 
-#SETTERS
+# SETTERS
 function set_complete_polygons!(VSD::ValuedSubdivision, P::Vector{Vector{Int64}})
-	VSD.CompletePolygons = P
+    VSD.complete_polygons = P
 end
 
 function set_incomplete_polygons!(VSD::ValuedSubdivision, P::Vector{Vector{Int64}})
-	VSD.IncompletePolygons = P
+    VSD.incomplete_polygons = P
 end
 
-#delete a specific polygon from IncompletePolygons
+# delete a specific polygon from IncompletePolygons
 function delete_from_incomplete_polygons!(VSD::ValuedSubdivision, P::Vector{Int64})
-	polygon_index = findfirst(x -> x == P, incomplete_polygons(VSD))
-	if polygon_index !== nothing
-		deleteat!(VSD.IncompletePolygons, polygon_index)
-	else
-		error("Polygon not found in IncompletePolygons!")
-	end
+    polygon_index = findfirst(x -> x == P, incomplete_polygons(VSD))
+    if polygon_index !== nothing
+        deleteat!(VSD.incomplete_polygons, polygon_index)
+    else
+        error("Polygon not found in IncompletePolygons!")
+    end
 end
 
-function push_to_complete_polygons!(VSD::ValuedSubdivision, P::Vector{Int64}) #push a single polygon to complete polygons
-	push!(VSD.CompletePolygons, P)
+function push_to_complete_polygons!(VSD::ValuedSubdivision, P::Vector{Int64})
+    push!(VSD.complete_polygons, P)
 end
 
 function push_to_incomplete_polygons!(VSD::ValuedSubdivision, P::Vector{Int64})
-	push!(VSD.IncompletePolygons, P)
+    push!(VSD.incomplete_polygons, P)
 end
 
-function push_to_fibre_function_cache!(VSD::ValuedSubdivision, V::Tuple{Vector{Float64},Float64})
-	push!(VSD.FibreFunctionCache, V)
+function push_to_function_cache!(VSD::ValuedSubdivision, V::Tuple{Vector{Float64},Float64})
+    push!(VSD.function_cache, V)
 end
 
 #region MESH FUNCTIONS
@@ -225,7 +220,7 @@ end
 #PLOTTING
 function draw_polygon(polygon, color_value, VSD::ValuedSubdivision; label = false, 
 	label_text = "real solutions", kwargs...)
-	polygon_1 = [fibre_function_cache(VSD)[i][1] for i in polygon]
+	polygon_1 = [function_cache(VSD)[i][1] for i in polygon]
 	polygon_1 = Shape([(t[1], t[2]) for t in polygon_1])
 	c = cgrad(:thermal, rev = false)[color_value]
 	if label == true
@@ -237,12 +232,12 @@ end
 
 function draw_valued_subdivision(VSD::ValuedSubdivision; xlims = [-1,1], ylims = [-1,1], plot_log_transform = false, kwargs...) 
 	my_plot = plot(xlims = xlims, ylims = ylims, aspect_ratio = :equal, background_color_inside=:black; kwargs...)
-	if fibre_function_type(VSD) == :discrete
+	if is_discrete(VSD) == true
 		plotting_values = unique(output_values(VSD))
 		plotting_values = sort(plotting_values)
 		values_that_have_been_plotted = []
 		for i in plotting_values
-			current_polygons = filter(x->fibre_function_cache(VSD)[x[1]][2] == i, complete_polygons(VSD)) #filters all polygons whose first vertices have the fibre function value i
+			current_polygons = filter(x->function_cache(VSD)[x[1]][2] == i, complete_polygons(VSD)) #filters all polygons whose first vertices have the function value i
 			color_value = findfirst(x->x == i, plotting_values)/length(plotting_values)
 			for j in current_polygons
 					if (i in values_that_have_been_plotted) == false
@@ -259,9 +254,9 @@ function draw_valued_subdivision(VSD::ValuedSubdivision; xlims = [-1,1], ylims =
 		values = []
 		for p in polygons
 			if plot_log_transform == true
-				vertex_values = [log(fibre_function_cache(VSD)[v][2]) for v in p]
+				vertex_values = [log(function_cache(VSD)[v][2]) for v in p]
 			else
-				vertex_values = [fibre_function_cache(VSD)[v][2] for v in p]
+				vertex_values = [function_cache(VSD)[v][2] for v in p]
 			end
 			polygon_value = sum(vertex_values)/length(p)
 			push!(values, polygon_value)
@@ -271,7 +266,7 @@ function draw_valued_subdivision(VSD::ValuedSubdivision; xlims = [-1,1], ylims =
 		min_value = min(values...)
 		for i in eachindex(polygons)
 			color_value = values[i]/(max_value - min_value)
-			draw_triangle(polygons[i], color_value, fibre_function_cache(VSD))
+			draw_triangle(polygons[i], color_value, function_cache(VSD))
 		end
 		scatter!([0.0], [0.0]; zcolor = [min_value, max_value], color = cgrad(:thermal, rev = false), markersize = 0, colorbar = true, label = false)
 		return my_plot
@@ -281,7 +276,7 @@ end
 #REFINEMENT FUNCTIONS
 
 function global_delaunay_refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; 
-	fibre_function = x->n_real_solutions(x), insertion_method = sierpinski_point_insertion, kwargs...)
+	function_oracle = x->n_real_solutions(x), insertion_method = sierpinski_point_insertion, kwargs...)
 	new_parameters_to_solve::Vector{Vector{Float64}} = []
 	resolution_used = 0
 	for T in incomplete_polygons(VSD)
@@ -303,14 +298,14 @@ function global_delaunay_refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem,
 	inserted_point_solutions = solve(EP, new_parameters_to_solve)
 	length(inserted_point_solutions) != length(new_parameters_to_solve) && error("Did not solve for each parameter")
 	for i in eachindex(inserted_point_solutions)
-		push_to_graph_mesh!(graph_mesh(VSD), (new_parameters_to_solve[i], Float64(fibre_function(inserted_point_solutions[i]))))
+		push_to_graph_mesh!(graph_mesh(VSD), (new_parameters_to_solve[i], Float64(function_oracle(inserted_point_solutions[i]))))
 	end
 	retriangulate_valued_subdivision!(VSD)
 	return resolution_used
 end
 
 function refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; 
-	fibre_function = x->n_real_solutions(x),
+	function_oracle = x->n_real_solutions(x),
 	strategy = :quadtree)
 	#Error checking to make sure that the refinement strategy will work with the VSD (e.g. sierpinski refinement won't work on a rectangular mesh)
 	local_refinement_method = 0
@@ -351,7 +346,7 @@ function refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int
 	new_parameters_to_solve::Vector{Vector{Float64}} = []
 	resolution_used = 0
 	for P in incomplete_polygons(VSD)
-		P_parameters = [fibre_function_cache(VSD)[v][1] for v in P]
+		P_parameters = [function_cache(VSD)[v][1] for v in P]
 		new_params, new_polygons = local_refinement_method(P_parameters)
 		if length(new_params) > 0
 			push!(refined_polygons, P)
@@ -371,18 +366,18 @@ function refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int
 	new_parameters_solutions = solve(EP, new_parameters_to_solve)
 	length(new_parameters_solutions) != length(new_parameters_to_solve) && error("Did not solve for each parameter")
 	for i in eachindex(new_parameters_solutions)
-		push_to_fibre_function_cache!(VSD, (new_parameters_to_solve[i], Float64(fibre_function(new_parameters_solutions[i]))))
+		push_to_function_cache!(VSD, (new_parameters_to_solve[i], Float64(function_oracle(new_parameters_solutions[i]))))
 	end
 	for P in refined_polygons
 		delete_from_incomplete_polygons!(VSD, P)
 	end
 	refinement_tol = 0.0
-	if fibre_function_type(VSD) == :continuous
+	if is_discrete(VSD) == false
 		polygons = vcat(complete_polygons(VSD), incomplete_polygons(VSD)) #this does not include the newly created incomplete rectangles that have been added during the current stage of refinement. Perhaps it should
-		refinement_tol = continuous_fibre_function_refinement_threshold(VSD, polygons)
+		refinement_tol = continuous_function_refinement_threshold(VSD, polygons)
 	end
 	for P in polygons_to_solve_and_sort
-		polygon = [findfirst(x->x[1]==y, fibre_function_cache(VSD)) for y in P]
+		polygon = [findfirst(x->x[1]==y, function_cache(VSD)) for y in P]
 		is_complete(polygon, VSD; tol = refinement_tol) ? push_to_complete_polygons!(VSD, polygon) : push_to_incomplete_polygons!(VSD, polygon)
 	end
 	return resolution_used
@@ -433,7 +428,7 @@ end
 
 function delaunay_retriangulate!(VSD::ValuedSubdivision)
 	vertices = []
-    for v in fibre_function_cache(VSD)
+    for v in function_cache(VSD)
         v[1] in vertices || push!(vertices, v[1]) #ensuring that the triangulation will not contain duplicate points and the package won't give that annoying warning
     end
 	vertices = hcat(vertices...)
@@ -441,7 +436,7 @@ function delaunay_retriangulate!(VSD::ValuedSubdivision)
 	triangle_iterator = each_solid_triangle(tri) #Also from DelaunayTriangulation.jl
 	complete_triangles::Vector{Vector{Int64}} = []
 	incomplete_triangles::Vector{Vector{Int64}} = []
-	if fibre_function_type(VSD) == :continuous
+	if is_discrete(VSD) == false
 		triangles::Vector{Vector{Int64}} = []
 		for T in triangle_iterator
 			i,j,k = triangle_vertices(T)
@@ -449,13 +444,13 @@ function delaunay_retriangulate!(VSD::ValuedSubdivision)
 			vertex_1 = [i[1], i[2]]
 			vertex_2 = [j[1], j[2]]
 			vertex_3 = [k[1], k[2]]
-			index_1 = findfirst(x->x[1] == vertex_1, fibre_function_cache(VSD))
-			index_2 = findfirst(x->x[1] == vertex_2, fibre_function_cache(VSD))
-			index_3 = findfirst(x->x[1] == vertex_3, fibre_function_cache(VSD))
+			index_1 = findfirst(x->x[1] == vertex_1, function_cache(VSD))
+			index_2 = findfirst(x->x[1] == vertex_2, function_cache(VSD))
+			index_3 = findfirst(x->x[1] == vertex_3, function_cache(VSD))
 			triangle = [index_1,index_2,index_3]
 			push!(triangles, triangle)
 		end
-		refinement_tol = continuous_fibre_function_refinement_threshold(VSD, triangles)
+		refinement_tol = continuous_function_refinement_threshold(VSD, triangles)
 		for t in triangles
 			is_complete(t, VSD; tol = refinement_tol) ? push!(complete_triangles, t) : push!(incomplete_triangles, t)
 		end
@@ -466,9 +461,9 @@ function delaunay_retriangulate!(VSD::ValuedSubdivision)
 			vertex_1 = [i[1], i[2]]
 			vertex_2 = [j[1], j[2]]
 			vertex_3 = [k[1], k[2]]
-			index_1 = findfirst(x->x[1] == vertex_1, fibre_function_cache(VSD))
-			index_2 = findfirst(x->x[1] == vertex_2, fibre_function_cache(VSD))
-			index_3 = findfirst(x->x[1] == vertex_3, fibre_function_cache(VSD))
+			index_1 = findfirst(x->x[1] == vertex_1, function_cache(VSD))
+			index_2 = findfirst(x->x[1] == vertex_2, function_cache(VSD))
+			index_3 = findfirst(x->x[1] == vertex_3, function_cache(VSD))
 			triangle = [index_1,index_2,index_3]
 			is_complete(triangle, VSD) ? push!(complete_triangles, triangle) : push!(incomplete_triangles, triangle)
 		end
@@ -482,36 +477,19 @@ function midpoint(P::Vector{Vector{Float64}})
     return((sum(P))./length(P))
 end
 
-#checks if the max difference between vertex fibre function values is less than some tolerance. If so returns true, 
+#checks if the max difference between vertex function values is less than some tolerance. If so returns true, 
 #otherwise returns false
 function is_complete(p::Vector{Int}, VSD::ValuedSubdivision; tol = 0.0) 
-	vertex_function_values = sort([fibre_function_cache(VSD)[x][2] for x in p])
+	vertex_function_values = sort([function_cache(VSD)[x][2] for x in p])
 	vertex_function_values[end] - vertex_function_values[1] <= tol ? (return true) : (return false)
 end
 
-#CONTINUOUS FIBRE FUNCTION VISUALIZATION
-function is_continuous(VSD::ValuedSubdivision)
-	value_tally = Dict()
-	for v in output_values(VSD)
-		get!(value_tally, v, 0)
-		value_tally[v] += 1
-	end
-	println("n distinct values: ", length(keys(value_tally)))
-	if 	length(keys(value_tally)) < 50 
-		println("Not continuous")
-		return false 
-	else
-		println("Continuous")
-		 (return true) 
-	end
-	#if there are less than 50 unique values, then the fibre function is discrete
-end
 
-#determines a threshold for which polygons should be refined based on the difference in fibre function values across each polygon
-function continuous_fibre_function_refinement_threshold(VSD::ValuedSubdivision, polygons::Vector{Vector{Int}})
+#determines a threshold for which polygons should be refined based on the difference in function values across each polygon
+function continuous_function_refinement_threshold(VSD::ValuedSubdivision, polygons::Vector{Vector{Int}})
 	polygon_difference_values::Vector{Float64} = []
 	for p in polygons
-		vertex_values = sort([fibre_function_cache(VSD)[v][2] for v in p])
+		vertex_values = sort([function_cache(VSD)[v][2] for v in p])
 		push!(polygon_difference_values, vertex_values[end] - vertex_values[1])
 	end
 	polygon_difference_values = sort(polygon_difference_values)
@@ -520,7 +498,7 @@ function continuous_fibre_function_refinement_threshold(VSD::ValuedSubdivision, 
 end
 
 #VISUALIZATION
-function visualize_fibre_function_cache(VSD::ValuedSubdivision)
+function visualize_function_cache(VSD::ValuedSubdivision)
     scatter(first.(input_points(VSD)), last.(input_points(VSD)), 
     zcolor = output_values(VSD), legend = false, colorbar = true)
 end
@@ -537,7 +515,7 @@ end
 #TODO: Really use kwargs... here for passing xlims/ylims to initialize valued subdivision
 function visualizer(EP::EnumerativeProblem; xlims=[-1,1], ylims = [-1,1], 
 	initial_resolution = 1000,	total_resolution = 4*initial_resolution,  
-	fibre_function = x-> n_real_solutions(x), refine_function = global_delaunay_refine!, mesh_function = trihexagonal_mesh, local_insertion_function = quadtree_insertion,
+	function = x-> n_real_solutions(x), refine_function = global_delaunay_refine!, mesh_function = trihexagonal_mesh, local_insertion_function = quadtree_insertion,
 	kwargs...)
 
 	#Check enumerative problem is visualizable
@@ -549,11 +527,11 @@ function visualizer(EP::EnumerativeProblem; xlims=[-1,1], ylims = [-1,1],
 	end
 
 	VSD = initialize_valued_subdivision(new_EP; xlims = xlims, ylims = ylims, 
-	fibre_function = fibre_function, initial_resolution = initial_resolution, mesh_function = mesh_function, kwargs...)
+	function = function, initial_resolution = initial_resolution, mesh_function = mesh_function, kwargs...)
 
 	remaining_resolution = total_resolution - initial_resolution
 	while remaining_resolution > 0
-		resolution_used = refine_function(VSD, new_EP, remaining_resolution; fibre_function = fibre_function, local_refinement_method = local_insertion_function, kwargs...)
+		resolution_used = refine_function(VSD, new_EP, remaining_resolution; function = function, local_refinement_method = local_insertion_function, kwargs...)
 		if resolution_used > 0
 			remaining_resolution -= resolution_used
 		else
@@ -567,30 +545,30 @@ end
 
 function visualize(EP::EnumerativeProblem; xlims=[-1,1], ylims = [-1,1], 
 	initial_resolution = 1000,	total_resolution = 4*initial_resolution,  
-	fibre_function = x-> n_real_solutions(x), refine_function = global_delaunay_refine!, mesh_function = trihexagonal_mesh, strategy = nothing,
+	function = x-> n_real_solutions(x), refine_function = global_delaunay_refine!, mesh_function = trihexagonal_mesh, strategy = nothing,
 	kwargs...)
 	if isnothing(strategy)
 		return visualizer(EP::EnumerativeProblem; xlims=xlims, ylims = ylims, 
 		initial_resolution = initial_resolution, total_resolution = total_resolution,  
-		fibre_function = fibre_function, refine_function = refine_function, mesh_function = mesh_function,
+		function = function, refine_function = refine_function, mesh_function = mesh_function,
 		kwargs...)
 	elseif strategy == :quadtree
 		return visualizer(EP::EnumerativeProblem; xlims = xlims, ylims = ylims, initial_resolution = initial_resolution, total_resolution = total_resolution,
-		fibre_function = fibre_function, refine_function = locally_refine!, mesh_function = rectangular_mesh, local_insertion_function = quadtree_insertion, kwargs...)
+		function = function, refine_function = locally_refine!, mesh_function = rectangular_mesh, local_insertion_function = quadtree_insertion, kwargs...)
 	elseif strategy == :barycentric
 		return visualizer(EP::EnumerativeProblem; xlims = xlims, ylims = ylims, initial_resolution = initial_resolution, total_resolution = total_resolution,
-		fibre_function = fibre_function, refine_function = locally_refine!, mesh_function = trihexagonal_mesh,
+		function = function, refine_function = locally_refine!, mesh_function = trihexagonal_mesh,
 		local_insertion_function = barycenter_point_insertion, kwargs...)
 	elseif strategy == :sierpinski
 		return visualizer(EP::EnumerativeProblem; xlims = xlims, ylims = ylims, initial_resolution = initial_resolution, total_resolution = total_resolution,
-		fibre_function = fibre_function, refine_function = locally_refine!, mesh_function = trihexagonal_mesh, 
+		function = function, refine_function = locally_refine!, mesh_function = trihexagonal_mesh, 
 		local_insertion_function = sierpinski_point_insertion, kwargs...)
 	elseif strategy == :random
 		return visualizer(EP::EnumerativeProblem; xlims = xlims, ylims = ylims, initial_resolution = initial_resolution, total_resolution = total_resolution,
-		fibre_function = fibre_function, refine_function = locally_refine!, mesh_function = trihexagonal_mesh, local_insertion_function = random_point_insertion, kwargs...)
+		function = function, refine_function = locally_refine!, mesh_function = trihexagonal_mesh, local_insertion_function = random_point_insertion, kwargs...)
 	elseif strategy == :delaunay||strategy == :Delaunay
 		return visualizer(EP::EnumerativeProblem; xlims = xlims, ylims = ylims, initial_resolution = initial_resolution, total_resolution = total_resolution,
-		fibre_function = fibre_function, refine_function = global_delaunay_refine!, mesh_function = trihexagonal_mesh, kwargs...)
+		function = function, refine_function = global_delaunay_refine!, mesh_function = trihexagonal_mesh, kwargs...)
 	else
 		println("Invalid strategy entered. Valid strategies include: ")
 		println(":quadtree")
@@ -605,6 +583,7 @@ end
 
 #Everything after this point is written for local Delaunay refinement (better name?)
 
+#=
 function polygon_adjacency(polygon_1::Vector{Int64}, polygon_2::Vector{Int64}) #returns true if the two inputted polygons share any vertices and are therefore adjacent. Returns false otherwise.
 	polygon_1 = Set(polygon_1)
 	polygon_2 = Set(polygon_2)
@@ -798,7 +777,7 @@ function component_boundaries(triangles::Vector{Vector{Int}}, VSD::ValuedSubdivi
 	return correctly_ordered_boundary_components
 end
 
-function refine_valued_subdivision!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int; fibre_function = x->n_real_solutions(x))
+function refine_valued_subdivision!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int; function = x->n_real_solutions(x))
 	new_parameters::Vector{Vector{Float64}} = []
 	resolution_used = 0
 	for T in incomplete_polygons(VSD)
@@ -817,7 +796,7 @@ function refine_valued_subdivision!(VSD::ValuedSubdivision, EP::EnumerativeProbl
 	inserted_point_solutions = solve(EP, new_parameters)
 	length(inserted_point_solutions) != length(new_parameters) && error("Did not solve for each parameter")
 	for i in eachindex(inserted_point_solutions)
-		push_to_graph_mesh!(graph_mesh(VSD), (new_parameters[i], Float64(fibre_function(inserted_point_solutions[i]))))
+		push_to_graph_mesh!(graph_mesh(VSD), (new_parameters[i], Float64(function_oracle(inserted_point_solutions[i]))))
 	end
 
 	incomplete_vertices = Set(boundary_indices_to_points(vcat(incomplete_polygons(VSD)...), VSD)) #all vertices in incomplete_polygons
@@ -906,7 +885,7 @@ end
 
 function visualize_2(EP::EnumerativeProblem; xlims=[-1,1], ylims = [-1,1], 
 	initial_resolution = 1000,	total_resolution = 3*initial_resolution,  
-	fibre_function = x-> n_real_solutions(x))
+	function_oracle = x-> n_real_solutions(x))
 	if n_parameters(EP) > 2
 		println("EP consists of more than two parameters. Visualizing a random 2-plane in the parameter space.")
 		new_EP = planar_restriction(EP)
@@ -914,13 +893,14 @@ function visualize_2(EP::EnumerativeProblem; xlims=[-1,1], ylims = [-1,1],
 		new_EP = EP
 	end
 	VSD = initialize_valued_subdivision(new_EP; xlims = xlims, ylims = ylims, 
-	fibre_function = fibre_function)
+	function_oracle = function_oracle)
 	remaining_resolution = total_resolution
 	while remaining_resolution > 0
-		resolution_used = refine_valued_subdivision!(VSD, new_EP, remaining_resolution; fibre_function = fibre_function)
+		resolution_used = refine_valued_subdivision!(VSD, new_EP, remaining_resolution; function_oracle = function_oracle)
 		remaining_resolution -= resolution_used
 	end
 	my_plot = draw_visualization(VSD; xlims = xlims, ylims = ylims)
 	return (VSD, my_plot)
 end
 
+=#
