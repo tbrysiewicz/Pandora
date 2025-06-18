@@ -2,7 +2,8 @@ export #main types
     EnumerativeProperty,
     AlgorithmDatum,
     KnowledgeNode,
-    EnumerativeProblem
+    EnumerativeProblem,
+    Citation
 
 
 export 
@@ -19,13 +20,24 @@ export
 NOALG = "No algorithm datum for this function"
 
 ##############################################################
-###################    Fibre          #######################
+###################    Fibre          ########################
 ##############################################################
-const Fibre = Tuple{Vector{Vector{ComplexF64}},Vector{ComplexF64}}
-#const RealFibre = Tuple{Vector{Vector{Float64}},Vector{Float64}}
+"""
+A `Fibre` is a tuple `(S,P)` of two vectors:
 
+- `S::Vector{Vector{ComplexF64}}`: A vector of solutions, each of which is a vector of complex numbers
+- `P::Vector{ComplexF64}`: A vector of parameters, each of which is a complex number
+"""
+const Fibre = Tuple{Vector{Vector{ComplexF64}},Vector{ComplexF64}}
+
+"""`solutions(fibre::Fibre)` returns the vector of solutions in the fibre.
+"""
 solutions(fibre::Fibre) = fibre[1]
+"""`parameters(fibre::Fibre)` returns the vector of parameters in the fibre.
+"""
 parameters(fibre::Fibre) = fibre[2]
+"""`n_solutions(fibre::Fibre)` returns the number of solutions in the fibre.
+"""
 n_solutions(fibre::Fibre) = length(solutions(fibre))
 
 export solutions, parameters, n_solutions
@@ -33,6 +45,18 @@ export solutions, parameters, n_solutions
 ##############################################################
 ###################Enumerative Property#######################
 ##############################################################
+
+"""
+An `EnumerativeProperty` is a type that represents a property of an 
+enumerative problem. It is parameterized by a type `T` and has a name.
+
+Examples:
+
+```julia
+const DEGREE = EnumerativeProperty{Int}("degree")
+const MONODROMY_GROUP = EnumerativeProperty{Group}("monodromy group")
+```
+"""
 struct EnumerativeProperty{T} 
     name :: String
 end
@@ -41,8 +65,7 @@ get_type(::EnumerativeProperty{T}) where {T} = T
 name(EProp::EnumerativeProperty) = EProp.name
 Base.show(io::IO, EProp::EnumerativeProperty) =  print(io,name(EProp))
 
-#We cannot define the enumerative property 'degree' since we
-#   import functions from HC and Oscar called 'degree'
+
 const DEGREE = EnumerativeProperty{Int}("degree")
 const SYSTEM  = EnumerativeProperty{System}("system")
 const BASE_FIBRE = EnumerativeProperty{Fibre}("base fibre")
@@ -52,7 +75,9 @@ const NULL_ENUMERATIVE_PROPERTY = EnumerativeProperty{Nothing}("null")
 #############          Citation          #####################
 ##############################################################
 
-
+"""A `Citation` is a type that represents a citation for an algorithm.
+It contains the authors, title, journal, and year of the publication.
+"""
 struct Citation
     authors :: Vector{String}
     title :: String
@@ -68,6 +93,15 @@ global NULL_CITATION = Citation([""],"","",0)
 ###################      AlgorithmDatum     ##################
 ##############################################################
 
+"""`AlgorithmDatum` is a type that represents an algorithm used in enumerative problems.
+It contains the name, description, input properties, default keyword arguments,
+output property, citation, and reliability of the algorithm.
+
+It is used to store metadata about algorithms that can be applied to enumerative problems.
+All `AlgorithmDatum` instances are stored in the global dictionary `ALGORITHM_DATA`,
+which maps functions to their corresponding `AlgorithmDatum`.
+This allows for easy retrieval of algorithm metadata based on the function used.
+"""
 Base.@kwdef struct AlgorithmDatum
     name::String = "Unnamed Algorithm"
     description::String = " an algorithm"
@@ -147,7 +181,16 @@ reliability(F::Function) = haskey(ALGORITHM_DATA, F) ? reliability(ALGORITHM_DAT
 ###################      KnowledgeNode     ###################
 ##############################################################
 
-
+"""
+`KnowledgeNode` is a type that represents a piece of knowledge about an enumerative problem.
+It contains the following fields:
+- `property`: An `EnumerativeProperty{T}` that this knowledge node represents.
+- `value`: The value of the property, of type `T`.
+- `input_knowledge`: A vector of `KnowledgeNode` instances that are the inputs to the algorithm that computed this knowledge.
+- `input_kwargs`: A dictionary of keyword arguments that were used
+  when computing this knowledge.
+- `algorithm`: The function that was used to compute this knowledge.
+"""
 mutable struct KnowledgeNode{T}
     property :: EnumerativeProperty{T}      #For example MonodromyGroup is of EnumerativeProperty{Group}
     value :: T                                  #The monodromy group G as a Group computed via 
@@ -199,9 +242,23 @@ end
 ################################################################
 ################################################################
 
+"""`AbstractEnumerativeProblem` is an abstract type that represents a problem in enumerative geometry.
+    It is the parent type for `EnumerativeProblem`, which contains a parametrized system of equations
+        for which there are finitely many solutions given a generic parameter. Homotopy continuation
+        is used to move solutions over one parameter to another. This ability to perform analytic continuation
+        over the implicit branched cover is what is necessary for an AbstractEnumerativeProblem
+"""           
 abstract type AbstractEnumerativeProblem end
 
+"""`EnumerativeProblem` is a concrete type that represents an enumerative problem.
+    It contains a `System` representing the equations of the problem and a `Knowledge` object
+        that stores the properties which are known about the problem, including how this knowledge
+        was obtained, and how reliable it is (e.g. whether it is known with probability 1, high
+        probability, is a proven result, or is some other form of "knowledge"). 
 
+    The `EnumerativeProblem` is the main concrete type used in Pandora.jl.
+    
+"""
 mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
     system :: System
     knowledge :: Knowledge
