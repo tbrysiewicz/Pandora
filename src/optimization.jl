@@ -195,7 +195,7 @@ function update_optimizer!(optimizer :: Optimizer, new_fibres :: Vector{Fibre})
     OD.improvement_proportion = (length(min_improv)+length(maj_improv))/N
 
     #Update record fibre/solver fibre
-    if OD.improvement_proportion>0.0
+    if improvement_proportion(OD)>0.0
         OD.steps_no_progress=0                                           #Setters to be added.
         println("Minor progress")
         if length(maj_improv)>0
@@ -242,19 +242,19 @@ function update_sampler!(optimizer,new_fibres)
     end
     if taboo_proportion(OD)>0.8
         println("Lot's of taboo fibres - reducing radius of sampler")
-        S.transform_matrix = S.transform_matrix*0.9
+        S.transform_matrix = transform_matrix(S)*0.9
     end
     if taboo_proportion(OD)<0.2 && improvement_proportion(OD)>0.0
         println("Not enough taboo fibres - we can be bolder in our sampling -increase radius")
-        S.transform_matrix = S.transform_matrix*1.1
+        S.transform_matrix = transform_matrix(S)*1.1
     end
     if improvement_proportion(OD)>0.2
         println("Lot's of improvement - increase radius")
-        S.transform_matrix = S.transform_matrix*1.1
+        S.transform_matrix = transform_matrix(S)*1.1
     end
     if improvement_proportion(OD)<0.01 && steps_no_progress(OD)>5
         println("Almost no improvement - decrease radius - maybe we are at a local max")
-        S.transform_matrix = S.transform_matrix*0.5
+        S.transform_matrix = transform_matrix(S)*0.5
     end
     if improvement_proportion(OD)>0.0
         println("Since there was an improvement, we need to adjust the translator of sampler")
