@@ -45,5 +45,17 @@ function restrict(EP::EnumerativeProblem,P::Vector{Vector{Float64}})
     return(EnumerativeProblem(System(new_expressions,variables=variables(EP),parameters=t)))
 end
 
+
+function gram_schmidt(basis_vectors::Vector; kwargs...)
+    M = hcat(basis_vectors...)
+    Q = Matrix(qr(M).Q)
+    return(collect(eachcol(Q)))
+end
+
+function planar_restriction(EP::EnumerativeProblem; kwargs...)
+    P = [randn(Float64,n_parameters(EP)) for i in 1:3]
+    return(restrict(EP,P))
+end
+
 #TODO: Fibre powers
 #
