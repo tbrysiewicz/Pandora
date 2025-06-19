@@ -49,8 +49,13 @@ mutable struct ValuedSubdivision
         ylims = get(kwargs, :ylims, [-1,1])
         function_oracle = get(kwargs, :function_oracle, x->n_real_solutions(x))
         resolution = get(kwargs, :resolution, 1000)
-        mesh_function = get(kwargs, :mesh_function, trihexagonal_mesh)
-
+        strategy = get(kwargs, :strategy, :sierpinski)
+        if strategy == :quadtree
+            mesh_function = rectangular_mesh
+        elseif strategy == :barycentric || strategy == :sierpinski || strategy == :random
+            mesh_function = trihexagonal_mesh
+        end
+        
         VSD = new()
 
 		#TODO: this is verbose below. Can we refactor? 
@@ -363,7 +368,7 @@ function refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int
 end
 
 function quadtree_insertion(P::Vector{Vector{Float64}})
-    center = mean(reduce(hcat, P), dims=2)[:]
+    center = midpoint(P)
     midpoints = [midpoint([P[i], P[mod1(i+1, 4)]]) for i in 1:4]
     rectangles = [[P[i], midpoints[i], center, midpoints[mod1(i-1, 4)]] for i in 1:4]
     return (midpoints..., center), rectangles
