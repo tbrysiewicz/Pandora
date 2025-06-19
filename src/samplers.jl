@@ -47,6 +47,12 @@ predistribution(ell_sampler::EllipseSampler) = ell_sampler.predistribution
 transform_matrix(ell_sampler::EllipseSampler) = ell_sampler.transform_matrix
 translation(ell_sampler::EllipseSampler) = ell_sampler.translation
 
+#Setters for EllipseSampler
+set_dimen!(ell_sampler::EllipseSampler, new_dimen::Int) = (ell_sampler.dimen = new_dimen; nothing)
+set_n_samples!(ell_sampler::EllipseSampler, new_n_samples::Int) = (ell_sampler.n_samples = new_n_samples; nothing)
+set_predistribution!(ell_sampler::EllipseSampler, new_predistribution) = (ell_sampler.predistribution = new_predistribution; nothing)
+set_transform_matrix!(ell_sampler::EllipseSampler, new_transform_matrix)  = (ell_sampler.transform_matrix = new_transform_matrix; nothing)
+set_translation!(ell_sampler::EllipseSampler, new_translation)  = (ell_sampler.translation = new_translation; nothing)
 
 # Function that transforms our predistribution to our required
 # ellipse sample by using the fields in S::EllipseSampler.

@@ -1,7 +1,6 @@
 export optimize
 
 
-
 #The struct OptimizerData : keeps track of the Data involved while using the optimizer.
 
 @kwdef mutable struct OptimizerData
@@ -33,9 +32,6 @@ set_taboo_proportion!(OD::OptimizerData, new_taboo_proportion::Float64) = (OD.ta
 set_improvement_proportion!(OD::OptimizerData, new_improvement_proportion::Float64) = (OD.improvement_proportion = new_improvement_proportion; nothing)
 
 
-function more_than_one_hundred_steps(O::Optimizer)
-    step(optimizer_data(O)) > 100
-end
 
 #The mutable Struct ScoringScheme
 
@@ -81,11 +77,14 @@ function weighted_objective(SS::ScoringScheme)
     x->(1-SS_barrier_weight).*SS_objective(x).+(SS_barrier_weight).*SS_barrier(x)
 end
 
-## Setters for ScoringScheme to be introduced.
-
-
-
-
+## Setters for ScoringScheme.
+set_objective!(SS::ScoringScheme, new_objective) = (SS.objective = new_objective; nothing)
+set_barrier!(SS::ScoringScheme, new_barrier) = (SS.barrier = new_barrier; nothing)
+set_barrier_weight!(SS::ScoringScheme, new_barrier_weight::Float64) = (SS.barrier_weight = new_barrier_weight; nothing)
+set_taboo!(SS::ScoringScheme, new_taboo) = (SS.taboo = new_taboo; nothing)
+set_error_checker!(SS::ScoringScheme, new_error_checker) = (SS.error_checker = new_error_checker; nothing)
+set_goal!(SS::ScoringScheme, new_goal::Union{Bool, Nothing}) = (SS.goal = new_goal; nothing)
+set_name!(SS::ScoringScheme, new_name::String) = (SS.name = new_name; nothing)
 
 
 # The mutable struct Optimizer:
@@ -120,7 +119,7 @@ end
 
 
         optimizer.record_fibre = (EP(p),p)
-        optimizer.record_objective = SS.objective(optimizer.record_fibre[1])
+        optimizer.record_objective = objective(SS)(EP(p))
         optimizer.path=[p]
 
         optimizer.optimizer_data = OptimizerData()
@@ -128,12 +127,19 @@ end
         return(optimizer)
     end
     
-    function Optimizer(EP::EnumerativeProblem, sampler :: Sampler, objective; goal = more_than_one_hundred_steps)
+    function Optimizer(EP::EnumerativeProblem, sampler :: Sampler, objective; goal = O-> step(optimizer_data(O)) > 100)
         SS = ScoringScheme(objective, goal = goal)
         Optimizer(EP,sampler,SS)
     end
 
 end
+
+
+function more_than_one_hundred_steps(O::Optimizer)
+    step(optimizer_data(O)) > 100
+end
+
+
 
 # Base.show for Optimizer
 
@@ -187,6 +193,19 @@ goal(optimizer::Optimizer) = goal(scoring_scheme(optimizer))
 name(optimizer::Optimizer) = name(scoring_scheme(optimizer))
 weighted_objective(optimizer::Optimizer) = weighted_objective(scoring_scheme(optimizer))
 
+#Setters
+set_enumerative_problem!(optimizer::Optimizer, new_enumerative_problem::EnumerativeProblem) = (optimizer.EP = new_enumerative_problem; nothing)
+set_solver_fibre!(optimizer::Optimizer, new_solver_fibre::Fibre) = (optimizer.solver_fibre = new_solver_fibre; nothing)
+set_record_fibre!(optimizer::Optimizer, new_record_fibre::Fibre) = (optimizer.record_fibre = new_record_fibre; nothing)
+set_record_objective!(optimizer::Optimizer, new_record_objective) = (optimizer.record_objective = new_record_objective; nothing)
+set_path!(optimizer::Optimizer, new_path::Vector{Vector{ComplexF64}}) = (optimizer.path = new_path; nothing)
+set_sampler!(optimizer::Optimizer, new_sampler::Sampler) = (optimizer.sampler = new_sampler; nothing)
+set_scoring_scheme!(optimizer::Optimizer, new_scoring_scheme::ScoringScheme) = (optimizer.scoring_scheme = new_scoring_scheme; nothing)
+set_optimizer_data!(optimizer::Optimizer, new_optimizer_data::OptimizerData) = (optimizer.optimizer_data = new_optimizer_data; nothing)
+
+
+##Sampler:
+
 
 ## Constructor for ScoringScheme
 function ScoringScheme(objective; 
@@ -217,7 +236,28 @@ function ScoringScheme(objective;
     end
 end
 
+export dietmaier_scheme, initialize_real_optimizer
 
+function dietmaier_scheme(EP::EnumerativeProblem) :: ScoringScheme
+    objective = dietmaier_pair
+    taboo = x -> -n_real_solutions(x)
+    error_checker = x->!(valid_fibre(EP,x)&&valid_real_fibre(EP,x))
+
+    d = degree(EP)
+
+    function totally_real(optimizer::Optimizer)
+        record_objective(optimizer)[1]==d
+    end 
+
+    
+    barrier = x->(n_real_solutions(x),0.0) ##replace with 1/(min dist between real solutions)
+    barrier_weight = 0.001
+
+    SS = ScoringScheme(objective; barrier=barrier, barrier_weight=barrier_weight, 
+                            taboo=taboo, error_checker=error_checker, 
+                            goal = totally_real, name = "Dietmaier")
+    return(SS)
+end
 
 # The function find_error_fibres uses the error_checker function from the optimizer to check for 
 # errors and return the fibres that has an error.
@@ -411,16 +451,16 @@ function update_optimizer!(optimizer :: Optimizer, new_fibres :: Vector{Fibre})
     
     #Updating OD, to include the proportion of error fibres, taboo fibres, and
     #improved fibres to the total number of fibres N.
-    OD.error_proportion = length(error_fibs)/N                           #Setters to be added.
-    OD.taboo_proportion = length(taboo_fibs)/N
-    OD.improvement_proportion = (length(min_improv)+length(maj_improv))/N
+    set_error_proportion!(OD, length(error_fibs)/N)                           #Setters to be added.
+    set_taboo_proportion!(OD, length(taboo_fibs)/N)
+    set_improvement_proportion!(OD, (length(min_improv)+length(maj_improv))/N)
 
     #Update record fibre/solver fibre
     if improvement_proportion(OD)>0.0
-        OD.steps_no_progress=0                                           #Setters to be added.
+        set_steps_no_progress!(OD,0)                                           #Setters to be added.
         println("Minor progress")
         if length(maj_improv)>0
-            OD.steps_no_major_progress = 0                               #Setters to be added.
+            set_steps_no_major_progress!(OD, 0)                               #Setters to be added.
             println("Major progress")
         end
         optimizer.sampler.translation = 2*new_fibres[best_score_index[1]][2] - record_fibre(optimizer)[2]
@@ -516,40 +556,11 @@ end
 # The function optimize! updates the input O::Optimizer by applying the function 
 # improve! to it until the goal is satisified.
 
-function optimize!(O::Optimizer)
-    G = goal(O)
-    while (G(O)==false)
-            improve!(O)
-            println(O)
-    end
-    return(O)
- end
-
- function optimize(EP::EnumerativeProblem, SS::ScoringScheme; sampler = nothing, n_samples = 100)#add kwarg for is_less
-    if isnothing(sampler)
-        sampler = initialize_real_sampler(n_parameters(EP), n_samples)
-    end
-    
-    O = Optimizer(EP, sampler, SS)
-    optimize!(O)
- end 
-
-
-function optimize(EP::EnumerativeProblem, objective; sampler = nothing, n_samples =100)#add kwarg for is_less
-    if isnothing(sampler)
-        sampler = initialize_real_sampler(n_parameters(EP), n_samples)
-    end
-    
-    O = Optimizer(EP, sampler, objective)
-    optimize!(O)
-end
-
- #=
-function optimize!(O::Optimizer; max_steps = 100, visualize_optimizer = false)
+ function optimize!(O::Optimizer; max_steps = 100, visualize_optimizer = false)
     G = goal(O)
     if visualize_optimizer && (length(parameters(enumerative_problem(O)))==2)
         visualize(enumerative_problem(O))[2]
-        while ((G(O)==false) && (steps_no_major_progress(optimizer_data(O))<max_steps))
+        while (G(O)==false) 
             improve!(O)
             println(O)
         end
@@ -561,27 +572,53 @@ function optimize!(O::Optimizer; max_steps = 100, visualize_optimizer = false)
     #return(O)
     elseif visualize_optimizer  && (length(parameters(enumerative_problem(O))) !=2)
         println("Parameter space is not of dimension 2. Cannot be visualised")
-        while ((G(O)==false) && (steps_no_major_progress(optimizer_data(O))<max_steps))
+        while (G(O)==false) 
             improve!(O)
             println(O)
         end
     return(O)
     else
-        while ((G(O)==false) && (steps_no_major_progress(optimizer_data(O))<max_steps))
+        while (G(O)==false) 
             improve!(O)
             println(O)
         end
     return(O)
     end
 end
+
+function optimize(EP::EnumerativeProblem, SS::ScoringScheme; sampler = nothing, n_samples = 100,visualize_optimizer = false)#add kwarg for is_less
+    if isnothing(sampler)
+        sampler = initialize_real_sampler(n_parameters(EP), n_samples)
+    end
+    
+    O = Optimizer(EP, sampler, SS::ScoringScheme)
+    
+ end 
+
+
+function optimize(EP::EnumerativeProblem, objective::Function; sampler = nothing, n_samples =100,visualize_optimizer = false)#add kwarg for is_less
+    if isnothing(sampler)
+        sampler = initialize_real_sampler(n_parameters(EP), n_samples)
+    end
+    
+    O = Optimizer(EP, sampler, objective::Function)
+    optimize!(O,visualize_optimizer = visualize_optimizer)
+end
+
+#=
+
+function optimize!(O::Optimizer)
+    G = goal(O)
+    while (G(O)==false)
+            improve!(O)
+            println(O)
+    end
+    return(O)
+ end
+
 =#
 
 
- # optimizer! function without visualize:
- 
-
-
-##
 
 
 

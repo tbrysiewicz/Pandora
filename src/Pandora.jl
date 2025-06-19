@@ -58,14 +58,11 @@ include("solutions.jl")
 include("fibres.jl")
 include("fibre_visualization.jl")
 
-#include("OldIntroduce/Samplers/Sampler.jl")
-
-#include("OldIntroduce/Optimization/OptimizationGetters.jl")
-#include("OldIntroduce/Optimization/Optimizer.jl")
-#include("OldIntroduce/Optimization/DietmaierOptimization.jl")
-
 include("samplers.jl")
+
 #include("optimization.jl")
+
+
 
 
 include("Summarization/summarize.jl")
