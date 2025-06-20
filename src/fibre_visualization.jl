@@ -252,15 +252,17 @@ function draw_valued_subdivision(VSD::ValuedSubdivision; kwargs...)
     my_plot = plot(xlims = xlims, ylims = ylims, aspect_ratio = :equal, background_color_inside=:black; kwargs...)
     if is_discrete(VSD) == true
         plotting_values = unique(output_values(VSD))
-        plotting_values = sort(plotting_values)
+        plotting_values = reverse(sort(plotting_values))
         values_that_have_been_plotted = []
+        number_of_labels_plotted = 0
         for i in plotting_values
             current_polygons = filter(x->function_cache(VSD)[x[1]][2] == i, complete_polygons(VSD))
             color_value = findfirst(x->x == i, plotting_values)/length(plotting_values)
             for j in current_polygons
-                if (i in values_that_have_been_plotted) == false
+                if (i in values_that_have_been_plotted) == false && number_of_labels_plotted < 5
                     draw_polygon(j, color_value, VSD; label = true, label_text = "$i real solutions", kwargs...)
                     push!(values_that_have_been_plotted, i)
+                    number_of_labels_plotted += 1
                 else
                     draw_polygon(j, color_value, VSD; label = false, kwargs...)
                 end
@@ -363,7 +365,7 @@ function refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int
 end
 
 function quadtree_insertion(P::Vector{Vector{Float64}})
-    center = mean(reduce(hcat, P), dims=2)[:]
+    center = midpoint(P)
     midpoints = [midpoint([P[i], P[mod1(i+1, 4)]]) for i in 1:4]
     rectangles = [[P[i], midpoints[i], center, midpoints[mod1(i-1, 4)]] for i in 1:4]
     return (midpoints..., center), rectangles
