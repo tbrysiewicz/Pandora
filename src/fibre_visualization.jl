@@ -29,6 +29,7 @@ export
     input_points,
     output_values,
     polygons,
+    function_oracle,
     function_cache,
     complete_polygons,
     incomplete_polygons,
@@ -39,32 +40,35 @@ mutable struct ValuedSubdivision
 	#TODO: put function_oracle as a field and also put in is_complete 
 	#  as a function (default is_complete_via_tol with tol = 0.0 for discrete
 	#  and tol = ??? for not discrete)
+    function_oracle::Function # Function that takes a vector of parameters and returns a real number
     function_cache::Vector{Tuple{Vector{Float64},Float64}}
     complete_polygons::Vector{Vector{Int64}} # Indices
     incomplete_polygons::Vector{Vector{Int64}}
     is_discrete::Bool
 
-    function ValuedSubdivision(EP::EnumerativeProblem; kwargs...)
+    function ValuedSubdivision(function_oracle::Function; kwargs...)
         xlims = get(kwargs, :xlims, [-1,1])
         ylims = get(kwargs, :ylims, [-1,1])
-        function_oracle = get(kwargs, :function_oracle, x->n_real_solutions(x))
         resolution = get(kwargs, :resolution, 1000)
-        mesh_function = get(kwargs, :mesh_function, trihexagonal_mesh)
-
+        strategy = get(kwargs, :strategy, :sierpinski)
+        mesh_function = trihexagonal_mesh
+        if strategy == :quadtree
+            mesh_function = rectangular_mesh
+        end
         VSD = new()
 
-		#TODO: this is verbose below. Can we refactor? 
+        #TODO: this is verbose below. Can we refactor? 
 
         (polygons, parameters) = mesh_function(; xlims=xlims, ylims=ylims, resolution=resolution, kwargs...)
 
         # Solve for all pts in the initial mesh
-        subdivision_solutions = solve(EP, parameters)
-        length(subdivision_solutions) != length(parameters) && error("Did not solve for each parameter")
+        function_oracle_values = function_oracle(parameters)
+        length(function_oracle_values) != length(parameters) && error("Did not solve for each parameter")
 
         # Create function cache
         function_cache = []
-        for i in eachindex(subdivision_solutions)
-            push!(function_cache, (parameters[i], function_oracle(subdivision_solutions[i])))
+        for i in eachindex(function_oracle_values)
+            push!(function_cache, (parameters[i], float(function_oracle_values[i])))
         end
 
         # Checking whether the function is continuous or discrete
@@ -105,16 +109,28 @@ mutable struct ValuedSubdivision
                 push!(incomplete_polygons, p)
             end
         end
-
+        VSD.function_oracle = function_oracle
         VSD.function_cache = function_cache
         VSD.complete_polygons = complete_polygons
         VSD.incomplete_polygons = incomplete_polygons
         VSD.is_discrete = is_discrete
         return VSD
     end
+
+    function ValuedSubdivision(EP::EnumerativeProblem; kwargs...)
+        xlims = get(kwargs, :xlims, [-1,1])
+        ylims = get(kwargs, :ylims, [-1,1])
+        fibre_function = get(kwargs, :fibre_function, x->n_real_solutions(x))
+        function_oracle = get(kwargs, :function_oracle, x->fibre_function.(EP(x)))
+        resolution = get(kwargs, :resolution, 1000)
+        mesh_function = get(kwargs, :mesh_function, trihexagonal_mesh)
+
+        ValuedSubdivision(function_oracle; xlims=xlims, ylims=ylims, resolution = resolution, mesh_function = mesh_function)
+    end
 end
 
 # GETTERS
+function_oracle(VSD::ValuedSubdivision) = VSD.function_oracle
 function_cache(VSD::ValuedSubdivision) = VSD.function_cache
 complete_polygons(VSD::ValuedSubdivision) = VSD.complete_polygons
 incomplete_polygons(VSD::ValuedSubdivision) = VSD.incomplete_polygons
@@ -286,7 +302,7 @@ function draw_valued_subdivision(VSD::ValuedSubdivision; kwargs...)
         min_value = min(values...)
         for i in eachindex(polygons)
             color_value = values[i]/(max_value - min_value)
-            draw_triangle(polygons[i], color_value, function_cache(VSD); kwargs...)
+            draw_polygon(polygons[i], color_value, VSD; kwargs...)
         end
         scatter!([0.0], [0.0]; zcolor = [min_value, max_value], color = cgrad(:thermal, rev = false), markersize = 0, colorbar = true, label = false)
         return my_plot
@@ -297,8 +313,7 @@ end
 #REFINEMENT FUNCTIONS
 
 
-function refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int64; 
-	function_oracle = x->n_real_solutions(x),
+function refine!(VSD::ValuedSubdivision, resolution::Int64; 
 	strategy = :sierpinski)
 	local_refinement_method = 0
 	if strategy == :quadtree && length(complete_polygons(VSD)[1]) != 4
@@ -321,7 +336,7 @@ function refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int
 	elseif strategy == :random
 		local_refinement_method = random_point_insertion
 	end
-
+    FO = function_oracle(VSD)
 	refined_polygons::Vector{Vector{Int64}} = []
 	polygons_to_solve_and_sort::Vector{Vector{Vector{Float64}}} = []
 	new_parameters_to_solve::Vector{Vector{Float64}} = []
@@ -344,10 +359,10 @@ function refine!(VSD::ValuedSubdivision, EP::EnumerativeProblem, resolution::Int
 		end
 	end
 	length(new_parameters_to_solve) == 0 && return resolution_used
-	new_parameters_solutions = solve(EP, new_parameters_to_solve)
-	length(new_parameters_solutions) != length(new_parameters_to_solve) && error("Did not solve for each parameter")
-	for i in eachindex(new_parameters_solutions)
-		push_to_function_cache!(VSD, (new_parameters_to_solve[i], Float64(function_oracle(new_parameters_solutions[i]))))
+	function_oracle_values = FO(new_parameters_to_solve)
+	length(function_oracle_values) != length(new_parameters_to_solve) && error("Did not solve for each parameter")
+	for i in eachindex(function_oracle_values)
+		push_to_function_cache!(VSD, (new_parameters_to_solve[i], float(function_oracle_values[i])))
 	end
 	for P in refined_polygons
 		delete_from_incomplete_polygons!(VSD, P)
@@ -387,7 +402,8 @@ function sierpinski_point_insertion(P::Vector{Vector{Float64}})
     m3 = midpoint([P[2], P[3]])
     triangles = [[P[1], m1, m2],
                  [P[2], m3, m1],
-                 [P[3], m2, m3]]
+                 [P[3], m2, m3],
+                 [m1, m2, m3]]
     return [m1, m2, m3], triangles
 end
 
