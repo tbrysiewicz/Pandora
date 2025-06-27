@@ -1,4 +1,4 @@
-export optimize
+export optimize, optimize_n_real_solutions
 
 
 #The struct OptimizerData : keeps track of the Data involved while using the optimizer.
@@ -604,6 +604,12 @@ function optimize(EP::EnumerativeProblem, objective::Function; sampler = nothing
     O = Optimizer(EP, sampler, objective::Function)
     optimize!(O,visualize_optimizer = visualize_optimizer)
 end
+
+function optimize_n_real_solutions(EP::EnumerativeProblem)
+    D = dietmaier_scheme(EP)
+    optimize(EP, D)
+end
+
 
 #=
 
