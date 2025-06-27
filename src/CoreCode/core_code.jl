@@ -573,6 +573,8 @@ function Base.show(io::IO, EP::EnumerativeProblem)
 end
 
 
+include("enumerative_solver.jl")
+
 function algorithms_which_return(EProp::EnumerativeProperty)
     filter(A -> output_property(ALGORITHM_DATA[A]) == EProp, collect(keys(ALGORITHM_DATA)))
 end
