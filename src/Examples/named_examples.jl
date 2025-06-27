@@ -3,7 +3,8 @@ export
     TangentCircles,
     SphereProjection,
     BarthSextic,
-    KuramotoModel
+    KuramotoModel,
+    SymmetricTwentySevenLines
 
 function SphereProjection()
     @var x,y,z

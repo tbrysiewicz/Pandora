@@ -1,16 +1,66 @@
+import Base: length, show, getindex
 export 
     MonodromyLoop,
-    Path,
-    monodromy,
+    Loop,
     large_monodromy_sample,
     monodromy_group,
     galois_group,
-    monodromy_sample
+    monodromy_sample,
+    permutation,
+    permutation!
 
-mutable struct MonodromyLoop{T}
+"""
+     Loop(P::Vector{Vector{ComplexF64}})
+
+Creates a loop object from a vector of parameter vectors `P`. The first and last elements of `P` must be the same, representing the start and end of the loop.
+"""
+struct Loop
+    P :: Vector{Vector{ComplexF64}} # A list of parameters starting and ending at F[2]
+    function Loop(P::Vector{Vector{ComplexF64}})
+        @assert length(P) >= 2 "Loop must have at least two parameters."
+        @assert isapprox(P[1], P[end]) "Loop must start and end at the same parameter."
+        new(P)
+    end
+end
+
+function length(L::Loop)
+    return length(L.P)
+end
+
+function getindex(L::Loop, i::Int)
+    return L.P[i]
+end
+
+
+"""
+    MonodromyLoop(F::Fibre, L::Loop, sigma::Union{PermGroupElem,Nothing})
+"""
+mutable struct MonodromyLoop
     F :: Fibre                      # Gives sols and ordering on them. (S,P)
-    P :: Vector{Vector{T}}          # A list of parameters starting and ending at F[2]
+    L :: Loop          # A list of parameters starting and ending at F[2]
     sigma :: Union{PermGroupElem,Nothing}
+
+    function MonodromyLoop(F::Fibre, P::Vector{Vector{ComplexF64}}, sigma::Union{PermGroupElem,Nothing})
+        @assert length(P) >= 2 "Monodromy loop must have at least two parameters."
+        @assert isapprox(P[1], P[end]) "Monodromy loop must start and end at the same parameter."
+        new(F, Loop(P), sigma)
+    end
+
+    function MonodromyLoop(F::Fibre, P::Vector{Vector{ComplexF64}})
+        return MonodromyLoop(F, P, nothing)
+    end
+
+    function MonodromyLoop(EP::EnumerativeProblem, P::Vector{Vector{ComplexF64}})
+        F = base_fibre(EP)
+        
+        if !isapprox(P[1],F[2])
+            pushfirst!(P, F[2]) # Inconsistent loop: starting at given fibre parameter
+        end
+        if !isapprox(P[end],F[2])
+            push!(P, F[2]) # Incomplete loop: using start parameter as end parameter
+        end
+        return MonodromyLoop(F, P, nothing)
+    end
 end
 
 """
@@ -22,53 +72,12 @@ function base_fibre(ML::MonodromyLoop)
     return ML.F
 end
 
-"""
-    is_valid(ML::MonodromyLoop) 
-
-    Checks if the monodromy loop `ML` is valid, meaning that it starts and ends at the base parameter of the fibre.
-"""
-function is_valid(ML::MonodromyLoop)
-    base_param = base_fibre(ML)[2]   
-    if isapprox(ML.P[1],base_param) && isapprox(ML.P[end],base_param) && base_param <: Vector{ComplexF64}
-        return true
-    else
-        return false
-    end
-end
-
-"""
-    make_valid!(ML::MonodromyLoop) 
-
-    Checks if the monodromy loop `ML` is valid, meaning that it starts and ends at the base parameter of the fibre.
-"""
-function make_valid!(ML::MonodromyLoop)
-    if !is_valid(ML)
-        base_param = base_fibre(ML)[2]
-        if base_param <: Vector{Float64}
-            ML.fibre = Fibre(ML.F.S, Vector{ComplexF64}(base_param)) # Convert to ComplexF64 
-        end
-        if !isapprox(ML.P[1],base_param)
-            pushfirst!(ML.P, base_param) # Inconsistent loop: starting at given fibre parameter
-        end
-        if !isapprox(ML.P[end],base_param)
-            push!(ML.P, base_param) # Incomplete loop: using start parameter as end parameter
-        end
-    end
-    return(ML)
-end
-
 function Base.show(io::IO, ML::MonodromyLoop)
     if ML.sigma === nothing
-        print(io,"A monodromy ",length(ML.P),"-gon. Use `monodromy!(EP,ML)` to compute the permutation.")
+        print(io,"A monodromy ",length(ML.L),"-loop.")
     else
-        print(io,"A monodromy ",length(ML.P),"-gon with permutation ",ML.sigma)
+        print(io,"A monodromy ",length(ML.L),"-loop with permutation ",ML.sigma)
     end
-end
-
-
-function MonodromyLoop(EP::EnumerativeProblem,P::Vector{Vector{ComplexF64}}) 
-    F = base_fibre(EP)
-    MonodromyLoop(F,P,nothing)
 end
 
 
@@ -99,47 +108,62 @@ function numerical_function(S1::Vector{T} where T, S2::Vector{T} where T; tol::F
     return(one_line)
 end
 
+"""
+    (EP::EnumerativeProblem)(ML::MonodromyLoop)
 
-function monodromy!(EP::EnumerativeProblem,ML::MonodromyLoop)
+    Tracks the base fibre of the monodromy loop `ML` over the loop defined by `ML.L` with respect to the enumerative problem `EP`.
+"""
+function (EP::EnumerativeProblem)(ML::MonodromyLoop)
     (S,P) = base_fibre(ML)
-    loop = ML.P
+    loop = ML.L.P
     for l in loop[2:end]
         (S,P) = (EP((S,P),l),l)
     end
-    
-    g = numerical_function(solutions(base_fibre(ML)),S)
+    return(S)
+end
+
+"""
+    (EP::EnumerativeProblem)(L::Loop)
+
+    Tracks the base fibre `F = (S,P)` of `EP` over the loop  `L`, conjugated with a path from `P` to `L[1]=L[end]`.
+"""
+function (EP::EnumerativeProblem)(L::Loop)
+    (S,P) = base_fibre(EP)
+    loop = L.P
+    for l in loop[1:end]
+        (S,P) = (EP((S,P),l),l)
+    end
+    l = base_fibre(EP)[2]
+    (S,P) = (EP((S,P),l),l)
+    return(S)
+end
+
+"""
+    permutation!(EP::EnumerativeProblem, ML::MonodromyLoop)
+
+    Computes the permutation of the solutions of the enumerative problem `EP` induced by the monodromy loop `ML`.
+"""
+function permutation!(EP::EnumerativeProblem,ML::MonodromyLoop)
+    if ML.sigma !== nothing
+        return ML.sigma
+    else
+        sigma = permutation(EP, ML)
+        ML.sigma = sigma
+    end
+
+end
+
+
+function permutation(EP::EnumerativeProblem, ML::MonodromyLoop)
+    g = numerical_function(solutions(base_fibre(ML)),EP(ML))
     if is_permutation(g,degree(EP)) == false
         @vprintln("The loop does not yield a valid permutation of the solutions of the enumerative problem.")
         @vprintln(" The function is: ",g)
-        if typeof(loop) <: Vector{Vector{Float64}}
-            @vprintln("  Are you sure you want to compute monodromy over the real numbers?")
-        end
         return nothing
     else
-        return(MonodromyLoop(base_fibre(ML),loop,perm(g)))
+        return(perm(g))
     end 
 end
-
-
-function monodromy(EP::EnumerativeProblem, fibre::Fibre, loop::Vector{Vector{T}} where T)
-    ML = MonodromyLoop(EP,fibre,loop)
-    make_valid!(ML)
-    return monodromy!(EP,ML)
-end
-
-monodromy(EP::EnumerativeProblem,loop::Vector{Vector{T}} where T) =monodromy(EP,base_fibre(EP),loop)
-
-#=
-function monodromy!(EP::EnumerativeProblem,ML::MonodromyLoop)
-    m = monodromy(EP,ML.F,ML.P)
-    if typeof(m) <: Perm
-        ML.sigma = m
-    end
-    return(m)
-end
-=#
-
-perm!(EP::EnumerativeProblem, ML::MonodromyLoop) = monodromy!(EP,ML)
 
 
 
@@ -164,7 +188,7 @@ function large_monodromy_sample(F::System, bf::Fibre; n_monodromy_loops::Int = 5
     for i in indices_of_valid_permutations
         push!(ML_bucket,MonodromyLoop(bf,sampled_loops[i],perm(one_line_perms[i])))
     end
-    return(unique(ML_bucket))
+    return(ML_bucket)
 end
 
 
@@ -192,18 +216,26 @@ function subgroup(perms::Vector{PermGroupElem})
 end
 
 function group_generated_by_monodromy_loops(MLS::Vector{MonodromyLoop})
-    return(subgroup(unique([ML.sigma for ML in MLS])))
+    mg = minimal_generators(subgroup(unique([ML.sigma for ML in MLS])))
+    return(subgroup(mg))
 end
 
 const MONODROMY_GROUP = EnumerativeProperty{PermGroup}("monodromy group")
 
 
 """
-    monodromy_group(EP::EnumerativeProblem)
+    monodromy_group(EP::EnumerativeProblem; kwargs...)
 
-Compute the monodromy group of the enumerative problem `EP`.
+Compute the monodromy group of the enumerative problem `EP`. Relevant keywords arguments, passed to `large_monodromy_sample`, are:
+- `n_monodromy_loops`: The number of monodromy loops to sample (default: 50).
+- `monodromy_loop_scaling`: The scaling factor for the monodromy loops (default: 1.0).
 """
 monodromy_group(EP::EnumerativeProblem; kwargs...) = MONODROMY_GROUP(EP; kwargs...)
+"""
+    galois_group(EP::EnumerativeProblem; kwargs...)
+
+Compute the Galois group of the enumerative problem `EP`. This is an alias for `monodromy_group`.
+"""
 galois_group(EP::EnumerativeProblem; kwargs...) = MONODROMY_GROUP(EP; kwargs...)
 
 
