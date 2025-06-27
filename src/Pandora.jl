@@ -60,26 +60,11 @@ include("fibre_visualization.jl")
 
 include("samplers.jl")
 
-#include("optimization.jl")
+include("optimization.jl")
 
 
 
 
 include("Summarization/summarize.jl")
 
-end # module Pandora
-
-
-#=
-Doc template
-
-@doc raw"""
-    b(n)
-
- Returns
- # Examples
- ```jldoctest
-
- ```
- """
-=#
+end 
