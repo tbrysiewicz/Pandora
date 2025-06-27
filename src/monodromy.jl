@@ -143,30 +143,26 @@ perm!(EP::EnumerativeProblem, ML::MonodromyLoop) = monodromy!(EP,ML)
 
 #When sampling many monodromy elements, one can make use of the parallelization in HC.jl by choosing loops all of the form
 #   a->b[i]->c->a where a is the base parameter, and c is another fixed parameter.
-#   This requires 2*N+1 fibres to be tracked. 1 from a->c, and N from a->b[i] and c->b[i]
-function large_monodromy_sample(F::System, bf::Fibre; N::Int = 50, loop_scaling = 1.0, permutations_only = false)
+#   This requires 2*N+1 fibres to be tracked. 1 from a->c, and n_monodromy_loops from a->b[i] and c->b[i]
+function large_monodromy_sample(F::System, bf::Fibre; n_monodromy_loops::Int = 50, monodromy_loop_scaling = 1.0, permutations_only = true)
     k = n_parameters(F)
-    c = loop_scaling.*randn(ComplexF64,k)
-    b = [loop_scaling.*randn(ComplexF64,k) for i in 1:N]
+    c = monodromy_loop_scaling.*randn(ComplexF64,k)
+    b = [monodromy_loop_scaling.*randn(ComplexF64,k) for i in 1:n_monodromy_loops]
     a = parameters(bf)
     S1_bij = solve(F, bf[1]; start_parameters = bf[2], target_parameters=b)
     S2 = solve(F, bf[1]; start_parameters = bf[2], target_parameters = c)
     S2_bij = solve(F,S2; start_parameters = c, target_parameters = b)
-    one_line_perms = [numerical_function(solutions(S2_bij[i][1]),solutions(S1_bij[i][1])) for i in 1:N]
+    one_line_perms = [numerical_function(solutions(S2_bij[i][1]),solutions(S1_bij[i][1])) for i in 1:n_monodromy_loops]
     indices_of_valid_permutations = findall(x->is_permutation(x,length(bf)),one_line_perms)
-    println("# Loops computed:            ",N)
+    println("# Loops computed:            ",n_monodromy_loops)
     println("# Valid permutations:        ",length(indices_of_valid_permutations))
     println("# Unique valid permutations: ",length(unique(one_line_perms[indices_of_valid_permutations])))
-    if permutations_only
-        return([perm(p) for p in one_line_perms[indices_of_valid_permutations]])
-    else
-        sampled_loops = [[a,bb,c,a] for bb in b]
-        ML_bucket = Vector{MonodromyLoop}([])
-        for i in indices_of_valid_permutations
-            push!(ML_bucket,MonodromyLoop(bf,sampled_loops[i],perm(one_line_perms[i])))
-        end
-        return(ML_bucket)
+    sampled_loops = [[a,bb,c,a] for bb in b]
+    ML_bucket = Vector{MonodromyLoop}([])
+    for i in indices_of_valid_permutations
+        push!(ML_bucket,MonodromyLoop(bf,sampled_loops[i],perm(one_line_perms[i])))
     end
+    return(ML_bucket)
 end
 
 
@@ -175,10 +171,11 @@ const MONODROMY_SAMPLE = EnumerativeProperty{Vector{MonodromyLoop}}("monodromy s
 monodromy_sample(EP::EnumerativeProblem; kwargs...) = MONODROMY_SAMPLE(EP; kwargs...)
 
 
+#TODO: When EnumerativeSolver is coded, that should be the input property
 const large_monodromy_sample_datum = AlgorithmDatum(
-    name = "Sample of [N] random monodromy loops of scaling [loop_scaling]",
+    name = "Sample of [n_monodromy_loops] random monodromy loops of scaling [monodromy_loop_scaling]",
     input_properties = [SYSTEM, BASE_FIBRE],
-    default_kwargs = Dict{Symbol,Any}(:N=>50,:loop_scaling=>1.0),
+    default_kwargs = Dict{Symbol,Any}(:n_monodromy_loops=>50,:monodromy_loop_scaling=>1.0),
     output_property = MONODROMY_SAMPLE,
     reliability = :numerical_and_random
 )
@@ -202,13 +199,7 @@ const MONODROMY_GROUP = EnumerativeProperty{PermGroup}("monodromy group")
 """
     monodromy_group(EP::EnumerativeProblem)
 
-This function returns the `MONODROMY_GROUP` of an enumerative problem.
-
-Note: Pandora.jl will automatically find an algorithm to compute the monodromy group of 
-        EP. If you want to use a specific algorithm, call `algorithms_which_return(MONODROMY_GROUP)`
-        If you have a preference of algorithm, run:
-            `monodromy_group(EP::EnumerativeProblem; algorithm = )`
-
+Compute the monodromy group of the enumerative problem `EP`.
 """
 monodromy_group(EP::EnumerativeProblem; kwargs...) = MONODROMY_GROUP(EP; kwargs...)
 galois_group(EP::EnumerativeProblem; kwargs...) = MONODROMY_GROUP(EP; kwargs...)

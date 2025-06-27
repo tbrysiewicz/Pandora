@@ -452,7 +452,7 @@ function learn!(EP::EnumerativeProblem, EProp::EnumerativeProperty{T};
     end
     f = algorithm
     @assert(ALGORITHM_DATA[f].output_property == EProp)
-    input_knowledge = [get_knowledge!(i, EP) for i in input_properties(f)]
+    input_knowledge = [get_knowledge!(i, EP; kwargs...) for i in input_properties(f)]
     input_knowledge_values = [value(kn) for kn in input_knowledge]
     kwargs_to_pass = copy(default_kwargs(f))
     if !isempty(kwargs)
