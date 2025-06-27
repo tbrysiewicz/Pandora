@@ -38,15 +38,15 @@ const NOALG = "No algorithm datum for this function"
 ##############################################################
 #############  Verbose Printing           ####################
 ##############################################################
-const VERBOSE = false
+const VERBOSE = Ref(false)
 
 macro vprintln(args...)
-    return :(if VERBOSE
+    return :(if VERBOSE[]
         println($(esc.(args)...))
     end)
 end
 macro vprint(args...)
-    return :(if VERBOSE
+    return :(if VERBOSE[]
         print($(esc.(args)...))
     end)
 end
