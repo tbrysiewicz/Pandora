@@ -14,7 +14,7 @@ mutable struct MonodromyLoop{T}
 end
 
 """
-    fibre(ML::MonodromyLoop)
+    base_fibre(ML::MonodromyLoop)
 
     Returns the base fibre of the monodromy loop `ML`.
 """
@@ -28,7 +28,7 @@ end
     Checks if the monodromy loop `ML` is valid, meaning that it starts and ends at the base parameter of the fibre.
 """
 function is_valid(ML::MonodromyLoop)
-    base_param = fibre(ML)[2]   
+    base_param = base_fibre(ML)[2]   
     if isapprox(ML.P[1],base_param) && isapprox(ML.P[end],base_param) && base_param <: Vector{ComplexF64}
         return true
     else
@@ -43,7 +43,7 @@ end
 """
 function make_valid!(ML::MonodromyLoop)
     if !is_valid(ML)
-        base_param = fibre(ML)[2]
+        base_param = base_fibre(ML)[2]
         if base_param <: Vector{Float64}
             ML.fibre = Fibre(ML.F.S, Vector{ComplexF64}(base_param)) # Convert to ComplexF64 
         end
@@ -101,20 +101,22 @@ end
 
 
 function monodromy!(EP::EnumerativeProblem,ML::MonodromyLoop)
-    (S,P) = fibre(ML)
-    for l in new_loop[2:end]
+    (S,P) = base_fibre(ML)
+    loop = ML.P
+    for l in loop[2:end]
         (S,P) = (EP((S,P),l),l)
     end
     
-    g = numerical_function(solutions(fibre),S)
+    g = numerical_function(solutions(base_fibre(ML)),S)
     if is_permutation(g,degree(EP)) == false
         @vprintln("The loop does not yield a valid permutation of the solutions of the enumerative problem.")
+        @vprintln(" The function is: ",g)
         if typeof(loop) <: Vector{Vector{Float64}}
             @vprintln("  Are you sure you want to compute monodromy over the real numbers?")
         end
         return nothing
     else
-        return(MonodromyLoop(fibre,new_loop,perm(g)))
+        return(MonodromyLoop(base_fibre(ML),loop,perm(g)))
     end 
 end
 
@@ -153,7 +155,7 @@ function large_monodromy_sample(F::System, bf::Fibre; n_monodromy_loops::Int = 5
     S2 = solve(F, bf[1]; start_parameters = bf[2], target_parameters = c)
     S2_bij = solve(F,S2; start_parameters = c, target_parameters = b)
     one_line_perms = [numerical_function(solutions(S2_bij[i][1]),solutions(S1_bij[i][1])) for i in 1:n_monodromy_loops]
-    indices_of_valid_permutations = findall(x->is_permutation(x,length(bf)),one_line_perms)
+    indices_of_valid_permutations = findall(x->is_permutation(x,length(bf[1])),one_line_perms)
     @vprintln("# Loops computed:            ",n_monodromy_loops)
     @vprintln("# Valid permutations:        ",length(indices_of_valid_permutations))
     @vprintln("# Unique valid permutations: ",length(unique(one_line_perms[indices_of_valid_permutations])))
@@ -162,7 +164,7 @@ function large_monodromy_sample(F::System, bf::Fibre; n_monodromy_loops::Int = 5
     for i in indices_of_valid_permutations
         push!(ML_bucket,MonodromyLoop(bf,sampled_loops[i],perm(one_line_perms[i])))
     end
-    return(ML_bucket)
+    return(unique(ML_bucket))
 end
 
 

@@ -41,6 +41,38 @@ function TwentySevenLines()
     E = EnumerativeProblem(F)
 end
 
+function SymmetricTwentySevenLines()
+    @var x,y,z
+    @var a[1:4,1:4,1:4,1:4]
+    terms = []
+    for i in 0:3
+        for j in 0:3
+            for k in 0:3
+                if i+j+k<=3
+                    push!(terms,[i,j,k, 3-i-j-k])
+                end
+            end
+        end
+    end
+
+    f = sum([a[sort([c[1]+1,c[2]+1,c[3]+1,c[4]+1])...]*x^c[1]*y^c[2]*z^c[3] for c in terms])
+    Params = unique([a[sort([c[1]+1,c[2]+1,c[3]+1,c[4]+1])...] for c in terms])
+
+    @var t,d[1:2],b[1:2],c[1:2]
+
+    lx = d[1]*t+d[2]
+    ly = b[1]*t+b[2]
+    lz = c[1]*t+c[2]
+
+    g = subs(f,[x,y,z]=>[lx,ly,lz])
+    Eqs = coefficients(g,[t])
+    push!(Eqs, sum(randn(ComplexF64,6).*vcat(d,b,c))-1)
+    push!(Eqs, sum(randn(ComplexF64,6).*vcat(d,b,c))-1)
+
+    F = System(Eqs,variables=[b[1],b[2],c[1],c[2],d[1],d[2]],parameters=Params)
+    E = EnumerativeProblem(F)
+end
+
 
 
 
@@ -78,34 +110,34 @@ function TangentCircles()
     parameters = [a[1], a[2], a[3], a[4], a[5], a[6], b[1], b[2], b[3], b[4], b[5], b[6], c[1], c[2], c[3], c[4], c[5], c[6]]);
     
     return(EnumerativeProblem(F))
-    end
+end
 
-    function BarthSextic()
-        @var w, x, y, z
-        f = 4*(w^2*x^2 - y^2)*(w^2*y^2 - z^2)*(w^2*z^2 - x^2) - (1 + 2*w)*(x^2 + y^2 + z^2 - 1^2)^2
-        golden_ratio = (1 + sqrt(5))/2
-        f = subs(f, w=>golden_ratio)
-        F = System([f], variables = [z], parameters = [x,y])
+function BarthSextic()
+    @var w, x, y, z
+    f = 4*(w^2*x^2 - y^2)*(w^2*y^2 - z^2)*(w^2*z^2 - x^2) - (1 + 2*w)*(x^2 + y^2 + z^2 - 1^2)^2
+    golden_ratio = (1 + sqrt(5))/2
+    f = subs(f, w=>golden_ratio)
+    F = System([f], variables = [z], parameters = [x,y])
 
-        return EnumerativeProblem(F)
-    end
-    
-    function KuramotoModel(n)
-        @var w[1:(n-1)], s[1:n], c[1:n]
-        equations = []
-        for i in 1:(n-1)
-            sum = 0
-            for j in 1:n
-                sum += (s[i]*c[j] - s[j]*c[i])
-            end
-            f_1 = w[i] - (1/n)*sum
-            f_2 = c[i]^2 + s[i]^2 - 1
-            f_1 = subs(f_1, [s[n], c[n]]=>[0, 1])
-            f_2 = subs(f_2, [s[n], c[n]]=>[0, 1])
-            f_1 == 0 || push!(equations, f_1)
-            f_2 == 0 || push!(equations, f_2)
+    return EnumerativeProblem(F)
+end
+
+function KuramotoModel(n)
+    @var w[1:(n-1)], s[1:n], c[1:n]
+    equations = []
+    for i in 1:(n-1)
+        sum = 0
+        for j in 1:n
+            sum += (s[i]*c[j] - s[j]*c[i])
         end
-        F = System(equations, variables = [s[1:n-1]..., c[1:n-1]...], parameters = [w[1:n-1]...])
-
-        return EnumerativeProblem(F)
+        f_1 = w[i] - (1/n)*sum
+        f_2 = c[i]^2 + s[i]^2 - 1
+        f_1 = subs(f_1, [s[n], c[n]]=>[0, 1])
+        f_2 = subs(f_2, [s[n], c[n]]=>[0, 1])
+        f_1 == 0 || push!(equations, f_1)
+        f_2 == 0 || push!(equations, f_2)
     end
+    F = System(equations, variables = [s[1:n-1]..., c[1:n-1]...], parameters = [w[1:n-1]...])
+
+    return EnumerativeProblem(F)
+end
