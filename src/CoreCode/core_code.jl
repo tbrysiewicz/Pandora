@@ -34,6 +34,22 @@ export EnumerativeProperty,
 
 const NOALG = "No algorithm datum for this function"
 
+
+##############################################################
+#############  Verbose Printing           ####################
+##############################################################
+const VERBOSE = Ref(false)
+
+macro vprintln(args...)
+    return :(if VERBOSE[]
+        println($(esc.(args)...))
+    end)
+end
+macro vprint(args...)
+    return :(if VERBOSE[]
+        print($(esc.(args)...))
+    end)
+end
 ##############################################################
 ###################    Fibre          ########################
 ##############################################################
@@ -124,6 +140,8 @@ Base.@kwdef struct AlgorithmDatum
     reliability::Symbol = :null
 end
 
+export name, description, input_properties, default_kwargs, output_property, reliability, citation
+
 name(AD::AlgorithmDatum) = AD.name
 description(AD::AlgorithmDatum) = AD.description
 input_properties(AD::AlgorithmDatum) = AD.input_properties
@@ -206,16 +224,36 @@ end
 
 const Knowledge = Vector{KnowledgeNode}
 
+"""
+ property(K::KnowledgeNode) returns the `EnumerativeProperty` of the knowledge node `K`.
+"""
 property(K::KnowledgeNode) = K.property
+"""
+ value(K::KnowledgeNode) returns the value of the knowledge node `K`.
+"""
 value(K::KnowledgeNode) = K.value
+"""
+ input_knowledge(K::KnowledgeNode) returns the input knowledge nodes that were used to compute `K`.
+"""
 input_knowledge(K::KnowledgeNode) = K.input_knowledge
+"""
+ input_kwargs(K::KnowledgeNode) returns the keyword arguments that were used to compute `K`.
+"""
 input_kwargs(K::KnowledgeNode) = K.input_kwargs
+"""
+ algorithm(K::KnowledgeNode) returns the algorithm that was used to compute `K`.
+"""
 algorithm(K::KnowledgeNode) = K.algorithm
 
 known_properties(K::Knowledge) = unique([property(k) for k in K])
 #TODO: reliability(K::KnowledgeNode) must track all the way back
 
-export property, value, input_knowledge, input_kwargs, algorithm
+export 
+    property, 
+    value, 
+    input_knowledge, 
+    input_kwargs, 
+    algorithm
 
 function Base.show(io::IO, K::KnowledgeNode)
     print(io,"[",property(K),"] is known as a consequence of [", name(algorithm(K)),"] ")
@@ -277,23 +315,97 @@ function populate!(EP::EnumerativeProblem; kwargs...)
     learn!(EP, DEGREE; algorithm = n_solutions, kwargs...)
 end
 
+"""
+    degree(EP::EnumerativeProblem; kwargs...)
+
+Return the degree of the enumerative problem.
+"""
 degree(EP::EnumerativeProblem; kwargs...) = DEGREE(EP; kwargs...)
+
+"""
+    system(EP::EnumerativeProblem; kwargs...)
+
+Return the system of equations defining the enumerative problem.
+"""
 system(EP::EnumerativeProblem; kwargs...) = SYSTEM(EP; kwargs...)
-base_fibre(EP::EnumerativeProblem; kwargs...) = BASE_FIBRE(EP; kwargs...)
 
+"""
+    base_fibre(EP::EnumerativeProblem; kwargs...)
+
+Return the base_fibre of the enumerative problem.
+"""
+function base_fibre(EP::EnumerativeProblem; kwargs...)
+    BASE_FIBRE(EP; kwargs...)
+end
+
+"""
+    knowledge(EP::EnumerativeProblem)
+Return the vector of knowledge nodes associated with the enumerative problem.
+"""
 knowledge(EP::EnumerativeProblem) = EP.knowledge
+"""
+    variables(EP::EnumerativeProblem)
+Return the variables of system of the enumerative problem.
+"""
 variables(EP::EnumerativeProblem) = variables(SYSTEM(EP))
+"""
+    parameters(EP::EnumerativeProblem)
+Return the parameters of system of the enumerative problem.
+"""
 parameters(EP::EnumerativeProblem) = parameters(SYSTEM(EP))
+"""
+    expressions(EP::EnumerativeProblem)
+Return the expressions of system of the enumerative problem.
+"""
 expressions(EP::EnumerativeProblem) = expressions(SYSTEM(EP))
+"""
+    ambient_dimension(EP::EnumerativeProblem)
+Return the ambient dimension of the enumerative problem, which is the number of variables.
+"""
 ambient_dimension(EP::EnumerativeProblem) = length(variables(EP))
+"""
+    n_variables(EP::EnumerativeProblem)
+Return the number of variables in the system of the enumerative problem.
+"""
 n_variables(EP::EnumerativeProblem) = ambient_dimension(EP)
+"""
+    n_polynomials(EP::EnumerativeProblem)
+Return the number of polynomials in the system of the enumerative problem.
+"""
 n_polynomials(EP::EnumerativeProblem) = length(expressions(EP))
+"""
+    n_parameters(EP::EnumerativeProblem)
+Return the number of parameters in the system of the enumerative problem.
+"""
 n_parameters(EP::EnumerativeProblem) = length(parameters(EP))
+"""
+    n_parameters(F::System)
+Return the number of parameters in a system.
+"""
+n_parameters(F::System) = length(parameters(F))
+"""
+    base_parameters(EP::EnumerativeProblem)
+Return the parameters of the base fibre of the enumerative problem.
+"""
 base_parameters(EP::EnumerativeProblem) = base_fibre(EP)[2]
+"""
+    base_solutions(EP::EnumerativeProblem)
+Return the solutions of the base fibre of the enumerative problem.
+"""
+base_solutions(EP::EnumerativeProblem) = base_fibre(EP)[1]  
 
-function specialize(F::System; P = nothing)
+"""
+    specialize(F::System; P = nothing)
+Return a specialized system for the given system `F` with parameters `P`.
+If `P` is not provided, it will generate a random (complex) parameter vector.
+"""
+function specialize(F::System; P = nothing, real = false)
     if P === nothing
-        P = randn(Float64, length(parameters(F)))
+        if !real
+            P = randn(ComplexF64, length(parameters(F)))
+        else
+            P = randn(Float64, length(parameters(F)))
+        end
     end
     return System(evaluate(expressions(F), parameters(F) => P))
 end
@@ -331,18 +443,18 @@ end
 
 function find_algorithm(EProp::EnumerativeProperty, EP::EnumerativeProblem)
     potential_algorithms = algorithms_which_return(EProp)
-    println("Pandora.jl is automatically finding an algorithm to compute ", EProp, ". To specify an algorithm, call again with algorithm=>[nameofalgorithm]")
-    println("There is a total of ", length(potential_algorithms), " algorithm(s) in Pandora.jl which compute(s) ", name(EProp), ":")
+    @vprintln("Pandora.jl is automatically finding an algorithm to compute ", EProp, ". To specify an algorithm, call again with algorithm=>[nameofalgorithm]")
+    @vprintln("There is a total of ", length(potential_algorithms), " algorithm(s) in Pandora.jl which compute(s) ", name(EProp), ":")
     counter = 0
     length(potential_algorithms) == 0 && return nothing
     algorithm_to_use = potential_algorithms[1]
     for p in potential_algorithms
         counter += 1
-        print("      ", counter, ") ")
+        @vprint("      ", counter, ") ")
         if p == algorithm_to_use
-            println("[USING] ", name(p))
+            @vprintln("[USING] ", name(p))
         else
-            println(name(p))
+            @vprintln(name(p))
         end
     end
     return algorithm_to_use
@@ -358,7 +470,7 @@ function learn!(EP::EnumerativeProblem, EProp::EnumerativeProperty{T};
     end
     f = algorithm
     @assert(ALGORITHM_DATA[f].output_property == EProp)
-    input_knowledge = [get_knowledge!(i, EP) for i in input_properties(f)]
+    input_knowledge = [get_knowledge!(i, EP; kwargs...) for i in input_properties(f)]
     input_knowledge_values = [value(kn) for kn in input_knowledge]
     kwargs_to_pass = copy(default_kwargs(f))
     if !isempty(kwargs)
@@ -394,7 +506,7 @@ function get_knowledge(EProp::EnumerativeProperty, EP::EnumerativeProblem; kwarg
     if length(kwarg_agreement) == 1
         return kwarg_agreement[1]
     else
-        println("Warning: the property [", EProp, "] with given keyword arguments has more than one knowledge node.")
+        @vprintln("Warning: the property [", EProp, "] with given keyword arguments has more than one knowledge node.")
         return kwarg_agreement[1]
     end
 end
@@ -462,12 +574,8 @@ function Base.show(io::IO, EP::EnumerativeProblem)
     end
 end
 
-function update_base_fibre!(EP::EnumerativeProblem, F::Fibre)
-    know!(EP, BASE_FIBRE, F)
-    learn!(EP, DEGREE; algorithm = n_solutions)
-end
 
-include("solving.jl")
+include("enumerative_solver.jl")
 
 function algorithms_which_return(EProp::EnumerativeProperty)
     filter(A -> output_property(ALGORITHM_DATA[A]) == EProp, collect(keys(ALGORITHM_DATA)))

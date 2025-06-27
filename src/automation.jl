@@ -6,7 +6,7 @@ function automate!(EP::EnumerativeProblem)
         D = ALGORITHM_DATA[AD]
         ep = output_property(D)
         if ep!= ANY
-            println("Computing ",ep)
+            @vprintln("Computing ",ep)
             ep(EP)
         end
     end

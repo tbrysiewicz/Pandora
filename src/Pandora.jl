@@ -18,8 +18,14 @@ export System, @var
 
 using LinearAlgebra: norm, isapprox, nullspace
 
-using Oscar: Perm, PermGroupElem, PermGroup, symmetric_group, sub,  order, Polyhedron, describe, convex_hull, gens, is_transitive, orbits
+
+#Use from Oscar only
+using Oscar: Perm, PermGroupElem, PermGroup, symmetric_group, sub,  Polyhedron,  convex_hull,  orbits, minimal_generators
+#Use and extend from Oscar
 import Oscar: perm, degree
+#Use from Oscar with intent to export
+using Oscar: is_primitive, order, is_transitive, describe, gens
+#Oscar exports
 export gens, order, is_primitive, is_transitive, describe
 
 function __init__()
@@ -58,31 +64,13 @@ include("solutions.jl")
 include("fibres.jl")
 include("fibre_visualization.jl")
 
-#include("OldIntroduce/Samplers/Sampler.jl")
-
-#include("OldIntroduce/Optimization/OptimizationGetters.jl")
-#include("OldIntroduce/Optimization/Optimizer.jl")
-#include("OldIntroduce/Optimization/DietmaierOptimization.jl")
-
 include("samplers.jl")
-#include("optimization.jl")
+
+include("optimization.jl")
+
+
 
 
 include("Summarization/summarize.jl")
 
-end # module Pandora
-
-
-#=
-Doc template
-
-@doc raw"""
-    b(n)
-
- Returns
- # Examples
- ```jldoctest
-
- ```
- """
-=#
+end 
