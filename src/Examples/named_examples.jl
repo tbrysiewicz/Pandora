@@ -66,8 +66,8 @@ function SymmetricTwentySevenLines()
 
     g = subs(f,[x,y,z]=>[lx,ly,lz])
     Eqs = coefficients(g,[t])
-    push!(Eqs, sum(randn(ComplexF64,6).*vcat(d,b,c))-1)
-    push!(Eqs, sum(randn(ComplexF64,6).*vcat(d,b,c))-1)
+    push!(Eqs, sum(randn(Float64,6).*vcat(d,b,c))-1)
+    push!(Eqs, sum(randn(Float64,6).*vcat(d,b,c))-1)
 
     F = System(Eqs,variables=[b[1],b[2],c[1],c[2],d[1],d[2]],parameters=Params)
     E = EnumerativeProblem(F)
