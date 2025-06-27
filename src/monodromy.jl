@@ -108,9 +108,9 @@ function monodromy!(EP::EnumerativeProblem,ML::MonodromyLoop)
     
     g = numerical_function(solutions(fibre),S)
     if is_permutation(g,degree(EP)) == false
-        println("The loop does not yield a valid permutation of the solutions of the enumerative problem.")
+        @vprintln("The loop does not yield a valid permutation of the solutions of the enumerative problem.")
         if typeof(loop) <: Vector{Vector{Float64}}
-            println("  Are you sure you want to compute monodromy over the real numbers?")
+            @vprintln("  Are you sure you want to compute monodromy over the real numbers?")
         end
         return nothing
     else
@@ -154,9 +154,9 @@ function large_monodromy_sample(F::System, bf::Fibre; n_monodromy_loops::Int = 5
     S2_bij = solve(F,S2; start_parameters = c, target_parameters = b)
     one_line_perms = [numerical_function(solutions(S2_bij[i][1]),solutions(S1_bij[i][1])) for i in 1:n_monodromy_loops]
     indices_of_valid_permutations = findall(x->is_permutation(x,length(bf)),one_line_perms)
-    println("# Loops computed:            ",n_monodromy_loops)
-    println("# Valid permutations:        ",length(indices_of_valid_permutations))
-    println("# Unique valid permutations: ",length(unique(one_line_perms[indices_of_valid_permutations])))
+    @vprintln("# Loops computed:            ",n_monodromy_loops)
+    @vprintln("# Valid permutations:        ",length(indices_of_valid_permutations))
+    @vprintln("# Unique valid permutations: ",length(unique(one_line_perms[indices_of_valid_permutations])))
     sampled_loops = [[a,bb,c,a] for bb in b]
     ML_bucket = Vector{MonodromyLoop}([])
     for i in indices_of_valid_permutations

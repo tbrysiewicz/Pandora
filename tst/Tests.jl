@@ -1,15 +1,14 @@
-TSL = TwentySevenLines()
-degree(TSL)
-base_fibre(TSL)
-base_solutions(TSL)
-base_parameters(TSL)
+using Test
 
+@testset "Galois group generators count" begin
+    T = TwentySevenLines()
+    G = galois_group(T; n_monodromy_loops=3)
+    @test length(gens(G)) == 3
+end
 
-solve_over_params(TSL,[randn(Float64,n_parameters(TSL)) for i in 1:100])
-
-galois_group(TSL)
-monodromy_group(TSL)
-
-EP = restrict_enumerative_problem(TSL,[randn(Float64,20) for i in 1:3])
-
-optimize_real(TSL)
+@testset "Degree bounds for TwentySevenLines" begin
+    T = TwentySevenLines()
+    @test bkk_bound(T) == 45
+    @test bezout_bound(T) == 81
+    @test degree(T) == 27
+end

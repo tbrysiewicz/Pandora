@@ -34,6 +34,22 @@ export EnumerativeProperty,
 
 const NOALG = "No algorithm datum for this function"
 
+
+##############################################################
+#############  Verbose Printing           ####################
+##############################################################
+const VERBOSE = false
+
+macro vprintln(args...)
+    return :(if VERBOSE
+        println($(esc.(args)...))
+    end)
+end
+macro vprint(args...)
+    return :(if VERBOSE
+        print($(esc.(args)...))
+    end)
+end
 ##############################################################
 ###################    Fibre          ########################
 ##############################################################
@@ -425,18 +441,18 @@ end
 
 function find_algorithm(EProp::EnumerativeProperty, EP::EnumerativeProblem)
     potential_algorithms = algorithms_which_return(EProp)
-    println("Pandora.jl is automatically finding an algorithm to compute ", EProp, ". To specify an algorithm, call again with algorithm=>[nameofalgorithm]")
-    println("There is a total of ", length(potential_algorithms), " algorithm(s) in Pandora.jl which compute(s) ", name(EProp), ":")
+    @vprintln("Pandora.jl is automatically finding an algorithm to compute ", EProp, ". To specify an algorithm, call again with algorithm=>[nameofalgorithm]")
+    @vprintln("There is a total of ", length(potential_algorithms), " algorithm(s) in Pandora.jl which compute(s) ", name(EProp), ":")
     counter = 0
     length(potential_algorithms) == 0 && return nothing
     algorithm_to_use = potential_algorithms[1]
     for p in potential_algorithms
         counter += 1
-        print("      ", counter, ") ")
+        @vprint("      ", counter, ") ")
         if p == algorithm_to_use
-            println("[USING] ", name(p))
+            @vprintln("[USING] ", name(p))
         else
-            println(name(p))
+            @vprintln(name(p))
         end
     end
     return algorithm_to_use
@@ -488,7 +504,7 @@ function get_knowledge(EProp::EnumerativeProperty, EP::EnumerativeProblem; kwarg
     if length(kwarg_agreement) == 1
         return kwarg_agreement[1]
     else
-        println("Warning: the property [", EProp, "] with given keyword arguments has more than one knowledge node.")
+        @vprintln("Warning: the property [", EProp, "] with given keyword arguments has more than one knowledge node.")
         return kwarg_agreement[1]
     end
 end
