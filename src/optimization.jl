@@ -1,4 +1,4 @@
-export optimize
+export optimize, optimize_n_real_solutions
 
 
 #The struct OptimizerData : keeps track of the Data involved while using the optimizer.
@@ -469,12 +469,12 @@ function update_optimizer!(optimizer :: Optimizer, new_fibres :: Vector{Fibre})
     end
 
     #shaping the samples according to non-error non-taboo samples using SVD.
-    non_error_taboo_fibre_values = new_fibres[union(min_improv,
-                                                    maj_improv, 
-                                                    non_improv)]
-    A = reduce(hcat,([non_error_taboo_fibre_values[i][2] for i in 1:length(non_error_taboo_fibre_values)]))
-    u,s,v = svd(A)
-    optimizer.sampler.transform_matrix = u*diagm(s)
+    #non_error_taboo_fibre_values = new_fibres[union(min_improv,
+    #                                                maj_improv, 
+    #                                                non_improv)]
+    #A = reduce(hcat,([non_error_taboo_fibre_values[i][2] for i in 1:length(non_error_taboo_fibre_values)]))
+    #u,s,v = svd(A)
+    #optimizer.sampler.transform_matrix = u*diagm(s)
     
     
     
@@ -556,7 +556,7 @@ end
 # The function optimize! updates the input O::Optimizer by applying the function 
 # improve! to it until the goal is satisified.
 
- function optimize!(O::Optimizer; max_steps = 100, visualize_optimizer = false)
+ function optimize!(O::Optimizer; visualize_optimizer = false)
     G = goal(O)
     if visualize_optimizer && (length(parameters(enumerative_problem(O)))==2)
         visualize(enumerative_problem(O))[2]
@@ -592,7 +592,7 @@ function optimize(EP::EnumerativeProblem, SS::ScoringScheme; sampler = nothing, 
     end
     
     O = Optimizer(EP, sampler, SS::ScoringScheme)
-    
+    optimize!(O,visualize_optimizer = visualize_optimizer)
  end 
 
 
@@ -604,6 +604,12 @@ function optimize(EP::EnumerativeProblem, objective::Function; sampler = nothing
     O = Optimizer(EP, sampler, objective::Function)
     optimize!(O,visualize_optimizer = visualize_optimizer)
 end
+
+function optimize_n_real_solutions(EP::EnumerativeProblem)
+    D = dietmaier_scheme(EP)
+    optimize(EP, D)
+end
+
 
 #=
 
