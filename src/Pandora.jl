@@ -18,8 +18,14 @@ export System, @var
 
 using LinearAlgebra: norm, isapprox, nullspace
 
-using Oscar: Perm, PermGroupElem, PermGroup, symmetric_group, sub,  order, Polyhedron, describe, convex_hull, gens, is_transitive, orbits
+
+#Use from Oscar only
+using Oscar: Perm, PermGroupElem, PermGroup, symmetric_group, sub,  Polyhedron,  convex_hull,  orbits
+#Use and extend from Oscar
 import Oscar: perm, degree
+#Use from Oscar with intent to export
+using Oscar: is_primitive, order, is_transitive, describe, gens
+#Oscar exports
 export gens, order, is_primitive, is_transitive, describe
 
 function __init__()
