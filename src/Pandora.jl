@@ -20,7 +20,7 @@ using LinearAlgebra: norm, isapprox, nullspace
 
 
 #Use from Oscar only
-using Oscar: Perm, PermGroupElem, PermGroup, symmetric_group, sub,  Polyhedron,  convex_hull,  orbits, minimal_generators
+using Oscar: Perm, PermGroupElem, PermGroup, symmetric_group, sub,  Polyhedron,  convex_hull,  orbits, small_generating_set, minimal_generating_set
 #Use and extend from Oscar
 import Oscar: perm, degree
 #Use from Oscar with intent to export

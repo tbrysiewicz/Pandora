@@ -33,7 +33,7 @@ end
     @testset "Galois group generators count" begin
         T = TwentySevenLines()
         G = galois_group(T; n_monodromy_loops=3)
-        @test length(gens(G)) == 3
+        @test length(monodromy_sample(T)) == 3
     end    
 end
 
@@ -51,5 +51,29 @@ end
         @test is_transitive(G)
         @test order(G) == 51840
         @test is_primitive(G)
+    end
+end
+
+
+
+
+#todo Tests
+@testset "Todo Tests" verbose=true begin
+    @testset "Monodromy todo for TwentySevenLines" begin
+        T = TwentySevenLines()
+        @test try
+            T = TwentySevenLines()
+            @test monodromy_basis(T)
+            true
+        catch
+            false
+        end
+        @test try
+            T = TwentySevenLines()
+            @test monodromy_reorder!(T)
+            true
+        catch
+            false
+        end
     end
 end

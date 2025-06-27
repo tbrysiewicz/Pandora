@@ -216,7 +216,7 @@ function subgroup(perms::Vector{PermGroupElem})
 end
 
 function group_generated_by_monodromy_loops(MLS::Vector{MonodromyLoop})
-    mg = minimal_generators(subgroup(unique([ML.sigma for ML in MLS])))
+    mg = minimal_generating_set(subgroup(unique([ML.sigma for ML in MLS])))
     return(subgroup(mg))
 end
 
