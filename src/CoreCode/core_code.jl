@@ -140,6 +140,8 @@ Base.@kwdef struct AlgorithmDatum
     reliability::Symbol = :null
 end
 
+export name, description, input_properties, default_kwargs, output_property, reliability, citation
+
 name(AD::AlgorithmDatum) = AD.name
 description(AD::AlgorithmDatum) = AD.description
 input_properties(AD::AlgorithmDatum) = AD.input_properties

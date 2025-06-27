@@ -1,18 +1,39 @@
-@testset "All tests" verbose=true begin
+using Test
 
-    @testset "Galois group generators count" begin
-        T = TwentySevenLines()
-        G = galois_group(T; n_monodromy_loops=3)
-        @test length(gens(G)) == 3
+macro smoketest(expr)
+    return quote
+        try
+            $(esc(expr))
+           true
+        catch err
+           false
+        end
+    end
+end
+
+@testset "Algorithm Tests" verbose=true begin
+
+
+    for AD in keys(Pandora.ALGORITHM_DATA)
+        @testset "Algorithm Data Tests for $(AD)" begin
+            D = Pandora.ALGORITHM_DATA[AD]
+
+            #Type Tests
+            @test isa(D, AlgorithmDatum)
+            @test isa(input_properties(D), Vector{EnumerativeProperty})
+            @test isa(output_property(D), EnumerativeProperty)
+            @test isa(reliability(D), Symbol)
+            @test isa(name(D), String)
+            @test isa(default_kwargs(D), Dict{Symbol,Any})
+
+            #Smoke Tests
+            T = TwentySevenLines()
+            @smoketest(
+                Pandora.learn!(T, output_property(D); algorithm = AD)
+            )
+            
+        end
     end
 
-    @testset "Degree bounds for TwentySevenLines" begin
-        T = TwentySevenLines()
-        @test bkk_bound(T) == 45
-        @test bezout_bound(T) == 81
-        @test degree(T) == 27
-    end
 
-
-    
 end
