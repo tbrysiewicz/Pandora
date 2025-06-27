@@ -206,16 +206,36 @@ end
 
 const Knowledge = Vector{KnowledgeNode}
 
+"""
+ property(K::KnowledgeNode) returns the `EnumerativeProperty` of the knowledge node `K`.
+"""
 property(K::KnowledgeNode) = K.property
+"""
+ value(K::KnowledgeNode) returns the value of the knowledge node `K`.
+"""
 value(K::KnowledgeNode) = K.value
+"""
+ input_knowledge(K::KnowledgeNode) returns the input knowledge nodes that were used to compute `K`.
+"""
 input_knowledge(K::KnowledgeNode) = K.input_knowledge
+"""
+ input_kwargs(K::KnowledgeNode) returns the keyword arguments that were used to compute `K`.
+"""
 input_kwargs(K::KnowledgeNode) = K.input_kwargs
+"""
+ algorithm(K::KnowledgeNode) returns the algorithm that was used to compute `K`.
+"""
 algorithm(K::KnowledgeNode) = K.algorithm
 
 known_properties(K::Knowledge) = unique([property(k) for k in K])
 #TODO: reliability(K::KnowledgeNode) must track all the way back
 
-export property, value, input_knowledge, input_kwargs, algorithm
+export 
+    property, 
+    value, 
+    input_knowledge, 
+    input_kwargs, 
+    algorithm
 
 function Base.show(io::IO, K::KnowledgeNode)
     print(io,"[",property(K),"] is known as a consequence of [", name(algorithm(K)),"] ")
@@ -277,23 +297,97 @@ function populate!(EP::EnumerativeProblem; kwargs...)
     learn!(EP, DEGREE; algorithm = n_solutions, kwargs...)
 end
 
+"""
+    degree(EP::EnumerativeProblem; kwargs...)
+
+Return the degree of the enumerative problem.
+"""
 degree(EP::EnumerativeProblem; kwargs...) = DEGREE(EP; kwargs...)
+
+"""
+    system(EP::EnumerativeProblem; kwargs...)
+
+Return the system of equations defining the enumerative problem.
+"""
 system(EP::EnumerativeProblem; kwargs...) = SYSTEM(EP; kwargs...)
-base_fibre(EP::EnumerativeProblem; kwargs...) = BASE_FIBRE(EP; kwargs...)
 
+"""
+    base_fibre(EP::EnumerativeProblem; kwargs...)
+
+Return the base_fibre of the enumerative problem.
+"""
+function base_fibre(EP::EnumerativeProblem; kwargs...)
+    BASE_FIBRE(EP; kwargs...)
+end
+
+"""
+    knowledge(EP::EnumerativeProblem)
+Return the vector of knowledge nodes associated with the enumerative problem.
+"""
 knowledge(EP::EnumerativeProblem) = EP.knowledge
+"""
+    variables(EP::EnumerativeProblem)
+Return the variables of system of the enumerative problem.
+"""
 variables(EP::EnumerativeProblem) = variables(SYSTEM(EP))
+"""
+    parameters(EP::EnumerativeProblem)
+Return the parameters of system of the enumerative problem.
+"""
 parameters(EP::EnumerativeProblem) = parameters(SYSTEM(EP))
+"""
+    expressions(EP::EnumerativeProblem)
+Return the expressions of system of the enumerative problem.
+"""
 expressions(EP::EnumerativeProblem) = expressions(SYSTEM(EP))
+"""
+    ambient_dimension(EP::EnumerativeProblem)
+Return the ambient dimension of the enumerative problem, which is the number of variables.
+"""
 ambient_dimension(EP::EnumerativeProblem) = length(variables(EP))
+"""
+    n_variables(EP::EnumerativeProblem)
+Return the number of variables in the system of the enumerative problem.
+"""
 n_variables(EP::EnumerativeProblem) = ambient_dimension(EP)
+"""
+    n_polynomials(EP::EnumerativeProblem)
+Return the number of polynomials in the system of the enumerative problem.
+"""
 n_polynomials(EP::EnumerativeProblem) = length(expressions(EP))
+"""
+    n_parameters(EP::EnumerativeProblem)
+Return the number of parameters in the system of the enumerative problem.
+"""
 n_parameters(EP::EnumerativeProblem) = length(parameters(EP))
+"""
+    n_parameters(F::System)
+Return the number of parameters in a system.
+"""
+n_parameters(F::System) = length(parameters(F))
+"""
+    base_parameters(EP::EnumerativeProblem)
+Return the parameters of the base fibre of the enumerative problem.
+"""
 base_parameters(EP::EnumerativeProblem) = base_fibre(EP)[2]
+"""
+    base_solutions(EP::EnumerativeProblem)
+Return the solutions of the base fibre of the enumerative problem.
+"""
+base_solutions(EP::EnumerativeProblem) = base_fibre(EP)[1]  
 
-function specialize(F::System; P = nothing)
+"""
+    specialize(F::System; P = nothing)
+Return a specialized system for the given system `F` with parameters `P`.
+If `P` is not provided, it will generate a random (complex) parameter vector.
+"""
+function specialize(F::System; P = nothing, real = false)
     if P === nothing
-        P = randn(Float64, length(parameters(F)))
+        if !real
+            P = randn(ComplexF64, length(parameters(F)))
+        else
+            P = randn(Float64, length(parameters(F)))
+        end
     end
     return System(evaluate(expressions(F), parameters(F) => P))
 end
@@ -462,10 +556,6 @@ function Base.show(io::IO, EP::EnumerativeProblem)
     end
 end
 
-function update_base_fibre!(EP::EnumerativeProblem, F::Fibre)
-    know!(EP, BASE_FIBRE, F)
-    learn!(EP, DEGREE; algorithm = n_solutions)
-end
 
 include("solving.jl")
 

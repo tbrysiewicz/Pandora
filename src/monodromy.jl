@@ -7,15 +7,62 @@ export
     galois_group,
     monodromy_sample
 
-mutable struct MonodromyLoop
+mutable struct MonodromyLoop{T}
     F :: Fibre                      # Gives sols and ordering on them. (S,P)
-    P :: Vector{Vector{ComplexF64}} # A list of parameters starting
+    P :: Vector{Vector{T}}          # A list of parameters starting and ending at F[2]
     sigma :: Union{PermGroupElem,Nothing}
 end
 
+"""
+    fibre(ML::MonodromyLoop)
+
+    Returns the base fibre of the monodromy loop `ML`.
+"""
+function base_fibre(ML::MonodromyLoop)
+    return ML.F
+end
+
+"""
+    is_valid(ML::MonodromyLoop) 
+
+    Checks if the monodromy loop `ML` is valid, meaning that it starts and ends at the base parameter of the fibre.
+"""
+function is_valid(ML::MonodromyLoop)
+    base_param = fibre(ML)[2]   
+    if isapprox(ML.P[1],base_param) && isapprox(ML.P[end],base_param) && base_param <: Vector{ComplexF64}
+        return true
+    else
+        return false
+    end
+end
+
+"""
+    make_valid!(ML::MonodromyLoop) 
+
+    Checks if the monodromy loop `ML` is valid, meaning that it starts and ends at the base parameter of the fibre.
+"""
+function make_valid!(ML::MonodromyLoop)
+    if !is_valid(ML)
+        base_param = fibre(ML)[2]
+        if base_param <: Vector{Float64}
+            ML.fibre = Fibre(ML.F.S, Vector{ComplexF64}(base_param)) # Convert to ComplexF64 
+        end
+        if !isapprox(ML.P[1],base_param)
+            pushfirst!(ML.P, base_param) # Inconsistent loop: starting at given fibre parameter
+        end
+        if !isapprox(ML.P[end],base_param)
+            push!(ML.P, base_param) # Incomplete loop: using start parameter as end parameter
+        end
+    end
+    return(ML)
+end
 
 function Base.show(io::IO, ML::MonodromyLoop)
-    print(io,"A monodromy ",length(ML.P),"-gon with permutation ",ML.sigma)
+    if ML.sigma === nothing
+        print(io,"A monodromy ",length(ML.P),"-gon. Use `monodromy!(EP,ML)` to compute the permutation.")
+    else
+        print(io,"A monodromy ",length(ML.P),"-gon with permutation ",ML.sigma)
+    end
 end
 
 
@@ -25,47 +72,62 @@ function MonodromyLoop(EP::EnumerativeProblem,P::Vector{Vector{ComplexF64}})
 end
 
 
-#p is interpretted as a function where p(i) = p[i]. But p(i) may be not injective or
-#  surjective, in which case the following function should return false.
-function is_valid_permutation(p::Union{Vector{Int},Vector{Union{Nothing,Int64}}},d::Int64) :: Bool
+"""
+    is_permutation(p::Vector{Int},d::Int64) :: Bool
+
+    This function checks if the vector `p` represents a valid permutation of the integers from 1 to `d`.
+    A valid permutation is injective and surjective, meaning it contains each integer from 1 to `d` exactly once.
+    If `p` contains `nothing`, it indicates that the mapping is not surjective.
+"""
+function is_permutation(p::Union{Vector{Int},Vector{Union{Nothing,Int64}}},d::Int64) :: Bool
     u=unique(p) 
     return(!(length(u)<d || in(nothing,u))) #nothing indicates not surjective, length indicates not injective
 end
 
-function numerical_bijection(S1::Vector{T} where T, S2::Vector{T} where T; tol::Float64 = 1e-6) 
+"""
+    numerical_function(S1::Vector{T}, S2::Vector{T}; tol::Float64 = 1e-6)
+
+    This function determines the function `f: S2 -> S1` such that `f(s) = i` if `isapprox(S1[i], s, atol=tol)` and 
+        represents it as a vector of indices. For example, the function `f: {a,b,c} -> {a,b,c}` for which `f(a)=a,f(b)=a,f(c)=b` would be represented as [1,1,2].
+    If `f` represents a permutation, the output of this function is the one-line notation of the permutation.
+
+    It is assumed that `S1` consists of distinct elements, and that `S2` is a (numerical) subset of `S1`.
+    If `S2` is not a subset of `S1`, then certain entries of this vector will be `nothing`, indicating that the corresponding element of `S2` is not found in `S1`.
+"""
+function numerical_function(S1::Vector{T} where T, S2::Vector{T} where T; tol::Float64 = 1e-6) 
     one_line = [findfirst(x->isapprox(x,s),S1) for s in S2]
     return(one_line)
 end
 
-function check_and_fix_monodromy_input(fibre::Fibre, loop::Vector{Vector{T}})  where T
-    if T != ComplexF64 #Make sure parameters are complex
-        loop=Vector{Vector{ComplexF64}}(loop) #Parameter type: changing parameters in loop to complex floats
-    end
 
-    if isapprox(parameters(fibre),first(loop))==false #If input loop is doesn't start at fibre force it to
-        pushfirst!(loop,parameters(fibre)) #Inconsistent loop: starting at given fibre parameter
-    end
-
-    if isapprox(first(loop),last(loop))==false #If input loop doesn't end at fibre, force it to
-        push!(loop, first(loop)) #Incompelte loop: using start parameter as end parameter
-    end
-    return(loop)
-end
-
-function monodromy(EP::EnumerativeProblem, fibre::Fibre, loop::Vector{Vector{T}} where T)
-    loop = check_and_fix_monodromy_input(fibre,loop)
-
-    (S,P) = fibre
-    for l in loop[2:end]
+function monodromy!(EP::EnumerativeProblem,ML::MonodromyLoop)
+    (S,P) = fibre(ML)
+    for l in new_loop[2:end]
         (S,P) = (EP((S,P),l),l)
     end
     
-    g = numerical_bijection(solutions(fibre),S)
-    return is_valid_permutation(g,degree(EP)) ? perm(g) : g
+    g = numerical_function(solutions(fibre),S)
+    if is_permutation(g,degree(EP)) == false
+        println("The loop does not yield a valid permutation of the solutions of the enumerative problem.")
+        if typeof(loop) <: Vector{Vector{Float64}}
+            println("  Are you sure you want to compute monodromy over the real numbers?")
+        end
+        return nothing
+    else
+        return(MonodromyLoop(fibre,new_loop,perm(g)))
+    end 
+end
+
+
+function monodromy(EP::EnumerativeProblem, fibre::Fibre, loop::Vector{Vector{T}} where T)
+    ML = MonodromyLoop(EP,fibre,loop)
+    make_valid!(ML)
+    return monodromy!(EP,ML)
 end
 
 monodromy(EP::EnumerativeProblem,loop::Vector{Vector{T}} where T) =monodromy(EP,base_fibre(EP),loop)
-monodromy(EP::EnumerativeProblem,ML::MonodromyLoop) = monodromy(EP,ML.F,ML.P)
+
+#=
 function monodromy!(EP::EnumerativeProblem,ML::MonodromyLoop)
     m = monodromy(EP,ML.F,ML.P)
     if typeof(m) <: Perm
@@ -73,6 +135,7 @@ function monodromy!(EP::EnumerativeProblem,ML::MonodromyLoop)
     end
     return(m)
 end
+=#
 
 perm!(EP::EnumerativeProblem, ML::MonodromyLoop) = monodromy!(EP,ML)
 
@@ -81,24 +144,16 @@ perm!(EP::EnumerativeProblem, ML::MonodromyLoop) = monodromy!(EP,ML)
 #When sampling many monodromy elements, one can make use of the parallelization in HC.jl by choosing loops all of the form
 #   a->b[i]->c->a where a is the base parameter, and c is another fixed parameter.
 #   This requires 2*N+1 fibres to be tracked. 1 from a->c, and N from a->b[i] and c->b[i]
-function large_monodromy_sample(S::System, F::Fibre; kwargs...)
-    EP = EnumerativeProblem(S; populate = false)
-    update_base_fibre!(EP,F)
-    return(large_monodromy_sample(EP;kwargs...))
-end
-
-function large_monodromy_sample(EP::EnumerativeProblem; N::Int = 50, loop_scaling = 1.0, permutations_only = false)
-    k = n_parameters(EP)
+function large_monodromy_sample(F::System, bf::Fibre; N::Int = 50, loop_scaling = 1.0, permutations_only = false)
+    k = n_parameters(F)
     c = loop_scaling.*randn(ComplexF64,k)
     b = [loop_scaling.*randn(ComplexF64,k) for i in 1:N]
-    bf = base_fibre(EP)
     a = parameters(bf)
-    S1_bij = solve(EP, base_fibre(EP), b)
-    S2 = solve(EP,c)
-    S2_fibre = (S2,c)
-    S2_bij = solve(EP,S2_fibre,b)
-    one_line_perms = [numerical_bijection(S2_bij[i],S1_bij[i]) for i in 1:N]
-    indices_of_valid_permutations = findall(x->is_valid_permutation(x,degree(EP)),one_line_perms)
+    S1_bij = solve(F, bf[1]; start_parameters = bf[2], target_parameters=b)
+    S2 = solve(F, bf[1]; start_parameters = bf[2], target_parameters = c)
+    S2_bij = solve(F,S2; start_parameters = c, target_parameters = b)
+    one_line_perms = [numerical_function(solutions(S2_bij[i][1]),solutions(S1_bij[i][1])) for i in 1:N]
+    indices_of_valid_permutations = findall(x->is_permutation(x,length(bf)),one_line_perms)
     println("# Loops computed:            ",N)
     println("# Valid permutations:        ",length(indices_of_valid_permutations))
     println("# Unique valid permutations: ",length(unique(one_line_perms[indices_of_valid_permutations])))
