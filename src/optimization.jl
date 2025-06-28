@@ -1,4 +1,72 @@
-export optimize, optimize_n_real_solutions
+export 
+    ScoringScheme
+
+
+
+
+"""
+    The struct ScoringScheme collects the information required to run optimization code in Pandora.
+    Its fields are:
+    - `objective`: A function from `Fibre` to some type `T` where elements of `T` can be compared. This function represents what the user truly wants to optimize locally.
+    - `barrier`: A function from `Fibre` to `T`, which is used to penalize the objective function.
+    - `barrier_weight`: A `Float64` between 0 and 1 which determines the weight of the barrier penalty
+    - `taboo`: A function from `Fibre` to `S`, where elements of `S` can be compared.
+    - `goal`: A function from `Optimizer` to `Bool` 
+    - `name`: A `String` that names the scoring scheme.
+    The function `improve(EP::EnumerativeProblem, F::Fibre, SS:ScoringScheme; Sampler, n_samples)` 
+        will sample `n_samples` new parameters, using `Sampler`, solve for the fibres `FF` of the EnumerativeProblem `EP` for these parameters,
+        and return the fibre of `FF` which is "best" according to the `ScoringScheme` `SS`.
+    A fibre `F'` is better than a fibre `F` according to the `ScoringScheme` `SS` if:
+    - `error_checker(SS)(F')` is `false` and `error_checker(SS)(F)` is `true`, or if both are `false`, then 
+    - `taboo(SS)(F')` is less than `taboo(SS)(F)`, or if both are equal, then
+    - `weighted_objective(SS)(F')`=`(1-barrier_weight)*objective(SS)(F')+barrier_weight*barrier(SS)(F')` is greater than `weighted_objective` of `F`.
+"""
+mutable struct ScoringScheme
+    objective                               # The function that we really want to be locally optimized.
+    barrier
+    barrier_weight :: Float64               # weight of barrier penalty
+    taboo            
+    name :: String                          # name of the ScoringScheme.
+end 
+
+
+# Base.show for ScoringScheme
+function Base.show(io::IO, SS::ScoringScheme)
+    print(io,"A scoring scheme.")
+end
+
+
+#=
+
+# Getters for ScoringScheme
+
+objective(SS:: ScoringScheme) = SS.objective
+barrier(SS::ScoringScheme) = SS.barrier
+barrier_weight(SS::ScoringScheme) = SS.barrier_weight
+taboo(SS::ScoringScheme) = SS.taboo
+error_checker(SS::ScoringScheme) = SS.error_checker
+goal(SS::ScoringScheme) = SS.goal
+name(SS::ScoringScheme) = SS.name
+
+### Function weighted objective:
+
+function weighted_objective(SS::ScoringScheme)
+    SS_objective = objective(SS)
+    SS_barrier_weight = barrier_weight(SS)
+    SS_barrier = barrier(SS)
+    x->(1-SS_barrier_weight).*SS_objective(x).+(SS_barrier_weight).*SS_barrier(x)
+end
+
+## Setters for ScoringScheme.
+set_objective!(SS::ScoringScheme, new_objective) = (SS.objective = new_objective; nothing)
+set_barrier!(SS::ScoringScheme, new_barrier) = (SS.barrier = new_barrier; nothing)
+set_barrier_weight!(SS::ScoringScheme, new_barrier_weight::Float64) = (SS.barrier_weight = new_barrier_weight; nothing)
+set_taboo!(SS::ScoringScheme, new_taboo) = (SS.taboo = new_taboo; nothing)
+set_error_checker!(SS::ScoringScheme, new_error_checker) = (SS.error_checker = new_error_checker; nothing)
+set_goal!(SS::ScoringScheme, new_goal::Union{Bool, Nothing}) = (SS.goal = new_goal; nothing)
+set_name!(SS::ScoringScheme, new_name::String) = (SS.name = new_name; nothing)
+
+
 
 
 #The struct OptimizerData : keeps track of the Data involved while using the optimizer.
@@ -30,61 +98,6 @@ set_steps_no_major_progress!(OD::OptimizerData, new_steps_no_major_progress::Int
 set_error_proportion!(OD::OptimizerData, new_error_proportion::Float64) = (OD.error_proportion = new_error_proportion; nothing)
 set_taboo_proportion!(OD::OptimizerData, new_taboo_proportion::Float64) = (OD.taboo_proportion = new_taboo_proportion; nothing)
 set_improvement_proportion!(OD::OptimizerData, new_improvement_proportion::Float64) = (OD.improvement_proportion = new_improvement_proportion; nothing)
-
-
-
-#The mutable Struct ScoringScheme
-
-mutable struct ScoringScheme
-    objective                               # The function that we really want to be optimized.
-    barrier
-    barrier_weight :: Float64               # weight of barrier penalty
-    taboo
-    error_checker                  
-    goal                                    # goal (:: Union{Bool, Nothing}) that stops 
-                                            # the optimizer, when it achieves the value "true".
-    name :: String                          # name of the ScoringScheme.
-end 
-
-
-# Base.show for ScoringScheme
-
-function Base.show(io::IO, SS::ScoringScheme)
-    if SS.name==""
-        print(io,"A scoring scheme with barrier weight ",SS.barrier_weight,".")
-    else
-        print(io,"The ",SS.name," scoring scheme with barrier weight ",SS.barrier_weight, ".")
-    end
-end
-
-
-# Getters for ScoringScheme
-
-objective(SS:: ScoringScheme) = SS.objective
-barrier(SS::ScoringScheme) = SS.barrier
-barrier_weight(SS::ScoringScheme) = SS.barrier_weight
-taboo(SS::ScoringScheme) = SS.taboo
-error_checker(SS::ScoringScheme) = SS.error_checker
-goal(SS::ScoringScheme) = SS.goal
-name(SS::ScoringScheme) = SS.name
-
-### Function weighted objective:
-
-function weighted_objective(SS::ScoringScheme)
-    SS_objective = objective(SS)
-    SS_barrier_weight = barrier_weight(SS)
-    SS_barrier = barrier(SS)
-    x->(1-SS_barrier_weight).*SS_objective(x).+(SS_barrier_weight).*SS_barrier(x)
-end
-
-## Setters for ScoringScheme.
-set_objective!(SS::ScoringScheme, new_objective) = (SS.objective = new_objective; nothing)
-set_barrier!(SS::ScoringScheme, new_barrier) = (SS.barrier = new_barrier; nothing)
-set_barrier_weight!(SS::ScoringScheme, new_barrier_weight::Float64) = (SS.barrier_weight = new_barrier_weight; nothing)
-set_taboo!(SS::ScoringScheme, new_taboo) = (SS.taboo = new_taboo; nothing)
-set_error_checker!(SS::ScoringScheme, new_error_checker) = (SS.error_checker = new_error_checker; nothing)
-set_goal!(SS::ScoringScheme, new_goal::Union{Bool, Nothing}) = (SS.goal = new_goal; nothing)
-set_name!(SS::ScoringScheme, new_name::String) = (SS.name = new_name; nothing)
 
 
 # The mutable struct Optimizer:
@@ -634,3 +647,4 @@ function optimize!(O::Optimizer)
 
 
 
+=#

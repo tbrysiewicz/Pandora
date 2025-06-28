@@ -26,7 +26,8 @@ export EnumerativeProperty,
        value,
        input_knowledge,
        input_kwargs,
-       algorithm
+       algorithm,
+       is_real
 
 ##############################################################
 #############  Warning and Error Messages ####################
@@ -310,6 +311,8 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
     end
 end
 
+
+
 function populate!(EP::EnumerativeProblem; kwargs...)
     learn!(EP, BASE_FIBRE; algorithm = polyhedral_homotopy, kwargs...)
     learn!(EP, DEGREE; algorithm = n_solutions, kwargs...)
@@ -392,7 +395,13 @@ base_parameters(EP::EnumerativeProblem) = base_fibre(EP)[2]
     base_solutions(EP::EnumerativeProblem)
 Return the solutions of the base fibre of the enumerative problem.
 """
-base_solutions(EP::EnumerativeProblem) = base_fibre(EP)[1]  
+base_solutions(EP::EnumerativeProblem) = base_fibre(EP)[1]
+
+
+function is_real(EP::EnumerativeProblem)
+    T = typeof(map(E->coefficients(E,vcat(variables(EP),parameters(EP))), expressions(EP)))
+    return promote_type(T, Vector{Vector{Float64}}) == Vector{Vector{Float64}}
+end
 
 """
     specialize(F::System; P = nothing)

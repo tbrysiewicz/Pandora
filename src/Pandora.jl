@@ -66,7 +66,7 @@ include("fibre_visualization.jl")
 
 include("samplers.jl")
 
-include("optimization.jl")
+#include("optimization.jl")
 
 
 
