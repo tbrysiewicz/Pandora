@@ -60,13 +60,12 @@ include("Examples/named_examples.jl")
 include("monodromy.jl")
 include("enumerative_problem_constructors.jl")
 
-include("solutions.jl")
-include("fibres.jl")
+include("fibre_functions.jl")
 include("fibre_visualization.jl")
 
 include("samplers.jl")
 
-#include("optimization.jl")
+include("optimization.jl")
 
 
 
