@@ -38,6 +38,8 @@ real_solutions(fibre::Fibre) = real_solutions(solutions(fibre))
 
 valid_fibre_count(EP::EnumerativeProblem, fibre::Fibre) = length(solutions(fibre)) == degree(EP)
 valid_real_fibre(EP::EnumerativeProblem, fibre::Fibre) =  n_real_solutions(fibre) % 2 == degree(EP) % 2
+valid_real_solution_set(EP::EnumerativeProblem, S::Vector{Vector{ComplexF64}}) =  n_real_solutions(S) % 2 == degree(EP) % 2
+
 
 function valid_fibre(EP::EnumerativeProblem, fibre::Fibre)
     # Check if the number of solutions matches the degree of the problem

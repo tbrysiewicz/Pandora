@@ -41,7 +41,7 @@ mutable struct ValuedSubdivision
 	#  as a function (default is_complete_via_tol with tol = 0.0 for discrete
 	#  and tol = ??? for not discrete)
     function_oracle::Function # Function that takes a vector of parameters and returns a real number
-    function_cache::Vector{Tuple{Vector{Float64},Float64}}
+    function_cache::Vector{Tuple{Vector{Float64},Union{Float64,Symbol}}}
     complete_polygons::Vector{Vector{Int64}} # Indices
     incomplete_polygons::Vector{Vector{Int64}}
     is_discrete::Bool
@@ -70,7 +70,13 @@ mutable struct ValuedSubdivision
         # Create function cache
         function_cache = []
         for i in eachindex(function_oracle_values)
-            push!(function_cache, (parameters[i], float(function_oracle_values[i])))
+            if function_oracle_values[i] == :wild
+                # If the function oracle returns :wild, we store it as a symbol
+                push!(function_cache, (parameters[i], :wild))
+            else
+                # Otherwise, we store the parameter and its corresponding value
+                push!(function_cache, (parameters[i], float(function_oracle_values[i])))
+            end
         end
 
         # Checking whether the function is continuous or discrete
@@ -104,7 +110,7 @@ mutable struct ValuedSubdivision
         end
 
         for p in polygons # determining completeness of polygons using computed tol
-            vertex_function_values = sort([function_cache[v][2] for v in p])
+            vertex_function_values = sort(filter(x->x!=:wild,[function_cache[v][2] for v in p]))
             if (vertex_function_values[end] - vertex_function_values[1]) <= tol
                 push!(complete_polygons, p)
             else
@@ -120,14 +126,10 @@ mutable struct ValuedSubdivision
     end
 
     function ValuedSubdivision(EP::EnumerativeProblem; kwargs...)
-        xlims = get(kwargs, :xlims, [-1,1])
-        ylims = get(kwargs, :ylims, [-1,1])
-        fibre_function = get(kwargs, :fibre_function, x->n_real_solutions(x))
+        fibre_function = get(kwargs, :fibre_function, x->valid_real_solution_set(EP,x) ? n_real_solutions(x) : :wild)
         function_oracle = get(kwargs, :function_oracle, x->fibre_function.(EP(x)))
-        resolution = get(kwargs, :resolution, 1000)
-        mesh_function = get(kwargs, :mesh_function, trihexagonal_mesh)
 
-        ValuedSubdivision(function_oracle; xlims=xlims, ylims=ylims, resolution = resolution, mesh_function = mesh_function)
+        ValuedSubdivision(function_oracle; kwargs...)
     end
 end
 
@@ -168,7 +170,7 @@ function push_to_incomplete_polygons!(VSD::ValuedSubdivision, P::Vector{Int64}; 
     push!(VSD.incomplete_polygons, P)
 end
 
-function push_to_function_cache!(VSD::ValuedSubdivision, V::Tuple{Vector{Float64},Float64}; kwargs...)
+function push_to_function_cache!(VSD::ValuedSubdivision, V::Tuple{Vector{Float64},Union{Float64,Symbol}}; kwargs...)
     push!(VSD.function_cache, V)
 end
 
@@ -270,7 +272,7 @@ function draw_valued_subdivision(VSD::ValuedSubdivision; kwargs...)
     my_plot = plot(xlims = xlims, ylims = ylims, aspect_ratio = :equal, background_color_inside=:black; kwargs...)
     if is_discrete(VSD) == true
         plotting_values = unique(output_values(VSD))
-        plotting_values = reverse(sort(plotting_values))
+#        plotting_values = reverse(sort(plotting_values))
         values_that_have_been_plotted = []
         number_of_labels_plotted = 0
         for i in plotting_values
@@ -316,8 +318,15 @@ end
 
 
 function refine!(VSD::ValuedSubdivision, resolution::Int64; 
-	strategy = :sierpinski)
+	strategy = nothing)
 	local_refinement_method = 0
+    if strategy === nothing
+        if length(complete_polygons(VSD)[1]) == 4
+            strategy = :quadtree
+        elseif length(complete_polygons(VSD)[1]) == 3
+            strategy = :sierpinski
+        end
+    end
 	if strategy == :quadtree && length(complete_polygons(VSD)[1]) != 4
 		error("Cannot do this refinement since polygons are not quadrilaterals.")
 	elseif (strategy == :barycentric || strategy == :sierpinski || strategy == :random) && length(complete_polygons(VSD)[1]) != 3
@@ -364,7 +373,13 @@ function refine!(VSD::ValuedSubdivision, resolution::Int64;
 	function_oracle_values = FO(new_parameters_to_solve)
 	length(function_oracle_values) != length(new_parameters_to_solve) && error("Did not solve for each parameter")
 	for i in eachindex(function_oracle_values)
-		push_to_function_cache!(VSD, (new_parameters_to_solve[i], float(function_oracle_values[i])))
+        if function_oracle_values[i] == :wild
+            # If the function oracle returns :wild, we store it as a symbol
+            push_to_function_cache!(VSD, (new_parameters_to_solve[i], :wild))
+        else
+            # Otherwise, we store the parameter and its corresponding value
+            push_to_function_cache!(VSD, (new_parameters_to_solve[i], float(function_oracle_values[i])))
+        end
 	end
 	for P in refined_polygons
 		delete_from_incomplete_polygons!(VSD, P)
@@ -379,6 +394,10 @@ function refine!(VSD::ValuedSubdivision, resolution::Int64;
 		is_complete(polygon, VSD; tol = refinement_tol) ? push_to_complete_polygons!(VSD, polygon) : push_to_incomplete_polygons!(VSD, polygon)
 	end
 	return resolution_used
+end
+function refine!(VSD::ValuedSubdivision; kwargs...)
+    # Default refinement strategy is quadtree
+    return refine!(VSD, 1000000; kwargs...)
 end
 
 function quadtree_insertion(P::Vector{Vector{Float64}})
@@ -470,7 +489,7 @@ end
 
 #TODO: Abstract this function as a kwarg (later)
 function is_complete(p::Vector{Int}, VSD::ValuedSubdivision; tol = 0.0) 
-	vertex_function_values = sort([function_cache(VSD)[x][2] for x in p])
+	vertex_function_values = sort(filter(x->x!=:wild,[function_cache(VSD)[x][2] for x in p]))
 	vertex_function_values[end] - vertex_function_values[1] <= tol ? (return true) : (return false)
 end
 

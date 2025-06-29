@@ -1,7 +1,7 @@
 export 
     ScoringScheme,
     dietmaier_scheme,
-    Dietmaier_Optimizer,
+    dietmaier_optimizer,
     improve,
     improve!,
     update_optimizer_data!,
@@ -151,7 +151,7 @@ function Base.show(io::IO, optimizer::Optimizer)
 
 end
 
-function Dietmaier_Optimizer(EP::EnumerativeProblem)
+function dietmaier_optimizer(EP::EnumerativeProblem)
     SS = dietmaier_scheme()
     sampler = UniformSampler{Float64}(n_parameters(EP))
     p = sampler(1)[1]
