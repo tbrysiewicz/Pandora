@@ -95,8 +95,9 @@ function optimizer_run(EP::EnumerativeProblem,  SS::ScoringScheme; sampler::Samp
             end
         end
     end
-
-    @error "No valid fibres found." if best_fibre === nothing
+    if best_fibre === nothing
+        @error "No valid fibres found in the sampled data."
+    end
     return(fibre_data, best_fibre, best_score)
 end
 
