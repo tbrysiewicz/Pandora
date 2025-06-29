@@ -192,7 +192,6 @@ function optimize!(O::Optimizer; n_samples::Int = 100, max_steps::Int = 1000)
             return O
         end
         improve!(O; n_samples = n_samples)
-        update_optimizer_parameters!(O; optimistic = true)
     end
     println("Optimizer did not reach its goal after ", max_steps, " steps.")
     return O
@@ -219,7 +218,7 @@ function update_optimizer_parameters!(O::Optimizer; optimistic = true)
     #Now we update the transformation matrix either by scaling or PCA 
     #TODO: Implement PCA
     # For now, we will just scale
-    if OD.last_error_proportion > 0.9 
+    if OD.last_error_proportion > 0.2
         # Change solver fibre
         O.solver_fibre = OD.EP(OD.record_fibre[2]+ 0.1*randn(ComplexF64, n_parameters(O.EP)))
         println("Changing solver fibre since so many errors occurred.")

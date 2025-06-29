@@ -98,7 +98,7 @@ Base.show(io::IO, EProp::EnumerativeProperty) = print(io, name(EProp))
 
 const DEGREE = EnumerativeProperty{Int}("degree")
 const SYSTEM = EnumerativeProperty{System}("system")
-const BASE_FIBRE = EnumerativeProperty{Fibre}("base fibre")
+const BASE_FIBRE = EnumerativeProperty{Fibre}("base_fibre")
 const NULL_ENUMERATIVE_PROPERTY = EnumerativeProperty{Nothing}("null")
 
 ##############################################################
