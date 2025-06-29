@@ -50,7 +50,7 @@ end
 
 
 function dietmaier_scheme() :: ScoringScheme
-    return(ScoringScheme(objective = S -> dietmaier(S), taboo = S->-n_real_solutions(S), name = "Dietmaier"))
+    return(ScoringScheme(objective = S -> -dietmaier(S), taboo = S->-n_real_solutions(S), name = "Dietmaier"))
 end
 
 function (SS::ScoringScheme)(S::Vector{Vector{ComplexF64}}) 
@@ -96,6 +96,7 @@ function optimizer_run(EP::EnumerativeProblem,  SS::ScoringScheme; sampler::Samp
         end
     end
 
+    @error "No valid fibres found." if best_fibre === nothing
     return(fibre_data, best_fibre, best_score)
 end
 
@@ -136,6 +137,10 @@ end
 
 # Base.show for Optimizer
 
+function radius(O::Optimizer)
+    det(O.sampler.affine_transformation.transform_matrix)^(1/n_parameters(O.EP))
+end
+
 function Base.show(io::IO, optimizer::Optimizer)
     tenspaces="          "
     println(io,"Optimizer for an enumerative problem of degree ",degree(optimizer.EP))
@@ -149,7 +154,7 @@ function Base.show(io::IO, optimizer::Optimizer)
     println("                        Last error proportion:  ",od.last_error_proportion)
     println("                        Last taboo proportion:  ",od.last_taboo_proportion)
     println("                  Last improvement proportion:  ",od.last_improvement_proportion)
-    println("                                       Radius: ",det(optimizer.sampler.affine_transformation.transform_matrix))
+    println("                                       Radius: ", radius(optimizer))
 
 end
 
@@ -221,23 +226,24 @@ function update_optimizer_parameters!(O::Optimizer; optimistic = true)
     if OD.last_taboo_proportion > 0.8
         # Scale down the sampler by 0.9
         scale!(sampler, 0.9)
-        println("Scaling down sampler since so many taboo fibres were found.") 
+        println("Scaling down sampler since so many taboo fibres were found: ", radius(O))
     end
     if OD.last_taboo_proportion < 0.2 && OD.last_improvement_proportion > 0.0 
         # Scale up the sampler by 1.1
         scale!(sampler, 1.1)
-        println("Scaling up sampler since taboo fibres were not found and some improvement was made.")
+        println("Scaling up sampler since taboo fibres were not found and some improvement was made: ", radius(O))
     end 
     if OD.last_improvement_proportion > 0.4
         # If we are making good progress, we will scale up the sampler by 1.2
         scale!(sampler, 1.2)
-        println("Scaling up sampler since good improvement was made.")
+        println("Scaling up sampler since good improvement was made: ", radius(O))
     end
     if OD.last_improvement_proportion == 0.0 && OD.steps_no_objective_progress > 10
         # If we are not making any progress, we will scale down the sampler by 0.8
         scale!(sampler, 0.5)
-        println("Scaling down sampler since no improvement was made for a long time. Probably at a local optimum.")
+        println("Scaling down sampler since no improvement was made for a long time. Probably at a local optimum: ", radius(O))
     end
+    print(".")
 end
 
 function update_optimizer_data!(O::Optimizer, fibre_data::Dict{Fibre, Any}, best_fibre::Fibre, best_score::Any)
@@ -248,14 +254,14 @@ function update_optimizer_data!(O::Optimizer, fibre_data::Dict{Fibre, Any}, best
         OD.steps_no_taboo_progress = 0
         OD.record_score = best_score
         OD.record_fibre = best_fibre
-        println("Taboo improvement")
+        println("Taboo improvement: ", best_score)
     else
         OD.steps_no_taboo_progress += 1
         if OD.record_score[1] == best_score[1] && OD.record_score[2] < best_score[2] # If the new best score has improved (increased) objective.
             OD.steps_no_objective_progress = 0
             OD.record_score = best_score
             OD.record_fibre = best_fibre
-            println("Objective improvement")
+            println("Objective improvement: ", best_score)
         else
             OD.steps_no_objective_progress += 1
         end
@@ -279,7 +285,7 @@ function update_optimizer_data!(O::Optimizer, fibre_data::Dict{Fibre, Any}, best
     OD.last_improvement_proportion = improvement_fibre_count / N
 end
 
-function optimize_n_real_solutions(EP::EnumerativeProblem; n_samples::Int = 100, max_steps::Int = 100)
+function optimize_n_real_solutions(EP::EnumerativeProblem; n_samples::Int = 2*n_parameters(EP), max_steps::Int = 100)
     # This function will run the optimizer until it reaches its goal of finding a fibre with n_real_solutions equal to degree(EP).
     O = dietmaier_optimizer(EP)
     return optimize!(O; n_samples = n_samples, max_steps = max_steps)
