@@ -4,6 +4,10 @@ using Plots: scatter, scatter!, plot, plot!, Shape, cgrad, Plot
 using DelaunayTriangulation: triangulate, each_solid_triangle, triangle_vertices, get_point, convert_boundary_points_to_indices
 using LinearAlgebra: qr
 
+#==============================================================================#
+# EXPORTS
+#==============================================================================#
+
 export
     visualize,                   # Main user function for plotting
     visualize_function_cache,    # Plot from a function cache
@@ -16,9 +20,9 @@ export
     complete_polygons,
     incomplete_polygons
 
-
-
-#region MESH FUNCTIONS
+#==============================================================================#
+# MESH FUNCTIONS
+#==============================================================================#
 
 function initial_parameter_distribution(; kwargs...)
     xlims = get(kwargs, :xlims, [-1,1])
@@ -85,6 +89,10 @@ function rectangular_mesh(; kwargs...)
     return (rectangles, parameters)
 end
 
+#==============================================================================#
+# LOCAL INSERTION FUNCTIONS
+#==============================================================================#
+
 function quadtree_insertion(P::Vector{Vector{Float64}})
     center = midpoint(P)
     midpoints = [midpoint([P[i], P[mod1(i+1, 4)]]) for i in 1:4]
@@ -121,6 +129,10 @@ function barycenter_point_insertion(P::Vector{Vector{Float64}})
     return [barycenter], triangles
 end
 
+#==============================================================================#
+# VISUALIZATION STRATEGIES
+#==============================================================================#
+
 """
     VISUALIZATION_STRATEGIES
 
@@ -133,6 +145,10 @@ global VISUALIZATION_STRATEGIES = Dict{Symbol, Dict{Symbol, Any}}(
     :random => Dict{Symbol, Any}(:mesh_function => trihexagonal_mesh, :refinement_method => random_point_insertion)
 )
 
+#==============================================================================#
+# FUNCTIONS NEEDED TO INITIALIZE VALUEDSUBDIVISION
+#==============================================================================#
+
 """
     is_discrete(function_cache::Vector{Tuple{Vector{Float64},Any}})
 
@@ -143,6 +159,20 @@ function is_discrete(function_cache::Vector{Tuple{Vector{Float64},Any}})
     output_values = getindex.(function_cache, 2)
     unique_count = length(unique(output_values))
     return unique_count < 50
+end
+
+
+function is_complete(polygon::Vector{Int}, FC::Vector{Tuple{Vector{Float64},Any}}; tol = 0.0) 
+    vals = [FC[v][2] for v in polygon]
+    vertex_function_values = sort(filter(x->isa(x,Number),vals))
+    if length(vertex_function_values) == 0
+        return false # If there are no vertices, we consider it incomplete
+    end
+    if (vertex_function_values[end] - vertex_function_values[1]) <= tol
+        return true
+    else
+        return false
+    end
 end
 
 
@@ -165,6 +195,9 @@ function default_is_complete(function_cache::Vector{Tuple{Vector{Float64},Any}})
     return local_is_complete
 end
 
+#==============================================================================#
+# VALUEDSUBDIVISION STRUCTURE
+#==============================================================================#
 
 """
     ValuedSubdivision
@@ -234,6 +267,10 @@ mutable struct ValuedSubdivision
     end
 end
 
+#==============================================================================#
+# ACCESSORS AND SETTERS
+#==============================================================================#
+
 function_oracle(VSD::ValuedSubdivision) = VSD.function_oracle
 function_cache(VSD::ValuedSubdivision) = VSD.function_cache
 """
@@ -255,7 +292,13 @@ input_points(VSD::ValuedSubdivision) = input_points(function_cache(VSD))
 output_values(VSD::ValuedSubdivision) = output_values(function_cache(VSD))
 is_discrete(VSD::ValuedSubdivision) = is_discrete(function_cache(VSD))
 
+function is_complete(polygon::Vector{Int}, VSD::ValuedSubdivision; kwargs...) 
+    VSD.is_complete(polygon, function_cache(VSD); kwargs...)
+end
 
+#==============================================================================#
+# POLYGON MANAGEMENT
+#==============================================================================#
 
 function delete_from_incomplete_polygons!(VSD::ValuedSubdivision, P::Vector{Int64}; kwargs...)
     polygon_index = findfirst(x -> x == P, incomplete_polygons(VSD))
@@ -284,9 +327,6 @@ function check_completeness!(VSD::ValuedSubdivision; kwargs...)
     end
 end
 
-
-# SETTERS
-#TODO: I think you can eliminate the next three functions
 function set_complete_polygons!(VSD::ValuedSubdivision, P::Vector{Vector{Int64}})
     VSD.complete_polygons = P
 end
@@ -294,7 +334,6 @@ end
 function set_incomplete_polygons!(VSD::ValuedSubdivision, P::Vector{Vector{Int64}})
     VSD.incomplete_polygons = P
 end
-
 
 function push_to_incomplete_polygons!(VSD::ValuedSubdivision, P::Vector{Int64}; kwargs...)
     push!(VSD.incomplete_polygons, P)
@@ -304,89 +343,92 @@ function push_to_function_cache!(VSD::ValuedSubdivision, V::Tuple{Vector{Float64
     push!(VSD.function_cache, V)
 end
 
-
-#REFINEMENT FUNCTIONS
-
+#==============================================================================#
+# REFINEMENT FUNCTION
+#==============================================================================#
 
 function refine!(VSD::ValuedSubdivision, resolution::Int64;	strategy = nothing, kwargs...)
-	local_refinement_method = 0
-
+    local_refinement_method = 0
 
     if strategy === nothing
         n = length(complete_polygons(VSD)[1])
         strategy = n == 4 ? :quadtree : n == 3 ? :sierpinski : strategy
     end
 
-	if in(strategy, collect(keys(VISUALIZATION_STRATEGIES))) == false
-		error("Invalid strategy inputted. Valid strategies include:",keys(VISUALIZATION_STRATEGIES),".")
-	end
-
+    if in(strategy, collect(keys(VISUALIZATION_STRATEGIES))) == false
+        error("Invalid strategy inputted. Valid strategies include:",keys(VISUALIZATION_STRATEGIES),".")
+    end
 
     local_refinement_method = VISUALIZATION_STRATEGIES[strategy][:refinement_method]
 
-
     FO = function_oracle(VSD)
-	refined_polygons::Vector{Vector{Int64}} = []
-	polygons_to_solve_and_sort::Vector{Vector{Vector{Float64}}} = []
-	new_parameters_to_solve::Vector{Vector{Float64}} = []
-	resolution_used = 0
+    refined_polygons::Vector{Vector{Int64}} = []
+    polygons_to_solve_and_sort::Vector{Vector{Vector{Float64}}} = []
+    new_parameters_to_solve::Vector{Vector{Float64}} = []
+    resolution_used = 0
 
-	for P in incomplete_polygons(VSD)
-		P_parameters = [function_cache(VSD)[v][1] for v in P]
-		new_params, new_polygons = local_refinement_method(P_parameters)
-		if length(new_params) > 0
-			push!(refined_polygons, P)
-			push!(polygons_to_solve_and_sort, new_polygons...)
-			for p in new_params
-				if !(p in new_parameters_to_solve) && !(p in input_points(VSD))
-					push!(new_parameters_to_solve, p)
-					resolution_used += 1
-				end
-			end
-			resolution_used >= resolution && break
-		else
-			continue
-		end
-	end
+    for P in incomplete_polygons(VSD)
+        P_parameters = [function_cache(VSD)[v][1] for v in P]
+        new_params, new_polygons = local_refinement_method(P_parameters)
+        if length(new_params) > 0
+            push!(refined_polygons, P)
+            push!(polygons_to_solve_and_sort, new_polygons...)
+            for p in new_params
+                if !(p in new_parameters_to_solve) && !(p in input_points(VSD))
+                    push!(new_parameters_to_solve, p)
+                    resolution_used += 1
+                end
+            end
+            resolution_used >= resolution && break
+        else
+            continue
+        end
+    end
 
-	for P in refined_polygons
-		delete_from_incomplete_polygons!(VSD, P)
-	end
+    for P in refined_polygons
+        delete_from_incomplete_polygons!(VSD, P)
+    end
 
-	length(new_parameters_to_solve) == 0 && return resolution_used
-	function_oracle_values = FO(new_parameters_to_solve)
-	length(function_oracle_values) != length(new_parameters_to_solve) && error("Did not solve for each parameter")
-	for i in eachindex(function_oracle_values)
+    length(new_parameters_to_solve) == 0 && return resolution_used
+    function_oracle_values = FO(new_parameters_to_solve)
+    length(function_oracle_values) != length(new_parameters_to_solve) && error("Did not solve for each parameter")
+    for i in eachindex(function_oracle_values)
          push_to_function_cache!(VSD, (new_parameters_to_solve[i], (function_oracle_values[i])))
-	end
+    end
 
-	for P in polygons_to_solve_and_sort
-		polygon = [findfirst(x->x[1]==y, function_cache(VSD)) for y in P]
-		push_to_incomplete_polygons!(VSD, polygon) 
-	end
+    for P in polygons_to_solve_and_sort
+        polygon = [findfirst(x->x[1]==y, function_cache(VSD)) for y in P]
+        push_to_incomplete_polygons!(VSD, polygon) 
+    end
     
-
     check_completeness!(VSD)
-	println("Resolution used:", resolution_used)
+    println("Resolution used:", resolution_used)
     return(VSD)
 end
-
-
 
 function refine!(VSD::ValuedSubdivision; kwargs...)
     # Default refinement strategy is quadtree
     return refine!(VSD, 1000000; kwargs...)
 end
 
+#==============================================================================#
+# DELAUNAY RETRIANGULATION
+#==============================================================================#
 
+"""
+    delaunay_retriangulate!(VSD::ValuedSubdivision)
+
+    Re-triangulates the mesh of a ValuedSubdivision using Delaunay triangulation.
+    This function ensures that the triangulation does not contain duplicate points and updates the polygons accordingly.
+"""
 function delaunay_retriangulate!(VSD::ValuedSubdivision)
-	vertices = []
+    vertices = []
     for v in function_cache(VSD)
         v[1] in vertices || push!(vertices, v[1]) #ensuring that the triangulation will not contain duplicate points and the package won't give that annoying warning
     end
-	vertices = hcat(vertices...)
-	tri = triangulate(vertices) #This comes from DelaunayTriangulation.jl
-	triangle_iterator = each_solid_triangle(tri) #Also from DelaunayTriangulation.jl
+    vertices = hcat(vertices...)
+    tri = triangulate(vertices) #This comes from DelaunayTriangulation.jl
+    triangle_iterator = each_solid_triangle(tri) #Also from DelaunayTriangulation.jl
     triangles::Vector{Vector{Int64}} = []
     for T in triangle_iterator
         i,j,k = triangle_vertices(T)
@@ -401,10 +443,14 @@ function delaunay_retriangulate!(VSD::ValuedSubdivision)
         push!(triangles, triangle)
     end
     set_complete_polygons!(VSD, Vector{Vector{Int64}}([])) 
-	set_incomplete_polygons!(VSD, triangles)
+    set_incomplete_polygons!(VSD, triangles)
     check_completeness!(VSD)
-	return VSD
+    return VSD
 end
+
+#==============================================================================#
+# UTILITY FUNCTIONS
+#==============================================================================#
 
 function midpoint(P::AbstractVector) 
     if length(P) == 0
@@ -427,22 +473,9 @@ function median(V::AbstractVector)
     end
 end
 
-function is_complete(polygon::Vector{Int}, FC::Vector{Tuple{Vector{Float64},Any}}; tol = 0.0) 
-    vals = [FC[v][2] for v in polygon]
-    vertex_function_values = sort(filter(x->isa(x,Number),vals))
-    if length(vertex_function_values) == 0
-        return false # If there are no vertices, we consider it incomplete
-    end
-    if (vertex_function_values[end] - vertex_function_values[1]) <= tol
-        return true
-    else
-        return false
-    end
-end
-
-function is_complete(polygon::Vector{Int}, VSD::ValuedSubdivision; kwargs...) 
-    VSD.is_complete(polygon, function_cache(VSD); kwargs...)
-end
+#==============================================================================#
+# VISUALIZATION FUNCTIONS
+#==============================================================================#
 
 """
     visualize_function_cache(VSD::ValuedSubdivision)
@@ -468,7 +501,6 @@ function visualize(VSD::ValuedSubdivision; kwargs...)
     yl = get(kwargs, :ylims, [min(map(x->x[1][2],Pandora.function_cache(VSD))...),max(map(x->x[1][2],Pandora.function_cache(VSD))...)])
     plot_log_transform = get(kwargs, :plot_log_transform, false)
     plot_all_polygons = get(kwargs, :plot_all_polygons, is_discrete(VSD) == false)
-
 
     MyPlot = plot(xlims = xl, ylims = yl, aspect_ratio = :equal, background_color_inside=:black; kwargs...)
     
@@ -511,9 +543,6 @@ function visualize(VSD::ValuedSubdivision; kwargs...)
     return(MyPlot)
 end
 
-
-
-
 """
     visualize(EP::EnumerativeProblem; kwargs...)
     visualize(EP::EnumerativeProblem; fibre_function = ..., kwargs...)
@@ -527,15 +556,15 @@ end
 """
 function visualize(EP::EnumerativeProblem; kwargs...)
 
-	#Check enumerative problem is visualizable
-	if n_parameters(EP) > 2
-		println("EP consists of more than two parameters. Visualizing a random 2-plane in the parameter space.")
-		new_EP = planar_restriction(EP)
-	else
-		new_EP = EP
-	end
+    #Check enumerative problem is visualizable
+    if n_parameters(EP) > 2
+        println("EP consists of more than two parameters. Visualizing a random 2-plane in the parameter space.")
+        new_EP = planar_restriction(EP)
+    else
+        new_EP = EP
+    end
 
-	VSD = ValuedSubdivision(new_EP; kwargs...)
+    VSD = ValuedSubdivision(new_EP; kwargs...)
 
     for i in 1:2
         refine!(VSD;kwargs...)
@@ -543,5 +572,5 @@ function visualize(EP::EnumerativeProblem; kwargs...)
 
     my_plot = visualize(VSD; kwargs...)
     display(my_plot)
-	return VSD
+    return VSD
 end
