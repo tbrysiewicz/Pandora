@@ -75,5 +75,12 @@ end
         catch
             false
         end
+        @test try
+            T = TwentySevenLines()
+            @test monodromy_coordinates(T)
+            true
+        catch
+            false
+        end
     end
 end
