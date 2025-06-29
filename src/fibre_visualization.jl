@@ -1,21 +1,3 @@
-#TODO: function_oracle should be a field in VSD
-#  which takes vectors of parameters to vectors of real numbers
-#  When VSD is called on an EP, the default function P->n_real_solutions.EP(P) 
-#  If a fibre function ff is passed as a keyword argument (currently called
-#   function_oracle unfortunately, then you construct P->ff.EP(P)
-#=
-
-
-VSD(K; fibre_function=>dietmaier_function)
-
-	function_oracle = P->fibre_function.K(P)
-
-VSD(K) #Makes fibre_function #real sols and function oracle 
-	function_oracle = P->fibre_function.K(P)
-
-VSD(f)
-=#
-
 import Base: getindex, iterate
 
 using Plots: scatter, scatter!, plot, plot!, Shape, cgrad, Plot
@@ -38,30 +20,31 @@ export
 
 # VALUEDSUBDIVISION
 mutable struct ValuedSubdivision
-	#TODO: put function_oracle as a field and also put in is_complete 
-	#  as a function (default is_complete_via_tol with tol = 0.0 for discrete
-	#  and tol = ??? for not discrete)
-    function_oracle::Function # Function that takes a vector of parameters and returns a real number
+    function_oracle::Function                           #This takes MANY parameters and returns a vector of values
     function_cache::Vector{Tuple{Vector{Float64},Any}}
-    complete_polygons::Vector{Vector{Int64}} # Indices
+    complete_polygons::Vector{Vector{Int64}}            # Given as indices of function_cache
     incomplete_polygons::Vector{Vector{Int64}}
     is_discrete::Bool
+    is_complete::Function
 
     function ValuedSubdivision(function_oracle::Function; kwargs...)
+        #Pull kwargs
         xlims = get(kwargs, :xlims, [-1,1])
         ylims = get(kwargs, :ylims, [-1,1])
         resolution = get(kwargs, :resolution, 1000)
         strategy = get(kwargs, :strategy, :sierpinski)
+
+
+        # Determine default mesh's based on strategy
         if strategy == :quadtree
             mesh_function = rectangular_mesh
         elseif strategy == :barycentric || strategy == :sierpinski || strategy == :random
             mesh_function = trihexagonal_mesh
         end
-        
+    
         VSD = new()
 
-        #TODO: this is verbose below. Can we refactor? 
-
+        # Generate initial mesh
         (polygons, parameters) = mesh_function(; xlims=xlims, ylims=ylims, resolution=resolution, kwargs...)
 
         # Solve for all pts in the initial mesh
@@ -69,57 +52,48 @@ mutable struct ValuedSubdivision
         length(function_oracle_values) != length(parameters) && error("Did not solve for each parameter")
 
         # Create function cache
-        function_cache = []
+        function_cache = Vector{Tuple{Vector{Float64},Any}}([])
         for i in eachindex(function_oracle_values)
             push!(function_cache, (parameters[i], function_oracle_values[i]))
         end
 
         # Checking whether the function is continuous or discrete
-        is_discrete = false
         output_values = getindex.(function_cache, 2)
-        function_value_tally = Dict()
-        for v in output_values
-            get!(function_value_tally, v, 0)
-            function_value_tally[v] += 1
-        end
-        if length(keys(function_value_tally)) < 50
-            is_discrete = true
-        end
+        unique_count = length(unique(output_values))
+        is_discrete = unique_count < 50
 
         # Now we scroll through polygons and establish completeness
         complete_polygons::Vector{Vector{Int}} = []
         incomplete_polygons::Vector{Vector{Int}} = []
 
-		#TODO: Think if this is the best choice
         tol = 0.0
-        if is_discrete == false
-            # determining a tolerance for establishing completeness for continuous function
-            polygon_difference_values::Vector{Float64} = []
-            for p in polygons
-                vertex_values = sort([function_cache[v][2] for v in p])
-                push!(polygon_difference_values, vertex_values[end] - vertex_values[1])
-            end
-            polygon_difference_values = sort(polygon_difference_values)
-            tol_index = Int(ceil(0.5*length(polygon_difference_values)))
-            tol = polygon_difference_values[tol_index]
+        if !is_discrete
+            polygon_diffs = [max([function_cache[v][2] for v in p]...) - min([function_cache[v][2] for v in p]...) for p in polygons]
+            tol = median(polygon_diffs)
+        end
+
+        local_is_complete = (p::Vector{Int}, FC:: Vector{Tuple{Vector{Float64},Any}}) -> is_complete(p, FC; tol=tol)
+        if haskey(kwargs, :is_complete)
+            ic = kwargs[:is_complete]
+            local_is_complete = (p::Vector{Int}, FC:: Vector{Tuple{Vector{Float64},Any}};kwargs...) -> ic(p, FC;kwargs...) # If a custom is_complete function is provided, use it
+        else
+            local_is_complete = (p::Vector{Int}, FC:: Vector{Tuple{Vector{Float64},Any}};kwargs...) -> is_complete(p, FC; tol=tol, kwargs...) # Default function to determine completeness of polygons
         end
 
         for p in polygons # determining completeness of polygons using computed tol
-            vertex_function_values = sort(filter(x->x!=:wild,[function_cache[v][2] for v in p]))
-            if length(vertex_function_values) == 0
-                return false # If there are no vertices, we consider it incomplete
-            end
-            if (vertex_function_values[end] - vertex_function_values[1]) <= tol
+            if local_is_complete(p,function_cache)
                 push!(complete_polygons, p)
             else
                 push!(incomplete_polygons, p)
             end
         end
+
         VSD.function_oracle = function_oracle
         VSD.function_cache = function_cache
         VSD.complete_polygons = complete_polygons
         VSD.incomplete_polygons = incomplete_polygons
         VSD.is_discrete = is_discrete
+        VSD.is_complete = local_is_complete
         return VSD
     end
 
@@ -137,8 +111,15 @@ function_cache(VSD::ValuedSubdivision) = VSD.function_cache
 complete_polygons(VSD::ValuedSubdivision) = VSD.complete_polygons
 incomplete_polygons(VSD::ValuedSubdivision) = VSD.incomplete_polygons
 is_discrete(VSD::ValuedSubdivision) = VSD.is_discrete
-input_points(VSD::ValuedSubdivision) = getindex.(VSD.function_cache, 1)
-output_values(VSD::ValuedSubdivision) = getindex.(VSD.function_cache, 2)
+input_points(FC::Vector{Tuple{Vector{Float64}, Any}}) = getindex.(FC, 1)
+output_values(FC::Vector{Tuple{Vector{Float64}, Any}}) = getindex.(FC, 2)
+input_points(VSD::ValuedSubdivision) = input_points(function_cache(VSD))
+output_values(VSD::ValuedSubdivision) = output_values(function_cache(VSD))
+
+
+function establish_completeness!(VSD::ValuedSubdivision)
+
+end
 
 # SETTERS
 #TODO: I think you can eliminate the next three functions
@@ -181,19 +162,8 @@ function initial_parameter_distribution(; kwargs...)
     xlength = xlims[2] - xlims[1]
     ylength = ylims[2] - ylims[1]
 
-    if xlength == ylength
-        num_x_divs = Int(floor(sqrt(resolution)))
-        num_y_divs = Int(floor(sqrt(resolution)))
-    else
-        xlength_proportion = (xlength)/(xlength + ylength)
-        num_x_divs = sqrt((xlength_proportion*resolution)/(1 - xlength_proportion))
-        num_y_divs = resolution/num_x_divs
-        num_x_divs = Int(floor(num_x_divs))
-        num_y_divs = Int(floor(num_y_divs))
-    end
-
-    x_values = range(xlims[1], xlims[2], num_x_divs)
-    y_values = range(ylims[1], ylims[2], num_y_divs)
+    x_values = range(xlims[1], xlims[2], Int(floor(sqrt((((xlength)/(xlength + ylength))*resolution)/(1 - ((xlength)/(xlength + ylength)))))))
+    y_values = range(ylims[1], ylims[2], Int(floor(sqrt((((ylength)/(xlength + ylength))*resolution)/(1 - ((ylength)/(xlength + ylength)))))))
 
     return x_values, y_values
 end
@@ -252,71 +222,11 @@ function rectangular_mesh(; kwargs...)
 end
 
 
-function draw_polygon(polygon, color_value, VSD::ValuedSubdivision; label = false, label_text = "real solutions", kwargs...)
-    polygon_1 = [function_cache(VSD)[i][1] for i in polygon]
-    polygon_1 = Shape([(t[1], t[2]) for t in polygon_1])
-    c = cgrad(:thermal, rev = false)[color_value]
-    if label == true
-        plot!(polygon_1, fillcolor = c, linecolor = c, linewidth = false, label = label_text; kwargs...)
-    else
-        plot!(polygon_1, fillcolor = c, linecolor = c, linewidth = false, label = false; kwargs...)
-    end
-end
-
-function draw_valued_subdivision(VSD::ValuedSubdivision; kwargs...)
-    xlims = get(kwargs, :xlims, [-1,1])
-    ylims = get(kwargs, :ylims, [-1,1])
-    plot_log_transform = get(kwargs, :plot_log_transform, false)
-    my_plot = plot(xlims = xlims, ylims = ylims, aspect_ratio = :equal, background_color_inside=:black; kwargs...)
-    if is_discrete(VSD) == true
-        plotting_values = filter(x->x!=:wild, unique(output_values(VSD)))
-        plotting_values = reverse(sort(plotting_values))
-        values_that_have_been_plotted = []
-        number_of_labels_plotted = 0
-        for i in plotting_values
-            current_polygons = filter(x->function_cache(VSD)[x[1]][2] == i, complete_polygons(VSD))
-            color_value = findfirst(x->x == i, plotting_values)/length(plotting_values)
-            for j in current_polygons
-                if (i in values_that_have_been_plotted) == false && number_of_labels_plotted < 5
-                    draw_polygon(j, color_value, VSD; label = true, label_text = "$i real solutions", kwargs...)
-                    push!(values_that_have_been_plotted, i)
-                    number_of_labels_plotted += 1
-                else
-                    draw_polygon(j, color_value, VSD; label = false, kwargs...)
-                end
-            end
-        end
-        return my_plot
-    else
-        polygons = vcat(complete_polygons(VSD), incomplete_polygons(VSD))
-        values = []
-        for p in polygons
-            if plot_log_transform == true
-                vertex_values = [log(function_cache(VSD)[v][2]) for v in p]
-            else
-                vertex_values = [function_cache(VSD)[v][2] for v in p]
-            end
-            polygon_value = sum(vertex_values)/length(p)
-            push!(values, polygon_value)
-        end
-
-        max_value = max(values...)
-        min_value = min(values...)
-        for i in eachindex(polygons)
-            color_value = values[i]/(max_value - min_value)
-            draw_polygon(polygons[i], color_value, VSD; kwargs...)
-        end
-        scatter!([0.0], [0.0]; zcolor = [min_value, max_value], color = cgrad(:thermal, rev = false), markersize = 0, colorbar = true, label = false)
-        return my_plot
-    end
-end
-
 
 #REFINEMENT FUNCTIONS
 
 
-function refine!(VSD::ValuedSubdivision, resolution::Int64; 
-	strategy = nothing)
+function refine!(VSD::ValuedSubdivision, resolution::Int64;	strategy = nothing)
 	local_refinement_method = 0
     if strategy === nothing
         if length(complete_polygons(VSD)[1]) == 4
@@ -387,6 +297,9 @@ function refine!(VSD::ValuedSubdivision, resolution::Int64;
 	end
 	return resolution_used
 end
+
+
+
 function refine!(VSD::ValuedSubdivision; kwargs...)
     # Default refinement strategy is quadtree
     return refine!(VSD, 1000000; kwargs...)
@@ -475,17 +388,43 @@ function delaunay_retriangulate!(VSD::ValuedSubdivision)
 	return VSD
 end
 
-function midpoint(P::Vector{Vector{Float64}})
+function midpoint(P::Vector{T}) where T <: Any
+    if length(P) == 0
+        return nothing
+    end
     return((sum(P))./length(P))
 end
 
+mean(P::Vector{T}) where T <: Any = midpoint(P)
+
+function median(V::AbstractVector)
+    Vsorted = sort(V)
+    n = length(Vsorted)
+    if n == 0
+        error("Cannot compute median of empty vector")
+    elseif isodd(n)
+        return Vsorted[(n+1) ÷ 2]
+    else
+        return (Vsorted[n ÷ 2] + Vsorted[n ÷ 2 + 1]) / 2
+    end
+end
+
 #TODO: Abstract this function as a kwarg (later)
-function is_complete(p::Vector{Int}, VSD::ValuedSubdivision; tol = 0.0) 
-	vertex_function_values = sort(filter(x->x!=:wild,[function_cache(VSD)[x][2] for x in p]))
+function is_complete(polygon::Vector{Int}, FC::Vector{Tuple{Vector{Float64},Any}}; tol = 0.0) 
+    vals = [FC[v][2] for v in polygon]
+    vertex_function_values = sort(filter(x->isa(x,Number),vals))
     if length(vertex_function_values) == 0
         return false # If there are no vertices, we consider it incomplete
     end
-	vertex_function_values[end] - vertex_function_values[1] <= tol ? (return true) : (return false)
+    if (vertex_function_values[end] - vertex_function_values[1]) <= tol
+        return true
+    else
+        return false
+    end
+end
+
+function is_complete(polygon::Vector{Int}, VSD::ValuedSubdivision; kwargs...) 
+    VSD.is_complete(polygon, function_cache(VSD); kwargs...)
 end
 
 
@@ -503,17 +442,62 @@ end
 
 #VISUALIZATION
 function visualize_function_cache(VSD::ValuedSubdivision)
-    scatter(first.(input_points(VSD)), last.(input_points(VSD)), 
-    zcolor = output_values(VSD), legend = false, colorbar = true)
+    visualize(function_cache(VSD))
+end
+function visualize(FC::Vector{Tuple{Vector{Float64},Any}})
+    scatter(first.(input_points(FC)), last.(input_points(FC)), 
+    zcolor = map(x->isa(x,Number) ? x : -10.0, output_values(FC)), legend = false, colorbar = true)
 end
 
-function visualize(VSD::ValuedSubdivision;
-	xlims = [-1.0, 1.0], ylims = [-1.0, 1.0],
-	plot_log_transform = false,
-	kwargs...)
-	my_plot = draw_valued_subdivision(VSD; xlims = xlims, ylims = ylims, plot_log_tranform = plot_log_transform)
-	return my_plot
+
+function visualize(VSD::ValuedSubdivision; kwargs...)
+    xl = get(kwargs, :xlims, [min(map(x->x[1][1],Pandora.function_cache(VSD))...),max(map(x->x[1][1],Pandora.function_cache(VSD))...)])
+    yl = get(kwargs, :ylims, [min(map(x->x[1][2],Pandora.function_cache(VSD))...),max(map(x->x[1][2],Pandora.function_cache(VSD))...)])
+    plot_log_transform = get(kwargs, :plot_log_transform, false)
+    plot_all_polygons = get(kwargs, :plot_all_polygons, is_discrete(VSD) == false)
+
+
+    my_plot = plot(xlims = xl, ylims = yl, aspect_ratio = :equal, background_color_inside=:black; kwargs...)
+    
+    polygon_list = plot_all_polygons == true ? vcat(complete_polygons(VSD), incomplete_polygons(VSD)) : complete_polygons(VSD)
+    polygons_to_draw = map(P->map(first,function_cache(VSD)[P]), polygon_list)
+    # we remove non-numbers when computing means so that non-numbers function as wild cards essentially 
+    polygon_values = map(P-> mean(filter(x->isa(x,Number),map(last,function_cache(VSD)[P]))), polygon_list)
+    if plot_log_transform
+        # If we are plotting log transformed values, we need to transform the polygon values
+        polygon_values = map(x->x==nothing ? nothing : log(x), polygon_values)
+    end
+    # It is still possible that the mean returns 'nothing' if all values are non-numbers
+    real_values = filter(x->x!=nothing, unique(polygon_values))
+    max_value = max(real_values...)
+    shapes = Shape[]
+    colors = []
+
+    for (poly_pts, value) in zip(polygons_to_draw, polygon_values)
+        push!(shapes, Shape([(t[1], t[2]) for t in poly_pts]))
+        push!(colors, value==nothing ? :white : cgrad(:thermal, rev=false)[value/max_value])
+    end
+    MyPlot = plot!(shapes; fillcolor=permutedims(colors), linecolor=permutedims(colors), linewidth=0, label = false)
+
+    
+    legend_values = sort(real_values, rev=true)
+    if in(nothing,polygon_values)
+        pushfirst!(legend_values, nothing)
+    end
+    if length(legend_values) <= 10
+        # Add legend entries for unique values
+        for val in legend_values
+            color = val==nothing ? :white : cgrad(:thermal, rev=false)[val/max_value]
+            # Plot an invisible shape with the correct color and label for the legend
+            plot!(Shape([(NaN, NaN), (NaN, NaN), (NaN, NaN)]); fillcolor=color, linecolor=:transparent, linewidth=0, label="$val", legend = :outerright)
+        end
+    else
+        # Add a colorbar for the continuous values
+        scatter!([NaN], [NaN]; zcolor = [min(real_values...), max(real_values...)], color = cgrad(:thermal, rev = false), markersize = 0, colorbar = true, label = false)
+    end
+    return(MyPlot)
 end
+
 
 #=
 #TODO: Really use kwargs... here for passing xlims/ylims to initialize valued subdivision
