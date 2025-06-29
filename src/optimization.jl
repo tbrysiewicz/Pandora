@@ -9,7 +9,8 @@ export
     optimizer_run,
     Optimizer,
     OptimizerData,
-    optimize!
+    optimize!,
+    optimize_n_real_solutions
 
 
 
@@ -278,3 +279,8 @@ function update_optimizer_data!(O::Optimizer, fibre_data::Dict{Fibre, Any}, best
     OD.last_improvement_proportion = improvement_fibre_count / N
 end
 
+function optimize_n_real_solutions(EP::EnumerativeProblem; n_samples::Int = 100, max_steps::Int = 100)
+    # This function will run the optimizer until it reaches its goal of finding a fibre with n_real_solutions equal to degree(EP).
+    O = dietmaier_optimizer(EP)
+    return optimize!(O; n_samples = n_samples, max_steps = max_steps)
+end

@@ -33,7 +33,8 @@ export
     function_cache,
     complete_polygons,
     incomplete_polygons,
-    is_discrete
+    is_discrete,
+    delaunay_retriangulate!
 
 # VALUEDSUBDIVISION
 mutable struct ValuedSubdivision
@@ -41,7 +42,7 @@ mutable struct ValuedSubdivision
 	#  as a function (default is_complete_via_tol with tol = 0.0 for discrete
 	#  and tol = ??? for not discrete)
     function_oracle::Function # Function that takes a vector of parameters and returns a real number
-    function_cache::Vector{Tuple{Vector{Float64},Union{Float64,Symbol}}}
+    function_cache::Vector{Tuple{Vector{Float64},Any}}
     complete_polygons::Vector{Vector{Int64}} # Indices
     incomplete_polygons::Vector{Vector{Int64}}
     is_discrete::Bool
@@ -70,13 +71,7 @@ mutable struct ValuedSubdivision
         # Create function cache
         function_cache = []
         for i in eachindex(function_oracle_values)
-            if function_oracle_values[i] == :wild
-                # If the function oracle returns :wild, we store it as a symbol
-                push!(function_cache, (parameters[i], :wild))
-            else
-                # Otherwise, we store the parameter and its corresponding value
-                push!(function_cache, (parameters[i], float(function_oracle_values[i])))
-            end
+            push!(function_cache, (parameters[i], function_oracle_values[i]))
         end
 
         # Checking whether the function is continuous or discrete
@@ -111,6 +106,9 @@ mutable struct ValuedSubdivision
 
         for p in polygons # determining completeness of polygons using computed tol
             vertex_function_values = sort(filter(x->x!=:wild,[function_cache[v][2] for v in p]))
+            if length(vertex_function_values) == 0
+                return false # If there are no vertices, we consider it incomplete
+            end
             if (vertex_function_values[end] - vertex_function_values[1]) <= tol
                 push!(complete_polygons, p)
             else
@@ -170,7 +168,7 @@ function push_to_incomplete_polygons!(VSD::ValuedSubdivision, P::Vector{Int64}; 
     push!(VSD.incomplete_polygons, P)
 end
 
-function push_to_function_cache!(VSD::ValuedSubdivision, V::Tuple{Vector{Float64},Union{Float64,Symbol}}; kwargs...)
+function push_to_function_cache!(VSD::ValuedSubdivision, V::Tuple{Vector{Float64},Any}; kwargs...)
     push!(VSD.function_cache, V)
 end
 
@@ -271,8 +269,8 @@ function draw_valued_subdivision(VSD::ValuedSubdivision; kwargs...)
     plot_log_transform = get(kwargs, :plot_log_transform, false)
     my_plot = plot(xlims = xlims, ylims = ylims, aspect_ratio = :equal, background_color_inside=:black; kwargs...)
     if is_discrete(VSD) == true
-        plotting_values = unique(output_values(VSD))
-#        plotting_values = reverse(sort(plotting_values))
+        plotting_values = filter(x->x!=:wild, unique(output_values(VSD)))
+        plotting_values = reverse(sort(plotting_values))
         values_that_have_been_plotted = []
         number_of_labels_plotted = 0
         for i in plotting_values
@@ -373,13 +371,7 @@ function refine!(VSD::ValuedSubdivision, resolution::Int64;
 	function_oracle_values = FO(new_parameters_to_solve)
 	length(function_oracle_values) != length(new_parameters_to_solve) && error("Did not solve for each parameter")
 	for i in eachindex(function_oracle_values)
-        if function_oracle_values[i] == :wild
-            # If the function oracle returns :wild, we store it as a symbol
-            push_to_function_cache!(VSD, (new_parameters_to_solve[i], :wild))
-        else
-            # Otherwise, we store the parameter and its corresponding value
-            push_to_function_cache!(VSD, (new_parameters_to_solve[i], float(function_oracle_values[i])))
-        end
+         push_to_function_cache!(VSD, (new_parameters_to_solve[i], (function_oracle_values[i])))
 	end
 	for P in refined_polygons
 		delete_from_incomplete_polygons!(VSD, P)
@@ -491,7 +483,7 @@ end
 function is_complete(p::Vector{Int}, VSD::ValuedSubdivision; tol = 0.0) 
 	vertex_function_values = sort(filter(x->x!=:wild,[function_cache(VSD)[x][2] for x in p]))
     if length(vertex_function_values) == 0
-        return true # If there are no vertices, we consider it complete
+        return false # If there are no vertices, we consider it incomplete
     end
 	vertex_function_values[end] - vertex_function_values[1] <= tol ? (return true) : (return false)
 end
