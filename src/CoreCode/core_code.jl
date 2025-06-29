@@ -3,6 +3,7 @@
 ##############################################################
 
 export EnumerativeProperty,
+       Fibre,
        AlgorithmDatum,
        KnowledgeNode,
        EnumerativeProblem,
@@ -402,6 +403,7 @@ function is_real(EP::EnumerativeProblem)
     T = typeof(map(E->coefficients(E,vcat(variables(EP),parameters(EP))), expressions(EP)))
     return promote_type(T, Vector{Vector{Float64}}) == Vector{Vector{Float64}}
 end
+
 
 """
     specialize(F::System; P = nothing)

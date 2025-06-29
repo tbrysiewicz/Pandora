@@ -44,6 +44,14 @@ function restrict(EP::EnumerativeProblem,P::Vector{Vector{Float64}})
     new_expressions = [subs(f,parameters(EP)=>affine_span) for f in expressions(EP)]
     return(EnumerativeProblem(System(new_expressions,variables=variables(EP),parameters=t)))
 end
+function restrict(EP::EnumerativeProblem,p::Vector{T}) where {T<:Number}
+    if is_real(p)
+        p = real(p)
+    end
+    P = [p, p+randn(Float64,n_parameters(EP)), p+randn(Float64,n_parameters(EP))]
+    return(restrict(EP,P))
+end
+
 
 
 function gram_schmidt(basis_vectors::Vector; kwargs...)

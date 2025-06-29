@@ -16,7 +16,7 @@ using HomotopyContinuation: System,  @var
 #HC exports
 export System, @var
 
-using LinearAlgebra: norm, isapprox, nullspace
+using LinearAlgebra: norm, isapprox, nullspace, I, det
 
 
 #Use from Oscar only
