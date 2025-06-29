@@ -490,6 +490,9 @@ end
 #TODO: Abstract this function as a kwarg (later)
 function is_complete(p::Vector{Int}, VSD::ValuedSubdivision; tol = 0.0) 
 	vertex_function_values = sort(filter(x->x!=:wild,[function_cache(VSD)[x][2] for x in p]))
+    if length(vertex_function_values) == 0
+        return true # If there are no vertices, we consider it complete
+    end
 	vertex_function_values[end] - vertex_function_values[1] <= tol ? (return true) : (return false)
 end
 

@@ -8,7 +8,8 @@ export
     update_optimizer_parameters!,
     optimizer_run,
     Optimizer,
-    OptimizerData
+    OptimizerData,
+    optimize!
 
 
 
@@ -161,6 +162,11 @@ function dietmaier_optimizer(EP::EnumerativeProblem)
     Optimizer(EP = EP, solver_fibre = base_fibre(EP), sampler = sampler, scoring_scheme = SS, optimizer_data = OD, goal = OptD -> OptD.record_score[1] == -degree(EP))
 end
 
+function success(O::Optimizer)
+    # Check if the optimizer has reached its goal.
+    return O.goal(O.optimizer_data)
+end
+
 function improve!(O::Optimizer; n_samples::Int = 100)
 
     (fibre_data, best_fibre, best_score) = optimizer_run(O.EP, O.scoring_scheme; sampler = O.sampler, n_samples = n_samples, solver_fibre = O.solver_fibre)
@@ -169,6 +175,20 @@ function improve!(O::Optimizer; n_samples::Int = 100)
     update_optimizer_parameters!(O)
     
     return(O)
+end
+
+function optimize!(O::Optimizer; n_samples::Int = 100, max_steps::Int = 1000)
+    # This function will run the optimizer until it reaches its goal or until it has taken `max_steps` steps.
+    for step in 1:max_steps
+        if success(O)
+            println("Optimizer has reached its goal after ", step-1, " steps.")
+            return O
+        end
+        improve!(O; n_samples = n_samples)
+        update_optimizer_parameters!(O; optimistic = true)
+    end
+    println("Optimizer did not reach its goal after ", max_steps, " steps.")
+    return O
 end
 
 function update_optimizer_parameters!(O::Optimizer; optimistic = true)
@@ -194,7 +214,7 @@ function update_optimizer_parameters!(O::Optimizer; optimistic = true)
     # For now, we will just scale
     if OD.last_error_proportion > 0.9 
         # Change solver fibre
-        O.solver_fibre = EP(OD.record_fibre[2]+ 0.1*randn(ComplexF64, n_parameters(O.EP)))
+        O.solver_fibre = OD.EP(OD.record_fibre[2]+ 0.1*randn(ComplexF64, n_parameters(O.EP)))
         println("Changing solver fibre since so many errors occurred.")
     end
     if OD.last_taboo_proportion > 0.8
