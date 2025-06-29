@@ -553,13 +553,23 @@ end
     The default fibre function is `n_real_solutions`, which counts the number of real solutions in the fibre.
     Other interesting fibre functions include 
     - `dietmaier`
+
+    Useful keyword arguments include:
+    - `xlims`: Limits for the x-axis.
+    - `ylims`: Limits for the y-axis.
+    - `resolution`: Number of points to sample in the parameter space.
+    - `strategy`: Strategy for mesh generation, e.g., `:quadtree`, `:barycentric`, `:sierpinski`, or `:random`.
+    - `plot_log_transform`: Whether to apply a logarithmic transformation to the output values for better visualization.
+    - `plot_all_polygons`: Whether to plot all polygons or only the complete ones. 
+    - `near`: A vector of parameters to visualize around, useful for zooming in on a specific region of the parameter space.
 """
 function visualize(EP::EnumerativeProblem; kwargs...)
 
     #Check enumerative problem is visualizable
     if n_parameters(EP) > 2
+        near = real(get(kwargs, :near, rand(Float64,n_parameters(EP)))) # If near is not provided, we sample a random point in the parameter space
         println("EP consists of more than two parameters. Visualizing a random 2-plane in the parameter space.")
-        new_EP = planar_restriction(EP)
+        new_EP = restrict(EP, [near, near + rand(Float64,length(near)), near + rand(Float64,length(near))])
     else
         new_EP = EP
     end
