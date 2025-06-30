@@ -25,9 +25,16 @@ function dietmaier(S::Vector{Vector{ComplexF64}})
     return isempty(nrs) ? 0.0 : minimum(norm ∘ imag, nonreal_solutions(S)) 
 end
 
+function anti_dietmaier(S::Vector{Vector{ComplexF64}})
+    rs = real_solutions(S)
+    return isempty(rs) ? 0.0 : minimum(norm(xi-xj) for xi in rs, xj in rs if xi != xj) 
+end
+
 dietmaier_pair(S::Vector{Vector{ComplexF64}}) = (n_real_solutions(S), -dietmaier(S))
 false_function(s) = false
 zero_function(s) = 0.0
+
+
 
 
 

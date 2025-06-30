@@ -1,0 +1,18 @@
+
+TODO List 
+
+[ ] Add docstrings to all public and internal functions
+[ ] Figure out how to automatically generate the html help pages
+[ ] Summary for Newton Polytopes
+[ ] Figure out how to make a parameter slice struct. SubEnumerativeProblem?
+        Such a construction (coming from restrict for example) should come 
+        with a function embedding the sliced parameters into the new ones. 
+        This allows for an implicit slice or a parametrized slice
+[ ] Figure out how to visualize the knowledge tree? 
+[ ] Create an interesting_fibre knowledge node for bookkeeping and referencing
+[ ] Should fibre cache exist?
+[ ] 
+[ ]
+[ ]
+[ ]
+[ ]

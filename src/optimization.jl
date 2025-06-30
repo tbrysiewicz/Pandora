@@ -10,7 +10,14 @@ export
     Optimizer,
     OptimizerData,
     optimize!,
-    optimize_n_real_solutions
+    maximize_n_real_solutions,
+    anti_dietmaier_scheme,
+    anti_dietmaier_optimizer,
+    change_scoring_scheme!,
+    record_fibre,
+    record_score,
+    obtain_k_reals_scheme,
+    obtain_k_optimizer
 
 
 
@@ -63,15 +70,66 @@ function Base.show(io::IO, SS::ScoringScheme)
 end
 
 """
-    dietmaier_scheme()
+    dietmaier_scheme(d)
 
 This function returns a `ScoringScheme` that is used to minimize 
     the smallest imaginary part of a non-real solution. Doing so
     is a heuristic for "pushing" non-real solutions together to 
     produce more real solutions.
+The taboo function of this scheme is the difference between
+    the number of real solutions and `d`. By default, `k` is the degree
+    of the EnumerativeProblem, but it can be set to any integer.
 """
-function dietmaier_scheme() :: ScoringScheme
-    return(ScoringScheme(objective = S -> -dietmaier(S), taboo = S->-n_real_solutions(S), name = "Dietmaier"))
+function dietmaier_scheme(d) :: ScoringScheme
+    return(ScoringScheme(objective = S -> -dietmaier(S), taboo = S->abs(d-n_real_solutions(S)), name = "Dietmaier"))
+end
+
+"""
+    anti_dietmaier_scheme(d::Int)
+
+This function returns a `ScoringScheme` that is used to minimize the distance between real solutions.
+    Doing so is a heuristic for "pushing" real solutions together to produce 
+    more non-real solutions.
+The taboo function of this scheme is the the number of real solutions.
+"""
+function anti_dietmaier_scheme(d::Int) :: ScoringScheme
+    return(ScoringScheme(objective = S -> -anti_dietmaier(S), taboo = S->abs(n_real_solutions(S)), name = "Anti Dietmaier"))
+end
+
+function obtain_k_reals_scheme(d::Int,k::Int) :: ScoringScheme
+    function obtain_k_objective(S::Vector{Vector{ComplexF64}})
+        nr = n_real_solutions(S)
+        if nr < k 
+            return -dietmaier(S)
+        else
+            return -anti_dietmaier(S)
+        end
+    end
+    function obtain_k_taboo(S::Vector{Vector{ComplexF64}})
+        nr = n_real_solutions(S)
+        return abs(nr - k)
+    end
+    return ScoringScheme(objective = obtain_k_objective, 
+                         taboo = obtain_k_taboo, 
+                         name = "Obtain $k real solutions")
+end
+
+
+function obtain_k_optimizer(EP::EnumerativeProblem, k::Int)
+    SS = obtain_k_reals_scheme(degree(EP), k)
+    sampler = UniformSampler{Float64}(n_parameters(EP))
+    p = sampler(1)[1]
+    start_fibre = Fibre((EP(p), p))
+    record_score = SS(start_fibre[1])
+    OD = OptimizerData(record_fibre = start_fibre, 
+                       record_score = record_score, 
+                       path = [start_fibre[2]])
+    Optimizer(EP = EP, 
+              solver_fibre = base_fibre(EP), 
+              sampler = sampler, 
+              scoring_scheme = SS, 
+              optimizer_data = OD, 
+              goal = OptD -> OptD.record_score[1] == 0.0)
 end
 
 """
@@ -172,6 +230,9 @@ end
     goal :: Function
 end
 
+record_fibre(O::Optimizer) = O.optimizer_data.record_fibre
+record_score(O::Optimizer) = O.optimizer_data.record_score
+
 function optimizer_run(O::Optimizer)
     return optimizer_run(O.EP, O.scoring_scheme; sampler = O.sampler, n_samples = 100, solver_fibre = O.solver_fibre)
 end
@@ -211,15 +272,42 @@ function Base.show(io::IO, optimizer::Optimizer)
 end
 
 function dietmaier_optimizer(EP::EnumerativeProblem)
-    SS = dietmaier_scheme()
+    SS = dietmaier_scheme(degree(EP))
     sampler = UniformSampler{Float64}(n_parameters(EP))
     p = sampler(1)[1]
     start_fibre = Fibre((EP(p), p))
     record_score = SS(start_fibre[1])
-    OD = OptimizerData(record_fibre = start_fibre, record_score = record_score, path = [start_fibre[2]])
-    Optimizer(EP = EP, solver_fibre = base_fibre(EP), sampler = sampler, scoring_scheme = SS, optimizer_data = OD, goal = OptD -> OptD.record_score[1] == -degree(EP))
+    OD = OptimizerData(record_fibre = start_fibre, 
+                       record_score = record_score, 
+                       path = [start_fibre[2]])
+    Optimizer(EP = EP, 
+              solver_fibre = base_fibre(EP), 
+              sampler = sampler, 
+              scoring_scheme = SS, 
+              optimizer_data = OD, 
+              goal = OptD -> OptD.record_score[1] == 0)
 end
 
+function anti_dietmaier_optimizer(EP::EnumerativeProblem)
+    SS = anti_dietmaier_scheme(degree(EP))
+    sampler = UniformSampler{Float64}(n_parameters(EP))
+    p = sampler(1)[1]
+    start_fibre = Fibre((EP(p), p))
+    record_score = SS(start_fibre[1])
+    OD = OptimizerData(
+        record_fibre = start_fibre,
+        record_score = record_score,
+        path = [start_fibre[2]]
+    )
+    Optimizer(
+        EP = EP,
+        solver_fibre = base_fibre(EP),
+        sampler = sampler,
+        scoring_scheme = SS,
+        optimizer_data = OD,
+        goal = OptD -> OptD.record_score[1] == 0.0
+    )
+end
 
 """
     success(O::Optimizer)
@@ -253,11 +341,11 @@ function improve!(O::Optimizer; n_samples::Int = 100)
 end
 
 """
-    optimize!(O::Optimizer; n_samples::Int = 100, max_steps::Int = 1000)
+    optimize!(O::Optimizer; n_samples::Int = 100, max_steps::Int = 100)
 
 This function will run the optimizer until it reaches its goal or until it has taken `max_steps` steps.
 """
-function optimize!(O::Optimizer; n_samples::Int = 100, max_steps::Int = 1000)
+function optimize!(O::Optimizer; n_samples::Int = 100, max_steps::Int = 100)
     # This function will run the optimizer until it reaches its goal or until it has taken `max_steps` steps.
     for step in 1:max_steps
         if success(O)
@@ -299,7 +387,8 @@ function update_optimizer_parameters!(O::Optimizer; optimistic = true)
     # For now, we will just scale
     if OD.last_error_proportion > 0.2
         # Change solver fibre
-        O.solver_fibre = OD.EP(OD.record_fibre[2]+ 0.1*randn(ComplexF64, n_parameters(O.EP)))
+        new_parameter = OD.record_fibre[2] + 0.1*randn(ComplexF64, n_parameters(O.EP))
+        O.solver_fibre = (O.EP(new_parameter),new_parameter)
         println("Changing solver fibre since so many errors occurred.")
     end
     if OD.last_taboo_proportion > 0.8
@@ -329,22 +418,25 @@ function update_optimizer_data!(O::Optimizer, fibre_data::Dict{Fibre, Any}, best
     OD = O.optimizer_data
     # Update the optimizer data with the new best fibre and score.
     old_record_score = OD.record_score
+
     if OD.record_score[1] > best_score[1] # If the new best score has improved (decreased) taboo. 
         OD.steps_no_taboo_progress = 0
         OD.record_score = best_score
         OD.record_fibre = best_fibre
-        println("Taboo improvement: ", best_score)
+        println("Taboo improvement")
     else
         OD.steps_no_taboo_progress += 1
         if OD.record_score[1] == best_score[1] && OD.record_score[2] < best_score[2] # If the new best score has improved (increased) objective.
             OD.steps_no_objective_progress = 0
             OD.record_score = best_score
             OD.record_fibre = best_fibre
-            println("Objective improvement: ", best_score)
+            println("Objective improvement")
         else
             OD.steps_no_objective_progress += 1
         end
     end
+
+    println("Current score (Taboo, Objective): ", record_score(O))
 
     # Update the step count and parameters solved.
     OD.step += 1
@@ -364,8 +456,29 @@ function update_optimizer_data!(O::Optimizer, fibre_data::Dict{Fibre, Any}, best
     OD.last_improvement_proportion = improvement_fibre_count / N
 end
 
-function optimize_n_real_solutions(EP::EnumerativeProblem; n_samples::Int = 2*n_parameters(EP), max_steps::Int = 100)
+function maximize_n_real_solutions(EP::EnumerativeProblem; n_samples::Int = 2*n_parameters(EP), max_steps::Int = 100)
     # This function will run the optimizer until it reaches its goal of finding a fibre with n_real_solutions equal to degree(EP).
     O = dietmaier_optimizer(EP)
     return optimize!(O; n_samples = n_samples, max_steps = max_steps)
 end
+
+
+function find_k_real_solutions(EP::EnumerativeProblem, k::Int; n_samples::Int = 2*n_parameters(EP), max_steps::Int = 100)
+    # This function will run the optimizer until it reaches its goal of finding a fibre with n_real_solutions equal to k.
+    O = obtain_k_optimizer(EP, k)
+    return optimize!(O; n_samples = n_samples, max_steps = max_steps)
+end
+
+
+"""
+    change_scoring_scheme!(O::Optimizer, SS::ScoringScheme)
+
+"""
+function change_scoring_scheme!(O::Optimizer, SS::ScoringScheme)
+    # This function changes the scoring scheme of the optimizer.
+    O.scoring_scheme = SS
+    O.optimizer_data.record_score = SS(O.optimizer_data.record_fibre[1])
+    println("Changed scoring scheme to ", name(SS))
+end
+
+
