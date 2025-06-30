@@ -1,6 +1,6 @@
 import Base: getindex, iterate
 
-using Plots: scatter, scatter!, plot, plot!, Shape, cgrad, Plot, annotate!, text
+using Plots
 using DelaunayTriangulation: triangulate, each_solid_triangle, triangle_vertices, get_point, convert_boundary_points_to_indices
 using LinearAlgebra: qr
 
@@ -142,7 +142,8 @@ global VISUALIZATION_STRATEGIES = Dict{Symbol, Dict{Symbol, Any}}(
     :quadtree => Dict{Symbol, Any}(:mesh_function => rectangular_mesh, :refinement_method => quadtree_insertion),
     :barycentric => Dict{Symbol, Any}(:mesh_function => trihexagonal_mesh, :refinement_method => barycenter_point_insertion),
     :sierpinski => Dict{Symbol, Any}(:mesh_function => trihexagonal_mesh, :refinement_method => sierpinski_point_insertion),
-    :random => Dict{Symbol, Any}(:mesh_function => trihexagonal_mesh, :refinement_method => random_point_insertion)
+    :random => Dict{Symbol, Any}(:mesh_function => trihexagonal_mesh, :refinement_method => random_point_insertion),
+    :careful => Dict{Symbol, Any}(:mesh_function => trihexagonal_mesh, :refinement_method => barycenter_point_insertion)
 )
 
 #==============================================================================#
@@ -260,6 +261,14 @@ mutable struct ValuedSubdivision
     end
 
     function ValuedSubdivision(EP::EnumerativeProblem; kwargs...)
+        #Check enumerative problem is visualizable
+
+        if n_parameters(EP) > 2
+            near = real(get(kwargs, :near, rand(Float64,n_parameters(EP)))) # If near is not provided, we sample a random point in the parameter space
+            println("EP consists of more than two parameters. Visualizing a random 2-plane in the parameter space.")
+            new_EP = restrict(EP, [near, near + rand(Float64,length(near)), near + rand(Float64,length(near))])
+            return(ValuedSubdivision(new_EP; kwargs...))
+        end
         fibre_function = get(kwargs, :fibre_function, x->valid_real_solution_set(EP,x) ? n_real_solutions(x) : :wild)
         function_oracle = get(kwargs, :function_oracle, x->fibre_function.(EP(x)))
 
@@ -347,6 +356,18 @@ end
 # REFINEMENT FUNCTION
 #==============================================================================#
 
+function area_of_polygon(P::Vector{Vector{Float64}})::Float64
+    # Computes the area of a simple polygon using the shoelace formula
+    n = length(P)
+    area = 0.0
+    for i in 1:n
+        x1, y1 = P[i]
+        x2, y2 = P[mod1(i+1, n)]
+        area += x1 * y2 - x2 * y1
+    end
+    return 0.5 * abs(area)
+end
+
 function refine!(VSD::ValuedSubdivision, resolution::Int64;	strategy = nothing, kwargs...)
     local_refinement_method = 0
 
@@ -367,7 +388,10 @@ function refine!(VSD::ValuedSubdivision, resolution::Int64;	strategy = nothing, 
     new_parameters_to_solve::Vector{Vector{Float64}} = []
     resolution_used = 0
 
-    for P in incomplete_polygons(VSD)
+
+    IP = sort(incomplete_polygons(VSD), by = x -> area_of_polygon([VSD.function_cache[v][1] for v in x]), rev = true)
+
+    for P in IP
         P_parameters = [function_cache(VSD)[v][1] for v in P]
         new_params, new_polygons = local_refinement_method(P_parameters)
         if length(new_params) > 0
@@ -422,6 +446,7 @@ end
     This function ensures that the triangulation does not contain duplicate points and updates the polygons accordingly.
 """
 function delaunay_retriangulate!(VSD::ValuedSubdivision)
+    @vprintln("Delaunay re-triangulating the mesh...")
     vertices = []
     for v in function_cache(VSD)
         v[1] in vertices || push!(vertices, v[1]) #ensuring that the triangulation will not contain duplicate points and the package won't give that annoying warning
@@ -574,13 +599,29 @@ function visualize(EP::EnumerativeProblem; kwargs...)
         new_EP = EP
     end
 
+    strat = get(kwargs, :strategy, :sierpinski)
+
     VSD = ValuedSubdivision(new_EP; kwargs...)
 
-    for i in 1:2
+    repeats = strat == :careful ? 3 : 2
+    for i in 1:repeats
         refine!(VSD;kwargs...)
+        if strat == :careful
+            delaunay_retriangulate!(VSD)
+        end
     end
 
     my_plot = visualize(VSD; kwargs...)
     display(my_plot)
     return VSD
+end
+
+function animate_refinement(VSD::ValuedSubdivision; steps::Int=100, resolution::Int=100, kwargs...)
+
+    anim = @animate for i in 1:steps
+        refine!(VSD, resolution)
+        visualize(VSD; kwargs...)
+    end
+
+    gif(anim, "refinement_animation.gif", fps=10)
 end

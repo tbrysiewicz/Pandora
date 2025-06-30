@@ -62,5 +62,6 @@ include("samplers.jl")
 include("optimization.jl")
 include("Summarization/summarize.jl")
 include("visualization.jl")
+include("explore.jl")
 
 end

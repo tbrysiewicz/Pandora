@@ -11,7 +11,8 @@ export
     valid_fibre_count,
     valid_real_fibre,
     valid_fibre,
-    real_solutions
+    real_solutions,
+    n_positive_solutions
 
 ###solution, solution set, and fibre functions
 
@@ -42,6 +43,8 @@ n_real_solutions(fibre::Fibre; tol::Float64=1e-6)::Int = n_real_solutions(soluti
 n_real_solutions(S::Vector{Vector{ComplexF64}}; tol::Float64=1e-6)::Int = count(s -> is_real(s; tol=tol), S)
 real_solutions(fibre::Fibre) = real_solutions(solutions(fibre))
 
+
+n_positive_solutions(S::Vector{Vector{ComplexF64}}; tol::Float64=1e-6)::Int = count(s -> all(x -> x > tol, real(s)), real_solutions(S))
 
 valid_fibre_count(EP::EnumerativeProblem, fibre::Fibre) = length(solutions(fibre)) == degree(EP)
 valid_real_fibre(EP::EnumerativeProblem, fibre::Fibre) =  n_real_solutions(fibre) % 2 == degree(EP) % 2
