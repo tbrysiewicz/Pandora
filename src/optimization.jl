@@ -36,8 +36,22 @@ end
 
 
 
+"""
+    objective(SS::ScoringScheme)
+
+This function returns the objective function of the ScoringScheme `SS`.
+"""
 objective(SS:: ScoringScheme) = SS.objective
+"""
+    taboo(SS::ScoringScheme)
+This function returns the taboo function of the ScoringScheme `SS`.
+"""
 taboo(SS::ScoringScheme) = SS.taboo
+"""
+    name(SS::ScoringScheme)
+
+This function returns the name of the ScoringScheme `SS`.
+"""
 name(SS::ScoringScheme) = SS.name
 # Base.show for ScoringScheme
 function Base.show(io::IO, SS::ScoringScheme)
@@ -48,11 +62,25 @@ function Base.show(io::IO, SS::ScoringScheme)
     end
 end
 
+"""
+    dietmaier_scheme()
 
+This function returns a `ScoringScheme` that is used to minimize 
+    the smallest imaginary part of a non-real solution. Doing so
+    is a heuristic for "pushing" non-real solutions together to 
+    produce more real solutions.
+"""
 function dietmaier_scheme() :: ScoringScheme
     return(ScoringScheme(objective = S -> -dietmaier(S), taboo = S->-n_real_solutions(S), name = "Dietmaier"))
 end
 
+"""
+    (SS::ScoringScheme)(S::Vector{Vector{ComplexF64}})
+
+    Evaluates the scoring scheme `SS` on a solution set `S`.
+    Such an evaluation returns a pair containing the taboo score
+    and the objective score. 
+"""
 function (SS::ScoringScheme)(S::Vector{Vector{ComplexF64}}) 
     return (taboo(SS)(S), objective(SS)(S))
 end
@@ -60,6 +88,7 @@ end
 
 """
     optimizer_run(EP::EnumerativeProblem, SS::ScoringScheme; sampler::Sampler = UniformSampler{Float64}(n_parameters(EP)), n_samples::Int = 100, solver_fibre::Fibre = base_fibre(EP))
+    optimizer_run(O::Optimizer)
 
 This function will sample `n_samples` new parameters, using `sampler`, solve for the fibres `FF` of the EnumerativeProblem `EP` for these parameters,
     and return a triple containing:
@@ -120,7 +149,19 @@ end
 end
 
 
+"""
+    Optimizer
 
+    This is the main optimization struct in Pandora.jl for EnumerativeProblems.
+    It contains the following fields:
+    - `EP`: The EnumerativeProblem to be solved in order to evaluate the objective function.
+    - `solver_fibre`: The fibre used to solve the EnumerativeProblem - this will be adjusted
+        automatically to speed up the optimization process.
+    - `sampler`: A `TransformedSampler` used to sample the parameter space.
+    - `scoring_scheme`: A `ScoringScheme` that defines how to score the solution sets in the fibres.
+    - `optimizer_data`: An `OptimizerData` struct that keeps track of the optimization process.
+    - `goal`: A function from `OptimizerData` to `Bool` that defines the goal of the optimization process. 
+"""
 @kwdef mutable struct Optimizer
     EP::EnumerativeProblem
     solver_fibre :: Fibre
@@ -131,13 +172,23 @@ end
     goal :: Function
 end
 
-
 function optimizer_run(O::Optimizer)
     return optimizer_run(O.EP, O.scoring_scheme; sampler = O.sampler, n_samples = 100, solver_fibre = O.solver_fibre)
 end
 
-# Base.show for Optimizer
 
+"""
+    radius(O::Optimizer)
+
+    This function calculates a number associated to a sampler which we call
+        the `radius`. It is defined as the determinant of the affine transformation matrix
+        of the sampler raised to the power of `1/n_parameters(O.EP)`.
+        When the affine transformation matrix is a scalar matrix c*I, the radius is c. 
+    
+    The radius is printed to the user throughout the optimization process to give
+       an idea of how the optimization is progressing. Small radius means that the sampler
+       was forced to shrink so that fewer samples were taboo. 
+"""
 function radius(O::Optimizer)
     det(O.sampler.affine_transformation.transform_matrix)^(1/n_parameters(O.EP))
 end
@@ -169,11 +220,28 @@ function dietmaier_optimizer(EP::EnumerativeProblem)
     Optimizer(EP = EP, solver_fibre = base_fibre(EP), sampler = sampler, scoring_scheme = SS, optimizer_data = OD, goal = OptD -> OptD.record_score[1] == -degree(EP))
 end
 
+
+"""
+    success(O::Optimizer)
+
+This function checks if the optimizer has reached its goal.
+"""
 function success(O::Optimizer)
     # Check if the optimizer has reached its goal.
     return O.goal(O.optimizer_data)
 end
 
+"""
+    improve!(O::Optimizer; n_samples::Int = 100)
+
+    This is the main function for the optimization process.
+    It calls `optimizer_run` to sample new parameters, solve for the fibres, and
+       evaluate their scores. 
+    It then updates the `OptimizerData` with the relevant data of the `optimizer_run`,
+       For example, the proportion of errors, taboo fibres, and improvements, the new record fibres and scores, etc.
+    Finally, it updates the parameters of the optimizer based on the results of the optimization step.
+       For example, it may scale the sampler or change the solver fibre based on the results.
+"""
 function improve!(O::Optimizer; n_samples::Int = 100)
 
     (fibre_data, best_fibre, best_score) = optimizer_run(O.EP, O.scoring_scheme; sampler = O.sampler, n_samples = n_samples, solver_fibre = O.solver_fibre)
@@ -184,6 +252,11 @@ function improve!(O::Optimizer; n_samples::Int = 100)
     return(O)
 end
 
+"""
+    optimize!(O::Optimizer; n_samples::Int = 100, max_steps::Int = 1000)
+
+This function will run the optimizer until it reaches its goal or until it has taken `max_steps` steps.
+"""
 function optimize!(O::Optimizer; n_samples::Int = 100, max_steps::Int = 1000)
     # This function will run the optimizer until it reaches its goal or until it has taken `max_steps` steps.
     for step in 1:max_steps
@@ -197,6 +270,12 @@ function optimize!(O::Optimizer; n_samples::Int = 100, max_steps::Int = 1000)
     return O
 end
 
+#TODO: Refactor this function to run through a collection of functions 
+#      which interpret `OptimizerData`. For example, function is_at_local_optimum(OD::OptimizerData) which checks if the last improvement proportion is 0.0 and the steps no objective progress is greater than 10.
+#      would return true if it is believed the optimizer is at a local optimum.
+#      Such functions could be combined into a struct which comes to form 
+#      an attitude about the optimizer's current state. These attitudes could 
+#      then be used to update the optimizer parameters. 
 function update_optimizer_parameters!(O::Optimizer; optimistic = true)
     sampler = O.sampler
     OD = O.optimizer_data

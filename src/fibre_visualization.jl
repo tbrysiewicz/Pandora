@@ -1,6 +1,6 @@
 import Base: getindex, iterate
 
-using Plots: scatter, scatter!, plot, plot!, Shape, cgrad, Plot
+using Plots: scatter, scatter!, plot, plot!, Shape, cgrad, Plot, annotate!, text
 using DelaunayTriangulation: triangulate, each_solid_triangle, triangle_vertices, get_point, convert_boundary_points_to_indices
 using LinearAlgebra: qr
 

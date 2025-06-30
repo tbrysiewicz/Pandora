@@ -20,12 +20,14 @@ using LinearAlgebra: norm, isapprox, nullspace, I, det
 
 # Use from Oscar only
 using Oscar: Perm, PermGroupElem, PermGroup, symmetric_group, sub, Polyhedron, convex_hull, orbits, small_generating_set, minimal_generating_set
+using Oscar: PointVector 
 # Use and extend from Oscar
 import Oscar: perm, degree
 # Use from Oscar with intent to export
-using Oscar: is_primitive, order, is_transitive, describe, gens
+using Oscar: is_primitive, order, is_transitive, describe, gens, faces
+import Oscar: vertices as oscar_vertices, dim as oscar_dim, ambient_dim as oscar_ambient_dim
 # Oscar exports
-export gens, order, is_primitive, is_transitive, describe
+export gens, order, is_primitive, is_transitive, describe, dim, vertices, faces
 
 function __init__()
     print(raw"
@@ -59,5 +61,6 @@ include("fibre_visualization.jl")
 include("samplers.jl")
 include("optimization.jl")
 include("Summarization/summarize.jl")
+include("visualization.jl")
 
 end

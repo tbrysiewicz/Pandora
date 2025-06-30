@@ -55,6 +55,32 @@ end
 end
 
 
+@testset "Draw Newton Polygons" begin
+    # Smoke test for drawing Newton polygons of an enumerative problem
+    @test try
+        # Variable and parameter setup
+        @var x y
+        @var a b c
+
+        # Define polynomials
+        f1 = a + b*x + c*y + b*c*x*y
+        f2 = b + c*x^2
+
+        # Create system and enumerative problem
+        F = System([f1, f2], variables=[x, y], parameters=[a, b, c])
+        E = EnumerativeProblem(F)
+
+        # Compute Newton polytopes
+        NP = newton_polytopes(E)
+
+        # Attempt to visualize the first Newton polytope
+        visualize(NP[1])
+        true
+    catch
+        false
+    end
+end
+
 
 
 #todo Tests
