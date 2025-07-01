@@ -8,7 +8,7 @@ const VERSION_NUMBER = VersionNumber(PROJECT_TOML["version"])
 using Dates: today
 
 # Use from HC only
-using HomotopyContinuation: TrackerOptions, Result, subs, coefficients, support_coefficients, paths_to_track, degrees, Expression, Variable, differentiate
+using HomotopyContinuation: TrackerOptions, Result, subs, coefficients, support_coefficients, paths_to_track, degrees, Expression, Variable, differentiate, certify
 # Use and extend from HC
 import HomotopyContinuation: expressions, variables, parameters, solve, solutions, evaluate
 # Use from HC with intent to export
@@ -63,5 +63,7 @@ include("optimization.jl")
 include("Summarization/summarize.jl")
 include("visualization.jl")
 include("explore.jl")
+include("certification.jl")
+
 
 end

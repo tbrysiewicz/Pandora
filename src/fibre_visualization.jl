@@ -18,7 +18,8 @@ export
     is_complete,                 # Check if a polygon is complete
     VISUALIZATION_STRATEGIES,    # Dictionary of visualization strategies
     complete_polygons,
-    incomplete_polygons
+    incomplete_polygons,
+    animate_refinement         # Animate the refinement process
 
 #==============================================================================#
 # MESH FUNCTIONS
@@ -616,6 +617,17 @@ function visualize(EP::EnumerativeProblem; kwargs...)
     return VSD
 end
 
+
+"""
+    animate_refinement(VSD::ValuedSubdivision; steps::Int=100, resolution::Int=100, kwargs...)
+
+    Creates an animation of the refinement process of a ValuedSubdivision `VSD`.
+    The animation shows the subdivision being refined step by step, with each step visualized using the `visualize` function.
+    The function accepts the following keyword arguments:
+    - `steps`: The number of refinement steps to animate (default is 100).
+    - `resolution`: The resolution for each refinement step (default is 100).
+    - `kwargs`: Additional keyword arguments to pass to the `visualize` function for customization
+"""
 function animate_refinement(VSD::ValuedSubdivision; steps::Int=100, resolution::Int=100, kwargs...)
 
     anim = @animate for i in 1:steps
