@@ -193,7 +193,7 @@ end
 
 #The struct OptimizerData : keeps track of the Data involved while using the optimizer.
 @kwdef mutable struct OptimizerData
-    record_fibre :: Union{Fibre, Nothing} = nothing 
+    record_fibre :: Fibre = nothing 
     record_score :: Any = nothing 
 
     step :: Int = 0                             
@@ -374,13 +374,9 @@ function update_optimizer_parameters!(O::Optimizer; optimistic = true)
     OD = O.optimizer_data
     if optimistic
         # If we are being optimistic, the step in the parameter space we just took, we will double
-        if (length(OD.path) == 1)
-            last_parameter = 0
-        else
-            last_parameter = OD.path[end-1]
-        end
+        last_parameter = OD.path[end-1]
         current_parameter = OD.path[end]
-        t = current_parameter+(current_parameter .- last_parameter)
+        t = current_parameter+(current_parameter - last_parameter)
         if is_real(t) 
             t = real(t)
         end
@@ -428,7 +424,7 @@ function update_optimizer_data!(O::Optimizer, fibre_data::Dict{Fibre, Any}, best
     # Update the optimizer data with the new best fibre and score.
     old_record_score = OD.record_score
 
-    if (OD.record_score == nothing || OD.record_score[1] > best_score[1]) # If the new best score has improved (decreased) taboo. 
+    if OD.record_score[1] > best_score[1] # If the new best score has improved (decreased) taboo. 
         OD.steps_no_taboo_progress = 0
         OD.record_score = best_score
         OD.record_fibre = best_fibre
@@ -457,8 +453,8 @@ function update_optimizer_data!(O::Optimizer, fibre_data::Dict{Fibre, Any}, best
 
     # Calculate error and taboo proportions.
     error_fibre_count = count(x -> valid_fibre(O.EP,x)==false, keys(fibre_data))
-    taboo_fibre_count = count(x -> valid_fibre(O.EP,x) && (old_record_score == nothing ||taboo(O.scoring_scheme)(x[1]) > old_record_score[1]), keys(fibre_data))
-    improvement_fibre_count = count(x -> valid_fibre(O.EP,x) && (old_record_score == nothing || (taboo(O.scoring_scheme)(x[1]) < old_record_score[1]) && objective(O.scoring_scheme)(x[1])>old_record_score[2]), keys(fibre_data))
+    taboo_fibre_count = count(x -> valid_fibre(O.EP,x) && taboo(O.scoring_scheme)(x[1]) > old_record_score[1], keys(fibre_data))
+    improvement_fibre_count = count(x -> valid_fibre(O.EP,x) && taboo(O.scoring_scheme)(x[1]) < old_record_score[1] && objective(O.scoring_scheme)(x[1])>old_record_score[2], keys(fibre_data))
 
     OD.last_error_proportion = error_fibre_count / N
     OD.last_taboo_proportion = taboo_fibre_count / N
@@ -487,17 +483,5 @@ function change_scoring_scheme!(O::Optimizer, SS::ScoringScheme)
     # This function changes the scoring scheme of the optimizer.
     O.scoring_scheme = SS
     O.optimizer_data.record_score = SS(O.optimizer_data.record_fibre[1])
-    @vprintln("Changed scoring scheme to ", name(SS))
-end
-
-export optimize
-function optimize(EP::EnumerativeProblem, SS::ScoringScheme; n_samples::Int = 100, max_steps::Int = 100)
-    # This function runs the optimizer with the given scoring scheme.
-    O = Optimizer(EP = EP, 
-                  solver_fibre = base_fibre(EP), 
-                  sampler = UniformSampler{Float64}(n_parameters(EP)), 
-                  scoring_scheme = SS, 
-                  optimizer_data = OptimizerData(), 
-                  goal = OptD -> (OptD.record_score != nothing && OptD.record_score[1] == 0.0))
-    return optimize!(O; n_samples = n_samples, max_steps = max_steps)
+    println("Changed scoring scheme to ", name(SS))
 end
