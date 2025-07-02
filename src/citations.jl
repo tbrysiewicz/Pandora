@@ -25,13 +25,21 @@ end
 
 const NULL_CITATION = Citation()
 
-const DummitFootCitation = Citation(
+const Dummit04 = Citation(
     authors = ["Dummit", "Foote"],
     title = "Abstract Algebra",
     publisher = "John Wiley & Sons",
     year = 2004,
     edition = "3rd",
     pages = "pp. 22"
+)
+
+const Jordan1870 = Citation(
+    authors = ["C. Jordan"],
+    title = "Trait´e des substitutions",
+    publisher = "Gauthier-Villars",
+    year = 1870,
+    edition = "1st"
 )
 
 function short(c::Citation)

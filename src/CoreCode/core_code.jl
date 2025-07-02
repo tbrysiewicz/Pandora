@@ -136,7 +136,7 @@ input_properties(AD::AlgorithmDatum) = AD.input_properties
 default_kwargs(AD::AlgorithmDatum) = AD.default_kwargs
 output_property(AD::AlgorithmDatum) = AD.output_property
 reliability(AD::AlgorithmDatum) = AD.reliability
-citations(AD::AlgorithmDatum) = AD.citation
+citations(AD::AlgorithmDatum) = AD.citations
 
 function core_function(AD::AlgorithmDatum)
     K = collect(keys(ALGORITHM_DATA))
@@ -159,7 +159,7 @@ function Base.show(io::IO, AD::AlgorithmDatum)
     end
     println(io, "Output:\n                  ", output_property(AD))
     println(io, "Core Function:    ", core_function(AD))
-    println(io, "Citation:         ", citation(AD))
+    println(io, "Citations:         ", [short(c) for c in citations(AD)])
     println(io, "Reliability:      ", reliability(AD))
 end
 
