@@ -164,6 +164,13 @@ function is_discrete(function_cache::Vector{Tuple{Vector{Float64},Any}})
 end
 
 
+
+"""
+    is_complete(p::Vector{Int}, FC::Vector{Tuple{Vector{Float64},Any}}; tol=0.0, kwargs...) 
+
+    The default function to determine if a polygon is complete.
+    A polygon is considered complete if all its vertices have been evaluated and the output values are within a specified tolerance.
+"""
 function is_complete(polygon::Vector{Int}, FC::Vector{Tuple{Vector{Float64},Any}}; tol = 0.0) 
     vals = [FC[v][2] for v in polygon]
     vertex_function_values = sort(filter(x->isa(x,Number),vals))
@@ -177,13 +184,6 @@ function is_complete(polygon::Vector{Int}, FC::Vector{Tuple{Vector{Float64},Any}
     end
 end
 
-
-"""
-    is_complete(p::Vector{Int}, FC::Vector{Tuple{Vector{Float64},Any}}; tol=0.0, kwargs...) 
-
-    The default function to determine if a polygon is complete.
-    A polygon is considered complete if all its vertices have been evaluated and the output values are within a specified tolerance.
-"""
 function default_is_complete(function_cache::Vector{Tuple{Vector{Float64},Any}})
     # Checking whether the function is continuous or discrete
 
@@ -226,7 +226,7 @@ mutable struct ValuedSubdivision
         ylims = get(kwargs, :ylims, [-1,1])
         resolution = get(kwargs, :resolution, 1000)
         strategy = get(kwargs, :strategy, :sierpinski)
-        mesh_function = VISUALIZATION_STRATEGIES[strategy][:mesh_function]
+        mesh_function = get(kwargs, :mesh_function, VISUALIZATION_STRATEGIES[strategy][:mesh_function])
 
     
         VSD = new()
@@ -277,8 +277,15 @@ mutable struct ValuedSubdivision
     end
 end
 
+
+function Base.show(io::IO, VSD::ValuedSubdivision)
+    print(io, "ValuedSubdivision with ", length(VSD.function_cache), " function cache entries, ",
+          length(VSD.complete_polygons), " complete polygons, and ",
+          length(VSD.incomplete_polygons), " incomplete polygons.")
+end
+
 #==============================================================================#
-# ACCESSORS AND SETTERS
+# GETTERS AND SETTERS
 #==============================================================================#
 
 function_oracle(VSD::ValuedSubdivision) = VSD.function_oracle
@@ -370,7 +377,6 @@ function area_of_polygon(P::Vector{Vector{Float64}})::Float64
 end
 
 function refine!(VSD::ValuedSubdivision, resolution::Int64;	strategy = nothing, kwargs...)
-    local_refinement_method = 0
 
     if strategy === nothing
         n = length(complete_polygons(VSD)[1])
@@ -381,7 +387,7 @@ function refine!(VSD::ValuedSubdivision, resolution::Int64;	strategy = nothing, 
         error("Invalid strategy inputted. Valid strategies include:",keys(VISUALIZATION_STRATEGIES),".")
     end
 
-    local_refinement_method = VISUALIZATION_STRATEGIES[strategy][:refinement_method]
+    local_refinement_method = get(kwargs, :refinement_method, VISUALIZATION_STRATEGIES[strategy][:refinement_method])
 
     FO = function_oracle(VSD)
     refined_polygons::Vector{Vector{Int64}} = []
@@ -395,19 +401,15 @@ function refine!(VSD::ValuedSubdivision, resolution::Int64;	strategy = nothing, 
     for P in IP
         P_parameters = [function_cache(VSD)[v][1] for v in P]
         new_params, new_polygons = local_refinement_method(P_parameters)
-        if length(new_params) > 0
-            push!(refined_polygons, P)
-            push!(polygons_to_solve_and_sort, new_polygons...)
-            for p in new_params
-                if !(p in new_parameters_to_solve) && !(p in input_points(VSD))
-                    push!(new_parameters_to_solve, p)
-                    resolution_used += 1
-                end
+        push!(refined_polygons, P)
+        push!(polygons_to_solve_and_sort, new_polygons...)
+        for p in new_params
+            if !(p in new_parameters_to_solve) && !(p in input_points(VSD))
+                push!(new_parameters_to_solve, p)
+                resolution_used += 1
             end
-            resolution_used >= resolution && break
-        else
-            continue
         end
+        resolution_used >= resolution && break
     end
 
     for P in refined_polygons
@@ -520,7 +522,11 @@ end
 """
     visualize(VSD::ValuedSubdivision; kwargs...)
     Visualizes the ValuedSubdivision by plotting the polygons and their associated values.
-    The function accepts keyword arguments for customization, such as `xlims`, `ylims`, `plot_log_transform`, and `plot_all_polygons`.
+    The function accepts keyword arguments for customization, such as 
+        -`xlims`, 
+        -`ylims`,
+        -`plot_log_transform`,
+        -`plot_all_polygons`
 """
 function visualize(VSD::ValuedSubdivision; kwargs...)
     xl = get(kwargs, :xlims, [min(map(x->x[1][1],Pandora.function_cache(VSD))...),max(map(x->x[1][1],Pandora.function_cache(VSD))...)])
@@ -600,11 +606,11 @@ function visualize(EP::EnumerativeProblem; kwargs...)
         new_EP = EP
     end
 
-    strat = get(kwargs, :strategy, :sierpinski)
+    strat = get(kwargs, :strategy, :careful)
 
     VSD = ValuedSubdivision(new_EP; kwargs...)
 
-    repeats = strat == :careful ? 3 : 2
+    repeats = strat == :careful ? 2 : 2
     for i in 1:repeats
         refine!(VSD;kwargs...)
         if strat == :careful

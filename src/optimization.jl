@@ -17,7 +17,9 @@ export
     record_fibre,
     record_score,
     obtain_k_reals_scheme,
-    obtain_k_optimizer
+    obtain_k_optimizer,
+    record_parameters,
+    record_solutions
 
 
 
@@ -232,6 +234,8 @@ end
 
 record_fibre(O::Optimizer) = O.optimizer_data.record_fibre
 record_score(O::Optimizer) = O.optimizer_data.record_score
+record_parameters(O::Optimizer) = O.optimizer_data.record_fibre[2]
+record_solutions(O::Optimizer) = O.optimizer_data.record_fibre[1]
 
 function optimizer_run(O::Optimizer)
     return optimizer_run(O.EP, O.scoring_scheme; sampler = O.sampler, n_samples = 100, solver_fibre = O.solver_fibre)
@@ -257,6 +261,7 @@ end
 function Base.show(io::IO, optimizer::Optimizer)
     tenspaces="          "
     println(io,"Optimizer for an enumerative problem of degree ",degree(optimizer.EP))
+    if VERBOSE[]==true
     println("--------------------------------------------------------------------------")
     od = optimizer.optimizer_data
     println("Progress:                       Current score:  ",od.record_score)
@@ -268,7 +273,7 @@ function Base.show(io::IO, optimizer::Optimizer)
     println("                        Last taboo proportion:  ",od.last_taboo_proportion)
     println("                  Last improvement proportion:  ",od.last_improvement_proportion)
     println("                                       Radius: ", radius(optimizer))
-
+    end
 end
 
 function dietmaier_optimizer(EP::EnumerativeProblem)
@@ -393,27 +398,27 @@ function update_optimizer_parameters!(O::Optimizer; optimistic = true)
         # Change solver fibre
         new_parameter = OD.record_fibre[2] + 0.1*randn(ComplexF64, n_parameters(O.EP))
         O.solver_fibre = (O.EP(new_parameter),new_parameter)
-        println("Changing solver fibre since so many errors occurred.")
+        @vprintln("Changing solver fibre since so many errors occurred.")
     end
     if OD.last_taboo_proportion > 0.8
         # Scale down the sampler by 0.9
         scale!(sampler, 0.9)
-        println("Scaling down sampler since so many taboo fibres were found: ", radius(O))
+        @vprintln("Scaling down sampler since so many taboo fibres were found: ", radius(O))
     end
     if OD.last_taboo_proportion < 0.2 && OD.last_improvement_proportion > 0.0 
         # Scale up the sampler by 1.1
         scale!(sampler, 1.1)
-        println("Scaling up sampler since taboo fibres were not found and some improvement was made: ", radius(O))
+        @vprintln("Scaling up sampler since taboo fibres were not found and some improvement was made: ", radius(O))
     end 
     if OD.last_improvement_proportion > 0.4
         # If we are making good progress, we will scale up the sampler by 1.2
         scale!(sampler, 1.2)
-        println("Scaling up sampler since good improvement was made: ", radius(O))
+        @vprintln("Scaling up sampler since good improvement was made: ", radius(O))
     end
     if OD.last_improvement_proportion == 0.0 && OD.steps_no_objective_progress > 10
         # If we are not making any progress, we will scale down the sampler by 0.8
         scale!(sampler, 0.5)
-        println("Scaling down sampler since no improvement was made for a long time. Probably at a local optimum: ", radius(O))
+        @vprintln("Scaling down sampler since no improvement was made for a long time. Probably at a local optimum: ", radius(O))
     end
     print(".")
 end
@@ -427,20 +432,20 @@ function update_optimizer_data!(O::Optimizer, fibre_data::Dict{Fibre, Any}, best
         OD.steps_no_taboo_progress = 0
         OD.record_score = best_score
         OD.record_fibre = best_fibre
-        println("Taboo improvement")
+        @vprintln("Taboo improvement")
     else
         OD.steps_no_taboo_progress += 1
         if OD.record_score[1] == best_score[1] && OD.record_score[2] < best_score[2] # If the new best score has improved (increased) objective.
             OD.steps_no_objective_progress = 0
             OD.record_score = best_score
             OD.record_fibre = best_fibre
-            println("Objective improvement")
+            @vprintln("Objective improvement")
         else
             OD.steps_no_objective_progress += 1
         end
     end
 
-    println("Current score (Taboo, Objective): ", record_score(O))
+    @vprintln("Current score (Taboo, Objective): ", record_score(O))
 
     # Update the step count and parameters solved.
     OD.step += 1
@@ -482,7 +487,7 @@ function change_scoring_scheme!(O::Optimizer, SS::ScoringScheme)
     # This function changes the scoring scheme of the optimizer.
     O.scoring_scheme = SS
     O.optimizer_data.record_score = SS(O.optimizer_data.record_fibre[1])
-    println("Changed scoring scheme to ", name(SS))
+    @vprintln("Changed scoring scheme to ", name(SS))
 end
 
 export optimize

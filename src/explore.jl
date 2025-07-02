@@ -1,6 +1,9 @@
 export
     explore,
-    reality_exploration
+    reality_exploration,
+    reality_exploration!,
+    fibre_datum,
+    fibre_data
 
 
 function tally(S)
@@ -29,10 +32,8 @@ function tally_and_witness_fibres(Fibres,f; certify_function = nothing)
                 @vprint("Trying again to certify that function value $v is found in fibre number $(i)")
                 if certify_function(Fibres[i],v)
                     witnesses[v] = Fibres[i][2]  # Store the first occurrence as a witness
-                    print("    check")
                 else
 
-                    print("    failed")
                 end
             end
         else
@@ -42,15 +43,12 @@ function tally_and_witness_fibres(Fibres,f; certify_function = nothing)
                 @vprint("Certifying that function value $v is found in fibre number $(i)")
                 if certify_function(Fibres[i],v)
                     witnesses[v] = Fibres[i][2]  # Store the first occurrence as a witness
-                    print("    check")
                 else
 
-                    print("    failed")
                 end
             else
                 witnesses[v] = Fibres[i][2]  # Store the first occurrence as a witness
             end
-            print("\n")
         end
     end
     return counts, witnesses
@@ -86,6 +84,7 @@ function explore(EP::EnumerativeProblem, F::Vector{Function}; n_samples = 1000, 
 end
 
 
+
 function reality_exploration(EP::EnumerativeProblem; n_samples = 1000, sampler = UniformSampler{Float64}(n_parameters(EP)), certify = true, kwargs...)
     certification_function = (fibre,n) -> true  # Default certification function that always returns true
     if certify
@@ -99,25 +98,50 @@ function reality_exploration(EP::EnumerativeProblem; n_samples = 1000, sampler =
     (T,W) = tally_and_witness_fibres(fibres, n_real_solutions; certify_function = certification_function)
 end
 
-const FIBRE_DATUM = EnumerativeProperty{Dict{Symbol, Any}}("fibre_datum")
-
-function reality_exploration!(EP::EnumerativeProblem; n_samples = 1000, sampler = UniformSampler{Float64}(n_parameters(EP)), certify = true, kwargs...)
-    (T,W) = reality_exploration(EP; n_samples = n_samples, sampler = sampler, certify = certify, kwargs...)
+function reality_exploration!(EP::EnumerativeProblem; n_samples = 1000,  kwargs...)
+    sampler = get(kwargs, :sampler, UniformSampler{Float64}(n_parameters(EP)))
+    (T,W) = reality_exploration(EP; n_samples = n_samples, sampler = sampler, certify = true, kwargs...)
 
     ParameterKnowledge = Vector{KnowledgeNode{Dict{Symbol, Any}}}([])
-    for (v,P) in W
+    if n_samples>1
+        for (v,P) in W
 
-        KN = KnowledgeNode{Dict{Symbol, Any}}(
-            FIBRE_DATUM,
-            Dict{Symbol, Any}(
-                :parameter => P,
-                :n_real_solutions => v
-            ),
-            Vector{KnowledgeNode}(),
-            Dict{Symbol, Any}(),
-            reality_exploration
-        )
-        push!(EP.knowledge, KN)
+            KN = KnowledgeNode{Dict{Symbol, Any}}(
+                FIBRE_DATUM,
+                Dict{Symbol, Any}(
+                    :parameter => P,
+                    :n_real_solutions => v
+                ),
+                Vector{KnowledgeNode}([get_knowledge(SYSTEM, EP),get_knowledge(BASE_FIBRE,EP)]),
+                Dict{Symbol, Any}(:n_samples => n_samples),
+                reality_exploration!
+            )
+            push!(EP.knowledge, KN)
+        end
+    else
+        return(Dict{Symbol, Any}(
+                    :parameter => P,
+                    :n_real_solutions => v
+                ))
     end
 end
 
+
+compute_fibre_data_AD = AlgorithmDatum(
+    name = "Explore",
+    description = "Explore the parameter space and compute fibre data for an EnumerativeProblem.",
+    input_properties = [SYSTEM],
+    default_kwargs = Dict{Symbol, Any}(:n_samples => 1),
+    output_property = FIBRE_DATUM,
+    reliability = :certified
+)
+
+ALGORITHM_DATA[reality_exploration!] = compute_fibre_data_AD
+
+"""
+    fibre_datum(EP::EnumerativeProblem)
+Returns some `fibre_datum` for the EnumerativeProblem `EP`.
+    If you are calling this, you may want to call `fibre_data` instead which will return all `fibre_datum` known for an enumerative problem. 
+"""
+fibre_datum(EP::EnumerativeProblem) = FIBRE_DATUM(EP)
+fibre_data(EP::EnumerativeProblem) = [K.value for K in filter(k -> property(k) == FIBRE_DATUM, knowledge(EP))]

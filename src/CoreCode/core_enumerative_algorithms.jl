@@ -42,7 +42,7 @@ function polyhedral_homotopy(F::System) :: Fibre
 end
 
 const polyhedral_homotopy_datum = AlgorithmDatum(
-    name = "polyhedral homotopy",
+    name = "polyhedral_homotopy",
     input_properties = [SYSTEM],
     output_property = BASE_FIBRE,
     reliability = :numerical
