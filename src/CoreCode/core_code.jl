@@ -101,23 +101,8 @@ const SYSTEM = EnumerativeProperty{System}("system")
 const BASE_FIBRE = EnumerativeProperty{Fibre}("base_fibre")
 const NULL_ENUMERATIVE_PROPERTY = EnumerativeProperty{Nothing}("null")
 
-##############################################################
-######################## Citation ############################
-##############################################################
 
-"""
-A `Citation` is a type that represents a citation for an algorithm.
-It contains the authors, title, journal, and year of the publication.
-"""
-struct Citation
-    authors::Vector{String}
-    title::String
-    journal::String
-    year::Int
-end
-
-const NULL_CITATION = Citation([""], "", "", 0)
-
+include("../citations.jl")
 ##############################################################
 ###################   AlgorithmDatum   #######################
 ##############################################################
@@ -130,7 +115,7 @@ Its fields are
 - `input_properties`: A vector of `EnumerativeProperty` instances that the algorithm takes as input.
 - `default_kwargs`: A dictionary of keyword arguments that the algorithm can take, with default values.
 - `output_property`: An `EnumerativeProperty` that the algorithm outputs.
-- `citation`: A `Citation` instance that provides the source of the algorithm.
+- `citations`: A list of `Citation`s that provide reference to the algorithm.
 - `reliability`: A symbol indicating the reliability of the algorithm.
 """
 Base.@kwdef struct AlgorithmDatum
@@ -139,7 +124,7 @@ Base.@kwdef struct AlgorithmDatum
     input_properties::Vector{EnumerativeProperty} = EnumerativeProperty[]
     default_kwargs::Dict{Symbol, Any} = Dict{Symbol, Any}()
     output_property::EnumerativeProperty = NULL_ENUMERATIVE_PROPERTY
-    citation::Citation = NULL_CITATION
+    citations::Vector{Citation} = [NULL_CITATION]
     reliability::Symbol = :null
 end
 
@@ -151,7 +136,7 @@ input_properties(AD::AlgorithmDatum) = AD.input_properties
 default_kwargs(AD::AlgorithmDatum) = AD.default_kwargs
 output_property(AD::AlgorithmDatum) = AD.output_property
 reliability(AD::AlgorithmDatum) = AD.reliability
-citation(AD::AlgorithmDatum) = AD.citation
+citations(AD::AlgorithmDatum) = AD.citation
 
 function core_function(AD::AlgorithmDatum)
     K = collect(keys(ALGORITHM_DATA))
@@ -189,7 +174,6 @@ const user_given_datum = AlgorithmDatum(
     description = "The user declared this property",
     input_properties = Vector{EnumerativeProperty}([]),
     output_property = ANY,
-    citation = NULL_CITATION,
     reliability = :user_given
 )
 
@@ -201,7 +185,7 @@ description(F::Function) = haskey(ALGORITHM_DATA, F) ? description(ALGORITHM_DAT
 input_properties(F::Function) = haskey(ALGORITHM_DATA, F) ? input_properties(ALGORITHM_DATA[F]) : error(NOALG)
 default_kwargs(F::Function) = haskey(ALGORITHM_DATA, F) ? default_kwargs(ALGORITHM_DATA[F]) : error(NOALG)
 output_property(F::Function) = haskey(ALGORITHM_DATA, F) ? output_property(ALGORITHM_DATA[F]) : error(NOALG)
-citation(F::Function) = haskey(ALGORITHM_DATA, F) ? citation(ALGORITHM_DATA[F]) : error(NOALG)
+citations(F::Function) = haskey(ALGORITHM_DATA, F) ? citations(ALGORITHM_DATA[F]) : error(NOALG)
 reliability(F::Function) = haskey(ALGORITHM_DATA, F) ? reliability(ALGORITHM_DATA[F]) : error(NOALG)
 
 ##############################################################
@@ -258,23 +242,42 @@ export
     input_kwargs, 
     algorithm
 
-function Base.show(io::IO, K::KnowledgeNode)
-    print(io,"[",property(K),"] is known as a consequence of [", name(algorithm(K)),"] ")
-    if length(keys(input_kwargs(K)))>0
-        print(io, "(with keyword arguments ",[input_kwargs(K)[i] for i in keys(input_kwargs(K))],") ")
-    end
-    print(io,"applied to knowledge of ")
-    if length(input_knowledge(K))==0
-        print(io,"(nothing).")
-    else
-        print(io,"[",property(input_knowledge(K)[1]))
-        for i in input_knowledge(K)[2:end]
-            print(io,", ",property(i))
-        end
-        print(io,"].")
+function Base.show(io::IO, K::Knowledge)
+    for (i,k) in enumerate(K)
+        print(io, i,") ", string(k), "\n")
     end
 end
 
+
+function Base.display(K::KnowledgeNode)
+    print("Property:                ", (property(K)), "\n")
+    print("Value:                   ", value(K), "\n")
+    print("Algorithm:               ", name(algorithm(K)), "\n")
+    print("Input Knowledge:         \n  ", input_knowledge(K), "")
+    if length(input_kwargs(K))>0
+        print("Input Keyword Arguments: ", input_kwargs(K), "\n")
+    end
+end
+function Base.string(K::KnowledgeNode{T}) where T
+
+    s = "["*string(property(K))
+    s *= "] as computed by (" * string(name(algorithm(K))) * ") applied to "
+    if length(input_knowledge(K)) == 0
+        s *= "(nothing)."
+    else
+        s *= "[" * string(property(input_knowledge(K)[1]))
+        for i in input_knowledge(K)[2:end]
+            s *= ", " * string(property(i))
+        end
+        s *= "]"
+    end
+    return s
+end
+
+function Base.show(io::IO, K::KnowledgeNode{T}) where T
+    s = string(K)
+    print(io,s)
+end
 ##############################################################
 ##############   ENUMERATIVE PROBLEM   #######################
 ##############################################################

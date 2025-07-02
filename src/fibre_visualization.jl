@@ -606,11 +606,11 @@ function visualize(EP::EnumerativeProblem; kwargs...)
         new_EP = EP
     end
 
-    strat = get(kwargs, :strategy, :sierpinski)
+    strat = get(kwargs, :strategy, :careful)
 
     VSD = ValuedSubdivision(new_EP; kwargs...)
 
-    repeats = strat == :careful ? 3 : 2
+    repeats = strat == :careful ? 2 : 2
     for i in 1:repeats
         refine!(VSD;kwargs...)
         if strat == :careful

@@ -66,5 +66,5 @@ include("visualization.jl")
 #include("certification.jl")
 #include("fibre_datum.jl")
 
-
+export ALGORITHM_DATA
 end

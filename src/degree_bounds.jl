@@ -10,38 +10,6 @@ export
 
 
 
-########## Implementation of Enumerative Property BEZOUT_BOUND#########
-
-const BEZOUT_BOUND = EnumerativeProperty{Int}("bezout_bound")
-
-"""
-    bezout_bound(EP::EnumerativeProblem)
-
-Return the Bézout bound of the enumerative problem — the product of the total degrees of the input polynomials.
-"""
-function bezout_bound(EP::EnumerativeProblem; kwargs...)
-    BEZOUT_BOUND(EP; kwargs...)
-end
-
-# Core computation function takes only the input property System
-function compute_bezout_bound(F::System)::Int
-    G = specialize(F)
-    Ms = support_coefficients(G)[1]
-    deg_seq = [maximum(sum, eachcol(M)) for M in Ms]
-    prod(deg_seq)
-end
-
-compute_bezout_bound_datum = AlgorithmDatum(
-    name = "Bezout Bound",
-    description = "Product of total degrees of the input polynomials",
-    input_properties = [SYSTEM],
-    output_property = BEZOUT_BOUND,
-    reliability = :certified
-)
-
-ALGORITHM_DATA[compute_bezout_bound] = compute_bezout_bound_datum
-
-
 
 ########## Implementation of Enumerative Property BKK_BOUND#########
 
@@ -125,6 +93,35 @@ compute_degree_sequence_datum = AlgorithmDatum(
 )
 
 ALGORITHM_DATA[compute_degree_sequence] = compute_degree_sequence_datum
+
+########## Implementation of Enumerative Property BEZOUT_BOUND#########
+
+const BEZOUT_BOUND = EnumerativeProperty{Int}("bezout_bound")
+
+"""
+    bezout_bound(EP::EnumerativeProblem)
+
+Return the Bézout bound of the enumerative problem — the product of the total degrees of the input polynomials.
+"""
+function bezout_bound(EP::EnumerativeProblem; kwargs...)
+    BEZOUT_BOUND(EP; kwargs...)
+end
+
+# Core computation function takes only the input property System
+function compute_bezout_bound(D::Vector{Int})::Int
+    prod(D)
+end
+
+compute_bezout_bound_datum = AlgorithmDatum(
+    name = "bezout_bound",
+    description = "Product of total degrees of the input polynomials",
+    input_properties = [DEGREE_SEQUENCE],
+    output_property = BEZOUT_BOUND,
+    reliability = :certified
+)
+
+ALGORITHM_DATA[compute_bezout_bound] = compute_bezout_bound_datum
+
 
 
 ########## Implementation of Enumerative Property SUPPORT#########
