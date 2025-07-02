@@ -124,13 +124,14 @@ const NULL_CITATION = Citation([""], "", "", 0)
 
 """
 `AlgorithmDatum` is a type that represents an algorithm used in enumerative problems.
-It contains the name, description, input properties, default keyword arguments,
-output property, citation, and reliability of the algorithm.
-
-It is used to store metadata about algorithms that can be applied to enumerative problems.
-All `AlgorithmDatum` instances are stored in the global dictionary `ALGORITHM_DATA`,
-which maps functions to their corresponding `AlgorithmDatum`.
-This allows for easy retrieval of algorithm metadata based on the function used.
+Its fields are 
+- `name`: A string representing the name of the algorithm.
+- `description`: A string describing the algorithm.
+- `input_properties`: A vector of `EnumerativeProperty` instances that the algorithm takes as input.
+- `default_kwargs`: A dictionary of keyword arguments that the algorithm can take, with default values.
+- `output_property`: An `EnumerativeProperty` that the algorithm outputs.
+- `citation`: A `Citation` instance that provides the source of the algorithm.
+- `reliability`: A symbol indicating the reliability of the algorithm.
 """
 Base.@kwdef struct AlgorithmDatum
     name::String = "Unnamed Algorithm"
