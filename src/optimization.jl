@@ -485,3 +485,22 @@ function change_scoring_scheme!(O::Optimizer, SS::ScoringScheme)
     O.optimizer_data.record_score = SS(O.optimizer_data.record_fibre[1])
     println("Changed scoring scheme to ", name(SS))
 end
+
+
+#Function which produces Optimizer struct from an enumerative problem and a scoring scheme.
+function Optimizer(EP::EnumerativeProblem, SS::ScoringScheme)
+    # This function produces an Optimizer struct from an enumerative problem and a scoring scheme.
+    sampler = UniformSampler{Float64}(n_parameters(EP))
+    p = sampler(1)[1]
+    start_fibre = Fibre((EP(p), p))
+    record_score = SS(start_fibre[1])
+    OD = OptimizerData(record_fibre = start_fibre, 
+                       record_score = record_score, 
+                       path = [start_fibre[2]])
+    Optimizer(EP = EP, 
+              solver_fibre = base_fibre(EP), 
+              sampler = sampler, 
+              scoring_scheme = SS, 
+              optimizer_data = OD, 
+              goal = OptD -> OptD.record_score[1] == 0.0)
+end
