@@ -56,13 +56,41 @@ end
 ###################    Fibre          ########################
 ##############################################################
 
+@kwdef mutable struct FibreDatum
+    parameters::Vector{ComplexF64} = ComplexF64[]
+    solutions::Vector{Vector{ComplexF64}} = Vector{Vector{ComplexF64}}()
+    function_values:: Dict{Symbol, Any} = Dict{Symbol, Any}()
+    certificates::Union{CertificationResult,Nothing} = nothing
+    F::Union{System,Nothing} = nothing 
+end
+
+
+# Essentially makes FibreDatum behave like a pair of solutions and parameters (which is a Fibre)
+function Base.getindex(F::FibreDatum, i::Int) 
+    if i==1
+        return F.solutions
+    elseif i==2
+        return F.parameters
+    end
+end
+
 """
 A `Fibre` is a tuple `(S, P)` of two vectors:
 
 - `S::Vector{Vector{ComplexF64}}`: A vector of solutions, each of which is a vector of complex numbers
 - `P::Vector{ComplexF64}`: A vector of parameters, each of which is a complex number
 """
-const Fibre = Tuple{Vector{Vector{ComplexF64}}, Vector{ComplexF64}}
+const Fibre = Union{Tuple{Vector{Vector{ComplexF64}}, Vector{ComplexF64}}, FibreDatum}
+
+Fibre(S::Vector{Vector{ComplexF64}}, P::Vector{Float64}) = (S,Vector{ComplexF64}(P))
+Fibre(S::Vector{Vector{ComplexF64}}, P::Vector{ComplexF64}) = (S,Vector{ComplexF64}(P))
+Fibre(F::Tuple{Vector{Vector{ComplexF64}}, Vector{Float64}}) = (F[1],Vector{ComplexF64}(F[2]))
+Fibre(F::Tuple{Vector{Vector{ComplexF64}}, Vector{ComplexF64}}) = F
+
+FibreDatum(F) = FibreDatum(
+    parameters = F[2],
+    solutions = F[1]
+)
 
 """Return the vector of solutions in the fibre."""
 solutions(fibre::Fibre) = fibre[1]
