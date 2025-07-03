@@ -8,7 +8,8 @@ export
     monodromy_sample,
     permutation,
     permutation!,
-    group_generated_by_monodromy_loops
+    group_generated_by_monodromy_loops,
+    is_decomposable
 
 """
      Loop(P::Vector{Vector{ComplexF64}})
@@ -259,3 +260,11 @@ const group_generated_by_monodromy_loops_datum = AlgorithmDatum(
 ALGORITHM_DATA[group_generated_by_monodromy_loops]=group_generated_by_monodromy_loops_datum
 
 
+function is_decomposable(EP::EnumerativeProblem)
+    G = galois_group(EP)
+    if is_transitive(G)
+        return is_primitive(G)
+    else
+        return false
+    end
+end
