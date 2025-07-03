@@ -74,6 +74,8 @@ function Base.getindex(F::FibreDatum, i::Int)
     end
 end
 
+FibreDatum(FD::FibreDatum) = FD
+
 """
 A `Fibre` is a tuple `(S, P)` of two vectors:
 
@@ -87,10 +89,9 @@ Fibre(S::Vector{Vector{ComplexF64}}, P::Vector{ComplexF64}) = (S,Vector{ComplexF
 Fibre(F::Tuple{Vector{Vector{ComplexF64}}, Vector{Float64}}) = (F[1],Vector{ComplexF64}(F[2]))
 Fibre(F::Tuple{Vector{Vector{ComplexF64}}, Vector{ComplexF64}}) = F
 
-FibreDatum(F) = FibreDatum(
-    parameters = F[2],
-    solutions = F[1]
-)
+FibreDatum(F::Tuple{Vector{Vector{ComplexF64}}, Vector{ComplexF64}}) = FibreDatum(parameters = F[2],solutions = F[1])
+FibreDatum(F::Tuple{Vector{Vector{ComplexF64}}, Vector{Float64}}) = FibreDatum(parameters = Vector{ComplexF64}(F[2]),solutions = F[1])
+
 
 """Return the vector of solutions in the fibre."""
 solutions(fibre::Fibre) = fibre[1]

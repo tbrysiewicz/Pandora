@@ -1,45 +1,60 @@
 export 
     certify_n_real,
     n_solutions_certified,
-    certify
+    certify,
+    certify!
 
 
-
-
-function is_certified(FD::FibreDatum)
-    count(x->x.certified, certificates(FD))==length(FD.solutions)
-end
 
 has_certification_result(FD::FibreDatum) = !isnothing(FD.certificates)
+
+function is_certified(FD::FibreDatum)
+    has_certification_result(FD) ? count(x->x.certified, certificates(FD))==length(FD.solutions) : false
+end
+
 certification_result(FD::FibreDatum) = FD.certificates
 certificates(FD::FibreDatum) = FD.certificates.certificates
 system(FD::FibreDatum) = FD.F
+has_system(F::Fibre) = F isa FibreDatum ? system(F)!=nothing : false
 
-function certify!(FD::FibreDatum) 
-    C = certify(F, S; target_parameters = P)
-    FD.certificates = C
+
+function certify(fibre::Fibre, F::System)::CertificationResult
+    certify(F, fibre[1]; target_parameters = fibre[2])
 end
 
-function certify(FD::FibreDatum)
-    # Ensure that the system and solutions are set
-    if isnothing(FD.F) 
-        @error "FibreDatum must have a system before certification. Call `certify(FD::FibreDatum,F::System)` or `certify(FD::FibreDatum, EP::EnumerativeProblem)`"
+function certify(fibre::Fibre, EP::EnumerativeProblem)::CertificationResult
+    F = system(EP)
+    certify(F, fibre[1]; target_parameters = fibre[2])
+end
+
+
+function certify(F::Fibre) ::CertificationResult
+    if has_system(F)
+        return(certify(F,system(F)))
+    else
+        @error "Fibre must have a reference to a system before certification. Call `certify(F::Fibre,F::System)` or `certify(F::Fibre, EP::EnumerativeProblem)`"
     end
-    certify(system(FD), solutions(FD); target_parameters = parameters(FD))
 end
 
-certify(FD::FibreDatum,F::System) = certify(F, solutions(FD); target_parameters = parameters(FD))
-certify(FD::FibreDatum, EP::EnumerativeProblem) = certify(system(EP), solutions(FD); target_parameters = parameters(FD))
-
-
-function certify!(FD::FibreDatum,F::System) 
-    FD.certificates = certify(F, solutions(FD); target_parameters = parameters(FD))
+function certify!(FD::FibreDatum, F::System) ::CertificationResult
+    C = certify(FD, F)
+    FD.certificates = C
     FD.F = F
+    return(C)
 end
-function certify!(FD::FibreDatum, EP::EnumerativeProblem)
-    FD.certificates = certify(system(EP), solutions(FD); target_parameters = parameters(FD))
-    FD.F = system(EP)
+
+function certify!(FD::FibreDatum)::CertificationResult
+    if has_system(FD)
+        return(certify!(FD, system(FD)))
+    else
+        error("FibreDatum must have a reference to a system before certification. Call `certify!(FD::FibreDatum,F::System)` or `certify!(FD::FibreDatum, EP::EnumerativeProblem)`")
+    end
 end
+
+function certify!(FD::FibreDatum, EP::EnumerativeProblem)  ::CertificationResult
+    return(certify!(FD, system(EP)))
+end
+
 
 
 function certify_n_real(EP::EnumerativeProblem, F::Fibre)

@@ -18,11 +18,15 @@ function Base.convert(::Type{FibreDatum}, F::Fibre)
 end
 
 function Base.show(io::IO, F::FibreDatum)
-    print(io, "FibreDatum with ", length(F.solutions), " solutions over ", length(F.parameters), " parameters.")
+    nreal = is_certified(F) ? count(x -> x.real, certificates(F)) : n_real_solutions(solutions(F))
+    print(io, "FibreDatum with ", length(F.solutions), " complex solutions (",nreal," real) over ", length(F.parameters), " parameters")
+    if is_certified(F) 
+        print(io, " [certified]")
+    end
+    println(".")
     if !isempty(F.function_values)
         print(io, " Function values: ", F.function_values)
     end
-    print(io, " Certified: ", has_certification_result(F) ? is_certified(F) : false)
 end
 const FIBRE_DATUM = EnumerativeProperty{FibreDatum}("fibre_datum")
 
