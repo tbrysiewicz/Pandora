@@ -28,7 +28,8 @@ export EnumerativeProperty,
        input_knowledge,
        input_kwargs,
        algorithm,
-       is_real
+       is_real,
+       verbose
 
 ##############################################################
 #############  Warning and Error Messages ####################
@@ -51,6 +52,16 @@ macro vprint(args...)
     return :(if VERBOSE[]
         print($(esc.(args)...))
     end)
+end
+
+function verbose()
+    if VERBOSE[]
+        VERBOSE[] = false
+        println("Verbose mode is now off.")
+    else
+        VERBOSE[] = true
+        println("Verbose mode is now on.")
+    end
 end
 ##############################################################
 ###################    Fibre          ########################

@@ -178,4 +178,6 @@ compute_newton_polytopes_datum = AlgorithmDatum(
     reliability = :certified
 )
 
+mixed_volume(N::Vector{Polyhedron}) = mixed_volume( [(hcat(v...)) for v in Pandora.vertices.(N)])
+
 ALGORITHM_DATA[compute_newton_polytopes] = compute_newton_polytopes_datum

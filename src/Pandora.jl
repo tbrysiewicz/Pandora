@@ -10,11 +10,11 @@ using Dates: today
 # Use from HC only
 using HomotopyContinuation: TrackerOptions, CertificationResult, Result, subs, coefficients, support_coefficients, paths_to_track, degrees, Expression, Variable, differentiate
 # Use and extend from HC
-import HomotopyContinuation: expressions, variables, parameters, solve, solutions, evaluate, certify
+import HomotopyContinuation: expressions, variables, parameters, solve, solutions, evaluate, certify, mixed_volume
 # Use from HC with intent to export
 using HomotopyContinuation: System, @var
 # HC exports
-export System, @var
+export System, @var, mixed_volume
 
 using LinearAlgebra: norm, isapprox, nullspace, I, det
 
@@ -24,10 +24,11 @@ using Oscar: PointVector
 # Use and extend from Oscar
 import Oscar: perm, degree
 # Use from Oscar with intent to export
-using Oscar: is_primitive, order, is_transitive, describe, gens, faces
+using Oscar: is_primitive, order, is_transitive, describe, gens, faces, volume
+#imports as new names
 import Oscar: vertices as oscar_vertices, dim as oscar_dim, ambient_dim as oscar_ambient_dim
 # Oscar exports
-export gens, order, is_primitive, is_transitive, describe, dim, vertices, faces
+export gens, order, is_primitive, is_transitive, describe, dim, vertices, faces, volume
 
 function __init__()
     print(raw"

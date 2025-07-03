@@ -3,7 +3,7 @@ export
     visualize_newton_polytopes
 
 function vertices(P::Polyhedron)
-    1.0 * collect(oscar_vertices(PointVector, P))
+    Vector{Vector{Int}}(1.0 * collect(oscar_vertices(PointVector, P)))
 end
 
 function dim(P::Polyhedron)
