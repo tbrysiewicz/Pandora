@@ -512,5 +512,13 @@ function Optimizer(EP::EnumerativeProblem, SS::ScoringScheme)
               sampler = sampler, 
               scoring_scheme = SS, 
               optimizer_data = OD, 
-              goal = OptD -> OptD.record_score[1] == 0.0)
+              goal = OptD -> false)
 end
+
+
+#Function which produces Optimizer struct from an enumerative problem and a scoring scheme.
+function Optimizer(EP::EnumerativeProblem, FF::Function)
+    SS = ScoringScheme(objective = FF, taboo = x->0.0, name = "Custom Scoring Scheme")
+    return Optimizer(EP, SS)
+end
+

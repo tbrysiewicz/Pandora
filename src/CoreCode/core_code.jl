@@ -595,3 +595,21 @@ include("enumerative_solver.jl")
 function algorithms_which_return(EProp::EnumerativeProperty)
     filter(A -> output_property(ALGORITHM_DATA[A]) == EProp, collect(keys(ALGORITHM_DATA)))
 end
+
+
+#=
+function knowledge_tree(K::KnowledgeNode; depth = 0)
+    if depth == 0
+        println("Knowledge Tree for ", property(K), ":")
+    end
+    println("  "*string(depth), "└── ", string(K))
+    if length(input_knowledge(K)) > 0
+        for i in input_knowledge(K)
+            knowledge_tree(i; depth = depth + 1)
+        end 
+    else
+        println("  "*string(depth), "    └── (no input knowledge)")
+    end
+end
+export knowledge_tree
+=#
