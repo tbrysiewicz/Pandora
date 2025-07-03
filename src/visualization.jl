@@ -34,7 +34,7 @@ function visualize(Ps::Vector{Polyhedron})
             Ymin = min(Ymin, ym)
             Ymax = max(Ymax, yM)
         end
-        plots = [visualize(P; xlims = [Xmin,Xmax], ylims = [Ymin,Ymax]) for P in Ps]
+        plots = [visualize(P; xlims = [Xmin,Xmax], ylims = [Ymin,Ymax],aspect_ratio = :equal) for P in Ps]
         return(plots)
     else
         throw(ArgumentError("All polyhedra must have the same dimension for visualization."))
@@ -104,7 +104,7 @@ function visualize_2d_polyhedron(P::Polyhedron; xlims = nothing, ylims = nothing
     plot!([0, -1], [0, 0], arrow = (:closed, 0.5), color = :black, linewidth = 3)
 
     MyPlot = plot!(Shape(getindex.(ordered_vertices,1), getindex.(ordered_vertices,2)), 
-         fillcolor = :cyan, linecolor = :blue, linewidth = 2, seriestype = :shape)
+         fillcolor = :cyan, linecolor = :blue, linewidth = 2, seriestype = :shape, aspect_ratio = :equal)
 
 
  

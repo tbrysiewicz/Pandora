@@ -31,7 +31,7 @@ function Base.show(io::IO, F::FibreDatum)
     if !isempty(F.function_values)
         print(io, " Function values: ", F.function_values)
     end
-    print(io, " Certified: ", is_certified(F)))
+    print(io, " Certified: ", is_certified(F))
 end
 
 

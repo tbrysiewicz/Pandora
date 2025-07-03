@@ -473,7 +473,7 @@ end
 function maximize_n_real_solutions(EP::EnumerativeProblem; n_samples::Int = 2*n_parameters(EP), max_steps::Int = 100)
     # This function will run the optimizer until it reaches its goal of finding a fibre with n_real_solutions equal to degree(EP).
     O = dietmaier_optimizer(EP)
-    improve!(O; n_samples = n_samples*100)
+    improve!(O; n_samples = n_samples*10)
     return optimize!(O; n_samples = n_samples, max_steps = max_steps)
 end
 

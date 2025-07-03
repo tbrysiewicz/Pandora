@@ -19,7 +19,8 @@ export
     VISUALIZATION_STRATEGIES,    # Dictionary of visualization strategies
     complete_polygons,
     incomplete_polygons,
-    animate_refinement         # Animate the refinement process
+    animate_refinement,         # Animate the refinement process
+    save
 
 #==============================================================================#
 # MESH FUNCTIONS
@@ -642,4 +643,21 @@ function animate_refinement(VSD::ValuedSubdivision; steps::Int=100, resolution::
     end
 
     gif(anim, "refinement_animation.gif", fps=10)
+end
+
+"""
+    save(P::Plot, filename::String)
+Saves a plot `P` to a file with the specified `filename`.
+"""
+function save(P::Plots.Plot, filename::String; file_extension = "png", dpi = 300)
+    #prepend "OutputFiles/" if it is not already there
+    if !startswith(filename, "OutputFiles/")
+        filename = "OutputFiles/" * filename
+    end
+    #append the file extension if it is not already there
+    if !endswith(filename, file_extension)
+        filename *= "." * file_extension
+    end
+    savefig(P, filename)
+    println("Plot saved to $filename")
 end
