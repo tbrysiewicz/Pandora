@@ -184,9 +184,6 @@ function optimizer_run(EP::EnumerativeProblem,  SS::ScoringScheme; sampler::Samp
             end
         end
     end
-    if best_fibre === nothing
-        @error "No valid fibres found in the sampled data."
-    end
     return(fibre_data, best_fibre, best_score)
 end
 
@@ -358,6 +355,7 @@ function optimize!(O::Optimizer; n_samples::Int = 100, max_steps::Int = 100)
             return O
         end
         improve!(O; n_samples = n_samples)
+        @vprint O
     end
     println("Optimizer did not reach its goal after ", max_steps, " steps.")
     return O
@@ -369,7 +367,7 @@ end
 #      Such functions could be combined into a struct which comes to form 
 #      an attitude about the optimizer's current state. These attitudes could 
 #      then be used to update the optimizer parameters. 
-function update_optimizer_parameters!(O::Optimizer; optimistic = true)
+function update_optimizer_parameters!(O::Optimizer; optimistic = false)
     sampler = O.sampler
     OD = O.optimizer_data
     if optimistic
@@ -390,9 +388,9 @@ function update_optimizer_parameters!(O::Optimizer; optimistic = true)
     #Now we update the transformation matrix either by scaling or PCA 
     #TODO: Implement PCA
     # For now, we will just scale
-    if OD.last_error_proportion > 0.2
+    if OD.last_error_proportion > 0.5
         # Change solver fibre
-        new_parameter = OD.record_fibre[2] + 0.1*randn(ComplexF64, n_parameters(O.EP))
+        new_parameter = OD.record_fibre[2] + randn(ComplexF64, n_parameters(O.EP))
         O.solver_fibre = (O.EP(new_parameter),new_parameter)
         @vprintln("Changing solver fibre since so many errors occurred.")
     end
@@ -416,28 +414,39 @@ function update_optimizer_parameters!(O::Optimizer; optimistic = true)
         scale!(sampler, 0.5)
         @vprintln("Scaling down sampler since no improvement was made for a long time. Probably at a local optimum: ", radius(O))
     end
+    if OD.last_improvement_proportion == 0.0 && radius(O)<0.00000000001
+        # If we are not making any progress, we will scale down the sampler by 0.8
+        if radius(O) == 0.0
+            sampler.affine_transformation.transform_matrix = I(n_parameters(O.EP))
+        end
+        scale!(sampler, 1/radius(O))
+        scale!(sampler,10000)
+        @vprintln("Convinced the radius is so small we are at a local minimum. Doing a large sample to attempt to jump", radius(O))
+        improve!(O; n_samples = n_parameters(O.EP)*10)
+    end
     print(".")
 end
 
-function update_optimizer_data!(O::Optimizer, fibre_data::Dict{Fibre, Any}, best_fibre::Fibre, best_score::Any)
+function update_optimizer_data!(O::Optimizer, fibre_data::Dict{Fibre, Any}, best_fibre::Union{Fibre,Nothing}, best_score::Any)
     OD = O.optimizer_data
     # Update the optimizer data with the new best fibre and score.
     old_record_score = OD.record_score
-
-    if OD.record_score[1] > best_score[1] # If the new best score has improved (decreased) taboo. 
-        OD.steps_no_taboo_progress = 0
-        OD.record_score = best_score
-        OD.record_fibre = best_fibre
-        @vprintln("Taboo improvement")
-    else
-        OD.steps_no_taboo_progress += 1
-        if OD.record_score[1] == best_score[1] && OD.record_score[2] < best_score[2] # If the new best score has improved (increased) objective.
-            OD.steps_no_objective_progress = 0
+    if best_score != nothing
+        if OD.record_score[1] > best_score[1] # If the new best score has improved (decreased) taboo. 
+            OD.steps_no_taboo_progress = 0
             OD.record_score = best_score
             OD.record_fibre = best_fibre
-            @vprintln("Objective improvement")
+            @vprintln("Taboo improvement")
         else
-            OD.steps_no_objective_progress += 1
+            OD.steps_no_taboo_progress += 1
+            if OD.record_score[1] == best_score[1] && OD.record_score[2] < best_score[2] # If the new best score has improved (increased) objective.
+                OD.steps_no_objective_progress = 0
+                OD.record_score = best_score
+                OD.record_fibre = best_fibre
+                @vprintln("Objective improvement")
+            else
+                OD.steps_no_objective_progress += 1
+            end
         end
     end
 
@@ -464,6 +473,7 @@ end
 function maximize_n_real_solutions(EP::EnumerativeProblem; n_samples::Int = 2*n_parameters(EP), max_steps::Int = 100)
     # This function will run the optimizer until it reaches its goal of finding a fibre with n_real_solutions equal to degree(EP).
     O = dietmaier_optimizer(EP)
+    improve!(O; n_samples = n_samples*100)
     return optimize!(O; n_samples = n_samples, max_steps = max_steps)
 end
 
