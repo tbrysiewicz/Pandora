@@ -590,13 +590,13 @@ function Base.show(io::IO, EP::EnumerativeProblem)
     println(io,tenspaces,"C^",n_parameters(EP),"\n")
     println(io,"An enumerative problem in ",ambient_dimension(EP)," variable(s) cut out by ", 
                 n_polynomials(EP)," condition(s) over ", n_parameters(EP)," parameter(s).")
-    println(io,"The following information is known about this problem:")
+    @vprintln(io,"The following information is known about this problem:")
     for k in known_properties(knowledge(EP))
         l = length(filter(x->property(x)==k,knowledge(EP)))
         if l == 1
-         println(io,"-",k)
+         @vprintln(io,"-",k)
         else
-         println(io,"-",k, " (# ways known: ",l,")")
+         @vprintln(io,"-",k, " (# ways known: ",l,")")
         end
     end
 end
