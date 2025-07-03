@@ -177,8 +177,20 @@ const user_given_datum = AlgorithmDatum(
     reliability = :user_given
 )
 
+function conjunction()
+end
+
+const conjunction_datum = AlgorithmDatum(
+    name = "Conjunction",
+    description = "Combines multiple properties into one",
+    input_properties = Vector{EnumerativeProperty}([]),
+    output_property = ANY,
+    reliability = :certified
+)
+
 global ALGORITHM_DATA = Dict{Function, AlgorithmDatum}()
 ALGORITHM_DATA[user_given] = user_given_datum
+ALGORITHM_DATA[conjunction] = conjunction_datum
 
 name(F::Function) = haskey(ALGORITHM_DATA, F) ? name(ALGORITHM_DATA[F]) : error(NOALG)
 description(F::Function) = haskey(ALGORITHM_DATA, F) ? description(ALGORITHM_DATA[F]) : error(NOALG)
@@ -253,7 +265,7 @@ function Base.display(K::KnowledgeNode)
     print("Property:                ", (property(K)), "\n")
     print("Value:                   ", value(K), "\n")
     print("Algorithm:               ", name(algorithm(K)), "\n")
-    print("Input Knowledge:         \n  ", input_knowledge(K), "")
+    print("Input Knowledge:         \n", input_knowledge(K), "")
     if length(input_kwargs(K))>0
         print("Input Keyword Arguments: ", input_kwargs(K), "\n")
     end
@@ -597,19 +609,32 @@ function algorithms_which_return(EProp::EnumerativeProperty)
 end
 
 
-#=
-function knowledge_tree(K::KnowledgeNode; depth = 0)
-    if depth == 0
-        println("Knowledge Tree for ", property(K), ":")
-    end
-    println("  "*string(depth), "└── ", string(K))
-    if length(input_knowledge(K)) > 0
-        for i in input_knowledge(K)
-            knowledge_tree(i; depth = depth + 1)
-        end 
-    else
-        println("  "*string(depth), "    └── (no input knowledge)")
-    end
+
+function is_certified(K::KnowledgeNode)
+    return reliability(K) == [:user_given]
+end 
+
+function reliability_consensus(reliability_bucket::Vector{Symbol})
+    reliability_bucket = unique(filter(r -> r != :certified, reliability_bucket))
 end
-export knowledge_tree
-=#
+
+function reliability(K::KnowledgeNode) 
+    reliability_bucket = [ALGORITHM_DATA[algorithm(K)].reliability]
+    for i in input_knowledge(K)
+        for r in reliability(i)
+        push!(reliability_bucket, r)
+        end
+    end
+    return(reliability_consensus(reliability_bucket))
+end
+
+function combine_knowledge(K::Knowledge)
+    new_type = type((map(k->get_type(property(k)), K)))
+    new_name = join([name(property(k)) for k in K], " & ")
+    combined_EP = EnumerativeProperty{new_type}(new_name)
+    combined_value = (map(k->value(k), K))
+    combined_input_knowledge = vcat([input_knowledge(k) for k in K]...)
+    combined_input_kwargs = Dict{Symbol, Any}()
+    new_knowledge = KnowledgeNode{new_type}(combined_EP, combined_value, combined_input_knowledge, combined_input_kwargs, conjunction)
+    return new_knowledge
+end

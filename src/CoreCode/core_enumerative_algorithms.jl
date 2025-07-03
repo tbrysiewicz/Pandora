@@ -20,7 +20,7 @@ const n_solutions_datum = AlgorithmDatum(
     name = "n_solutions",
     input_properties = [BASE_FIBRE],
     output_property = DEGREE,
-    reliability = :symbolic
+    reliability = :certified
 )
 
 ALGORITHM_DATA[n_solutions] = n_solutions_datum
