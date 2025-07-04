@@ -1,6 +1,10 @@
 
 #########BACKGROUND SUMMARY####################
 
+function texbf(s::String)
+    return raw"\textbf{"*s*raw"}"
+end
+
 function background_summary(EP::EnumerativeProblem;kwargs...)
     n = ambient_dimension(EP)
     k = n_polynomials(EP)
@@ -13,7 +17,15 @@ function background_summary(EP::EnumerativeProblem;kwargs...)
     NN = raw"{"*string(N)*raw"}"
 
     summary = raw"""\section{Background}"""
-    summary *= "\n\n The polynomial system given involves "*kk*raw" polynomials $F=(f_1,\ldots ,f_"*kk*raw")$ in "
+    if k==1
+        summary *= "\n\n The polynomial system given involves "*raw"1 polynomials $F=(f_"*kk*raw")$ in "
+    elseif k==2
+        summary *= "\n\n The polynomial system given involves "*raw"2 polynomials $F=(f_1,f_"*kk*raw")$ in "
+    elseif k==3
+        summary *= "\n\n The polynomial system given involves "*raw"3 polynomials $F=(f_1,f_2,f_"*kk*raw")$ in "
+    else
+        summary *= "\n\n The polynomial system given involves "*kk*raw" polynomials $F=(f_1,\ldots ,f_"*kk*raw")$ in "
+    end
     summary *= nn*raw" variables \[ \x = ("
     if n<10
        for i in 1:n-1
@@ -26,11 +38,11 @@ function background_summary(EP::EnumerativeProblem;kwargs...)
     summary *= NN*raw" parameters \[\p=("
     if N<10
        for i in 1:N-1
-          summary *=string(P[i])*", "
+          summary *=texbf(string(P[i]))*", "
        end
-       summary *=string(last(P))*raw").\]"
+       summary *=texbf(string(last(P)))*raw").\]"
     else
-        summary *= string(P[1])*","*string(P[2])*raw",\ldots ,"*string(last(P))*raw").\]"
+        summary *= texbf(string(P[1]))*","*texbf(string(P[2]))*raw",\ldots ,"*texbf(string(last(P)))*raw").\]"
     end
 
     summary *= "The polynomials look as follows."
@@ -104,11 +116,11 @@ function latex_polynomials(EP::EnumerativeProblem;kwargs...)
     V = variables(system(EP))
     P = parameters(system(EP))
     F = expressions(system(EP))
-    s = raw" \begin{align*}"*"\n"
+    s = raw"$$ \begin{array}{crc}"*"\n"
     for i in 1:length(F)
         f = F[i]
         t = terms_as_text_list(f,V,P)
-        println(t)
+        s *= raw"f_"*string(i)*raw": &"
         if length(t)<10
             polystring = t[1]
             for j in 2:length(t)
@@ -128,7 +140,7 @@ function latex_polynomials(EP::EnumerativeProblem;kwargs...)
             s*=raw"""\\\\"""*"\n"
         end
     end
-    s *= "\n"*raw"\end{align*}"*"\n\n"
+    s *= "\n"*raw"\end{array}$$"*"\n\n"
     return(s)
         
 end

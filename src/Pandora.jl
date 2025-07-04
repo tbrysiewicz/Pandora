@@ -30,6 +30,9 @@ import Oscar: vertices as oscar_vertices, dim as oscar_dim, ambient_dim as oscar
 # Oscar exports
 export gens, order, is_primitive, is_transitive, describe, dim, vertices, faces, volume
 
+
+using IntegerSmithNormalForm: snf, elementary_divisors
+
 function __init__()
     print(raw"
         0ooo000oo oo oo
@@ -66,5 +69,6 @@ include("visualization.jl")
 include("certification.jl")
 include("fibre_datum.jl")
 include("explore.jl")
+include("sparse_enumerative_problems.jl")
 export ALGORITHM_DATA
 end

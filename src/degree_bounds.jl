@@ -139,12 +139,12 @@ end
 
 function compute_support(F::System)::Vector{Matrix{Int}}
     G = specialize(F)
-    return([Matrix{Int}(M') for M in support_coefficients(G)[1]])
+    return([Matrix{Int}(M) for M in support_coefficients(G)[1]])
 end
 
 compute_support_datum = AlgorithmDatum(
     name = "support",
-    description = "Computes the supports of each expression in terms of matrices whose rows correspond to monomials",
+    description = "Computes the supports of each expression in terms of matrices whose columns correspond to monomials",
     input_properties = [SYSTEM],
     output_property = SUPPORT,
     reliability = :certified
@@ -166,7 +166,7 @@ function newton_polytopes(EP::EnumerativeProblem; kwargs...)
 end
 
 function compute_newton_polytopes(F::System)::Vector{Polyhedron}
-  S = compute_support(F)
+  S = map(permutedims,compute_support(F))
   return([convex_hull(s) for s in S])
 end
 

@@ -7,6 +7,7 @@ version = "0.4.0"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 DelaunayTriangulation = "927a84f5-c5f4-47a5-9785-b46e178433df"
 HomotopyContinuation = "f213a82b-91d6-5c5d-acf7-10f1c761b327"
+IntegerSmithNormalForm = "17272adc-a42e-4be8-afd0-5a751f607cdd"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Oscar = "f1435218-dba5-11e9-1e4d-f1a5fab5fc13"
 Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
@@ -14,3 +15,4 @@ Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 
 [compat]
 DelaunayTriangulation = "1.6.4"
+IntegerSmithNormalForm = "0.1.0"

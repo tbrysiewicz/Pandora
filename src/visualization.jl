@@ -34,7 +34,7 @@ function visualize(Ps::Vector{Polyhedron})
             Ymin = min(Ymin, ym)
             Ymax = max(Ymax, yM)
         end
-        plots = [visualize(P; xlims = [Xmin,Xmax], ylims = [Ymin,Ymax],aspect_ratio = :equal) for P in Ps]
+        plots = [visualize(P; xlims = [Xmin,Xmax], ylims = [Ymin,Ymax]) for P in Ps]
         return(plots)
     else
         throw(ArgumentError("All polyhedra must have the same dimension for visualization."))
@@ -84,7 +84,7 @@ function lims(P::Polyhedron)
     return(xmin, xmax, ymin, ymax)
 end
 
-function visualize_2d_polyhedron(P::Polyhedron; xlims = nothing, ylims = nothing)
+function visualize_2d_polyhedron(P::Polyhedron; xlims = nothing, ylims = nothing, kwargs...)
     V = vertices(P)
     edges = map(vertices,faces(P,1))
     ordered_vertices = order_vertices(edges)
@@ -119,7 +119,7 @@ function visualize_support(EP::EnumerativeProblem)
     V = map(vertices, NP)
     NP_plots = visualize(newton_polytopes(EP))
     S = support(EP)
-    S = map(s->collect(eachrow(s)), S)
+    S = map(s->collect(eachcol(s)), S)
 
     #S = [filter(s->!in(s,V[i]),S[i]) for i in eachindex(S)]
     for i in eachindex(S)
