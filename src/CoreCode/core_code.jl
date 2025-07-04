@@ -306,7 +306,13 @@ function Base.show(io::IO, K::Knowledge)
     end
 end
 
+function Base.show(io::IO, ::MIME"text/plain", K::Knowledge)
+    for (i, k) in enumerate(K)
+        print(io, i, ") ", string(k), "\n")
+    end
+end
 
+#=
 function Base.display(K::KnowledgeNode)
     print("Property:                ", (property(K)), "\n")
     print("Value:                   ", value(K), "\n")
@@ -316,8 +322,9 @@ function Base.display(K::KnowledgeNode)
         print("Input Keyword Arguments: ", input_kwargs(K), "\n")
     end
 end
-function Base.string(K::KnowledgeNode{T}) where T
+=#
 
+function Base.string(K::KnowledgeNode{T}) where T
     s = "["*string(property(K))
     s *= "] as computed by (" * string(name(algorithm(K))) * ") applied to "
     if length(input_knowledge(K)) == 0
@@ -331,10 +338,56 @@ function Base.string(K::KnowledgeNode{T}) where T
     end
     return s
 end
-
-function Base.show(io::IO, K::KnowledgeNode{T}) where T
-    s = string(K)
-    print(io,s)
+function Base.show(io::IO, K::KnowledgeNode)
+    function show_tree(K::KnowledgeNode; prefix = "", islast = true, isroot = false)
+        connector = islast ? "└──" : "├──"
+        line = prefix * connector * " [" * string(property(K)) * "]"
+        if isroot
+            line *= " as computed by (" * string(name(algorithm(K))) * ")"
+        end
+        println(io, line)
+        new_prefix = prefix * (islast ? "    " : "│   ")
+        children = input_knowledge(K)
+        n = length(children)
+        for (i, child) in enumerate(children)
+            show_tree(child; prefix = new_prefix, islast = i == n, isroot = false)
+        end
+    end
+    show_tree(K; isroot = true)
+end
+function Base.show(io::IO, ::MIME"text/plain", K::KnowledgeNode)
+    function show_tree(K::KnowledgeNode; prefix = "", islast = true, isroot = false)
+        connector = islast ? "└──" : "├──"
+        line = prefix * connector * " [" * string(property(K)) * "]"
+        if isroot
+            line *= " as computed by (" * string(name(algorithm(K))) * ")"
+        end
+        println(io, line)
+        new_prefix = prefix * (islast ? "    " : "│   ")
+        children = input_knowledge(K)
+        n = length(children)
+        for (i, child) in enumerate(children)
+            show_tree(child; prefix = new_prefix, islast = i == n, isroot = false)
+        end
+    end
+    show_tree(K; isroot = true)
+end
+function Base.display(K::KnowledgeNode)
+    function show_tree(K::KnowledgeNode; prefix = "", islast = true, isroot = false)
+        connector = islast ? "└──" : "├──"
+        line = prefix * connector * " [" * string(property(K)) * "]"
+        if isroot
+            line *= " as computed by (" * string(name(algorithm(K))) * ")"
+        end
+        println(line)
+        new_prefix = prefix * (islast ? "    " : "│   ")
+        children = input_knowledge(K)
+        n = length(children)
+        for (i, child) in enumerate(children)
+            show_tree(child; prefix = new_prefix, islast = i == n, isroot = false)
+        end
+    end
+    show_tree(K; isroot = true)
 end
 ##############################################################
 ##############   ENUMERATIVE PROBLEM   #######################
@@ -652,6 +705,17 @@ end
 function know!(EP::EnumerativeProblem, EProp::EnumerativeProperty{T}, value::T) where T
     K = KnowledgeNode(EProp, value, Vector{KnowledgeNode}(), Dict{Symbol, Any}(), user_given)
     know!(EP, K)
+end
+
+function knowledge_tree(K::KnowledgeNode; prefix = "", islast = true)
+           connector = islast ? "└──" : "├──"
+           println(prefix * connector * " [" * string(property(K)) * "]")
+           new_prefix = prefix * (islast ? "    " : "│   ")
+           children = input_knowledge(K)
+           n = length(children)
+           for (i, child) in enumerate(children)
+               knowledge_tree(child; prefix = new_prefix, islast = i == n)
+           end
 end
 
 ############ Getter System for EnumerativeProperty of Enumerative Problem #############

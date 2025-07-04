@@ -48,7 +48,7 @@ function background_summary(EP::EnumerativeProblem;kwargs...)
     summary *= "The equations look as follows."
     summary *= latex_polynomials(system(EP);ff = "f", kwargs...)
     summary *= raw"\noindent The inequations look as follows."
-    summary *= latex_polynomials(inequations(EP); ff = "g", bold_coefficients= false, kwargs...)
+    summary *= latex_polynomials(inequations(EP); ff = "g", inequations = true, bold_coefficients= false, kwargs...)
     
     summary *= "This setup can be summarized in the following diagram describing the parametrized polynomial system "
     summary *= raw"as a (possibly reducible) branched cover $\pi$ from the incidence variety $\mathcal V(F)$ to the parameter space $\mathbb{C}^"*NN*raw"$."
@@ -119,7 +119,11 @@ function monomial_string(BasePowerPairs)
     ms = raw""
     for (v,p) in BasePowerPairs
         if p != 0
-            ms *= string(v)*raw"^{ "*string(p)*raw"}"
+            if p ==1
+                ms *= string(v)
+            else
+                ms *= string(v)*raw"^{ "*string(p)*raw"}"
+            end
         end
     end
     return(ms)
@@ -141,7 +145,7 @@ function terms_as_text_list(f::Expression,V::Vector{Variable},P::Vector{Variable
     end
 end
 
-function latex_polynomials(FF::System;ff = "f", kwargs...)
+function latex_polynomials(FF::System;ff = "f", inequations = false, kwargs...)
     V = variables(FF)
     P = parameters(FF)
     F = expressions(FF)
@@ -164,7 +168,11 @@ function latex_polynomials(FF::System;ff = "f", kwargs...)
 
             s *= replace(string(f_replaceable),"*"=>"")
         end
+        if inequations == true
+            s *= raw"&\neq 0"
+        else
          s *= raw"&= 0"
+        end
         if i<length(F)
             s*=raw"""\\\\"""*"\n"
         end
