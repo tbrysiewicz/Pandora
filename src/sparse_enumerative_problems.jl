@@ -1,11 +1,9 @@
 
 export 
-    is_lacunary
+    is_lacunary,
+    is_triangular
 
 function is_lacunary(EP::EnumerativeProblem)
-    """
-    Checks if the natural sparse embedding of the enumerative problem is into a lacunary sparse system. 
-    """
     poly_supports = support(EP)
     shifted_supports = [A .- A[:, 1] for A in poly_supports]
     #horizontally concatenate the shifted supports
@@ -17,3 +15,13 @@ function is_lacunary(EP::EnumerativeProblem)
     end
 end
 
+
+function is_triangular(EP::EnumerativeProblem)
+    poly_supports = newton_polytopes(EP)
+    for c in combinations(poly_supports)
+        if dim(sum(c)) <= length(c) && length(c) != n_variables(EP)
+            return true
+        end
+    end
+    return(false)
+end

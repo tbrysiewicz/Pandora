@@ -45,11 +45,13 @@ function background_summary(EP::EnumerativeProblem;kwargs...)
         summary *= texbf(string(P[1]))*","*texbf(string(P[2]))*raw",\ldots ,"*texbf(string(last(P)))*raw").\]"
     end
 
-    summary *= "The polynomials look as follows."
-    summary *= latex_polynomials(EP;kwargs...)
+    summary *= "The equations look as follows."
+    summary *= latex_polynomials(system(EP);ff = "f", kwargs...)
+    summary *= raw"\noindent The inequations look as follows."
+    summary *= latex_polynomials(inequations(EP); ff = "g", bold_coefficients= false, kwargs...)
     
     summary *= "This setup can be summarized in the following diagram describing the parametrized polynomial system "
-    summary *= raw"as a branched cover $\pi$ from the incidence variety $\mathcal V(F)$ to the parameter space $\mathbb{C}^"*NN*raw"$."
+    summary *= raw"as a (possibly reducible) branched cover $\pi$ from the incidence variety $\mathcal V(F)$ to the parameter space $\mathbb{C}^"*NN*raw"$."
     summary *= tikz_incidence(EP)
 
 
@@ -58,10 +60,12 @@ end
 function tikz_incidence(EP::EnumerativeProblem)
     n = ambient_dimension(EP)
     k = n_polynomials(EP)
+    kiq = n_inequations(EP)
     N = n_parameters(EP)
 
     nn = raw"{"*string(n)*raw"}"
     kk = raw"{"*string(k)*raw"}"
+    kkiq = raw"{"*string(kiq)*raw"}"
     NN = raw"{"*string(N)*raw"}"
 
     s = raw"""
@@ -69,7 +73,11 @@ function tikz_incidence(EP::EnumerativeProblem)
     \begin{tikzpicture}
     \matrix (m) [matrix of math nodes,row sep=3em,column sep=0em,minimum width=2em]
     {
-        \mathcal V(F)=\mathcal V("""
+        \mathcal V(F)"""
+    if length(inequations(EP))>0
+    s = s*raw"""-  \mathcal V(G)"""
+    end
+    s=s*raw"""=\mathcal V("""
     if k == 1
         s *= raw"f_1"
     elseif k == 2
@@ -79,7 +87,25 @@ function tikz_incidence(EP::EnumerativeProblem)
     else
         s *= raw"f_1,\ldots,f_" * kk * raw""
     end
-    s *= raw""")=\{(\textbf{x},\textbf{p}) \mid F(\textbf{x};\textbf{p})=\textbf{0}\} & \subset \mathbb{C}_{\textbf{x}}^""" * nn * raw""" \times \mathbb{C}_{\textbf{p}}^""" * NN * raw""" \\
+    s *= raw""")"""
+    if kiq>0
+        s *= raw""" - \mathcal V("""
+        if kiq == 1
+            s *= raw"g_1"
+        elseif kiq == 2
+            s *= raw"g_1,g_2"
+        elseif kiq == 3
+            s *= raw"g_1,g_2,g_3"
+        else
+            s *= raw"_1,\ldots,g_" * kkiq 
+        end
+        s *= raw""")"""
+    end
+    s *= raw"""=\{(\textbf{x},\textbf{p}) \mid F(\textbf{x};\textbf{p})=\textbf{0}"""
+    if kiq>0
+        s *= raw""", G(\textbf{x}) \neq 0"""
+    end
+    s *= raw"""\} & \subset \mathbb{C}_{\textbf{x}}^""" * nn * raw""" \times \mathbb{C}_{\textbf{p}}^""" * NN * raw""" \\
         \mathbb{C}_{\p}^""" * NN * raw""" &  \\};
     \path[-stealth]
         (m-1-1) edge node [left] {$\pi$} (m-2-1);
@@ -99,25 +125,31 @@ function monomial_string(BasePowerPairs)
     return(ms)
 end
 
-function terms_as_text_list(f::Expression,V::Vector{Variable},P::Vector{Variable})
+function terms_as_text_list(f::Expression,V::Vector{Variable},P::Vector{Variable}; bold_coefficients = true)
     F = System([f],variables=V,parameters=P)
     SC = support_coefficients(F)
     M = SC[1][1]
     C = SC[2][1]
     (n,n_terms)=size(M)
-    myterms = reverse([raw"{\textbf{"*string(C[i])*raw"}}"*raw" \cdot "*monomial_string([(V[j],M[j,i]) for j in 1:n]) for i in 1:n_terms])
-    return(myterms)
+    if bold_coefficients
+        myterms = reverse([raw"{\textbf{"*string(C[i])*raw"}}"*raw" \cdot "*monomial_string([(V[j],M[j,i]) for j in 1:n]) for i in 1:n_terms])
+        return(myterms)
+    else
+        C = map(c->c==1 ? "" : string(c)*raw"\cdot",C)
+        myterms = reverse([raw"{{"*string(C[i])*raw"}}"*monomial_string([(V[j],M[j,i]) for j in 1:n]) for i in 1:n_terms])
+        return(myterms)
+    end
 end
 
-function latex_polynomials(EP::EnumerativeProblem;kwargs...)
-    V = variables(system(EP))
-    P = parameters(system(EP))
-    F = expressions(system(EP))
+function latex_polynomials(FF::System;ff = "f", kwargs...)
+    V = variables(FF)
+    P = parameters(FF)
+    F = expressions(FF)
     s = raw"$$ \begin{array}{crc}"*"\n"
     for i in 1:length(F)
         f = F[i]
-        t = terms_as_text_list(f,V,P)
-        s *= raw"f_"*string(i)*raw": &"
+        t = terms_as_text_list(f,V,P; kwargs...)
+        s *= ff*raw"_"*string(i)*raw": &"
         if length(t)<10
             polystring = t[1]
             for j in 2:length(t)

@@ -468,6 +468,13 @@ n_variables(EP::EnumerativeProblem) = ambient_dimension(EP)
 Return the number of polynomials in the system of the enumerative problem.
 """
 n_polynomials(EP::EnumerativeProblem) = length(expressions(EP))
+
+"""
+    n_inequations(EP::EnumerativeProblem)
+Return the number of inequations in the system of the enumerative problem.
+"""
+n_inequations(EP::EnumerativeProblem) = length(expressions(inequations(EP)))
+
 """
     n_parameters(EP::EnumerativeProblem)
 Return the number of parameters in the system of the enumerative problem.

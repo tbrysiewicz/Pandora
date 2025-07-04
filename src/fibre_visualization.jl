@@ -529,7 +529,7 @@ end
         -`plot_log_transform`,
         -`plot_all_polygons`
 """
-function visualize(VSD::ValuedSubdivision; kwargs...)
+function visualize(VSD::ValuedSubdivision; kwargs...) :: Plots.Plot
     xl = get(kwargs, :xlims, [min(map(x->x[1][1],Pandora.function_cache(VSD))...),max(map(x->x[1][1],Pandora.function_cache(VSD))...)])
     yl = get(kwargs, :ylims, [min(map(x->x[1][2],Pandora.function_cache(VSD))...),max(map(x->x[1][2],Pandora.function_cache(VSD))...)])
     plot_log_transform = get(kwargs, :plot_log_transform, false)
@@ -596,7 +596,7 @@ end
     - `plot_all_polygons`: Whether to plot all polygons or only the complete ones. 
     - `near`: A vector of parameters to visualize around, useful for zooming in on a specific region of the parameter space.
 """
-function visualize(EP::EnumerativeProblem; kwargs...)
+function visualize(EP::EnumerativeProblem; kwargs...) :: Tuple{ValuedSubdivision,Plots.Plot}
 
     #Check enumerative problem is visualizable
     if n_parameters(EP) > 2
@@ -621,7 +621,7 @@ function visualize(EP::EnumerativeProblem; kwargs...)
 
     my_plot = visualize(VSD; kwargs...)
     display(my_plot)
-    return VSD
+    return (VSD,my_plot)
 end
 
 

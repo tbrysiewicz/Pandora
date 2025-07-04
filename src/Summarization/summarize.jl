@@ -45,6 +45,7 @@ include("degree_summary.jl")
 
 function compile_latex_to_pdf(tex_path::String; output_dir::String = dirname(tex_path))
     run(`pdflatex -output-directory=$output_dir $tex_path`)
+    run(`pdflatex -output-directory=$output_dir $tex_path`)
 end
 
 

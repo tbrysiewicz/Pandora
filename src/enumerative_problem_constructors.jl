@@ -44,7 +44,7 @@ function restrict(EP::EnumerativeProblem,P::Vector{Vector{Float64}})
     basis_vectors = gram_schmidt([(P[i]-P[1]) for i in 2:n])
     affine_span = P[1] + sum([t[i].*basis_vectors[i] for i in 1:n-1])
     new_expressions = [subs(f,parameters(EP)=>affine_span) for f in expressions(EP)]
-    return(EnumerativeProblem(System(new_expressions,variables=variables(EP),parameters=t)))
+    return(EnumerativeProblem(System(new_expressions,variables=variables(EP),parameters=t); inequations = inequations(EP)))
 end
 function restrict(EP::EnumerativeProblem,p::Vector{T}) where {T<:Number}
     if is_real(p)

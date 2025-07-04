@@ -1,9 +1,10 @@
 name = "Pandora"
 uuid = "ddb62b48-25b1-445b-9844-d5846bdd42c2"
 authors = ["tbrysiewicz <taylorbrysiewicz@gmail.com>"]
-version = "0.4.0"
+version = "0.5.0"
 
 [deps]
+Combinatorics = "861a8166-3701-5b0c-9a16-15d98fcdc6aa"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 DelaunayTriangulation = "927a84f5-c5f4-47a5-9785-b46e178433df"
 HomotopyContinuation = "f213a82b-91d6-5c5d-acf7-10f1c761b327"
@@ -14,5 +15,6 @@ Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 
 [compat]
+Combinatorics = "1.0.3"
 DelaunayTriangulation = "1.6.4"
 IntegerSmithNormalForm = "0.1.0"

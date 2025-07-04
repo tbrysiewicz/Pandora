@@ -32,6 +32,7 @@ export gens, order, is_primitive, is_transitive, describe, dim, vertices, faces,
 
 
 using IntegerSmithNormalForm: snf, elementary_divisors
+using Combinatorics: combinations
 
 function __init__()
     print(raw"
