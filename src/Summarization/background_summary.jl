@@ -94,9 +94,6 @@ function monomial_string(BasePowerPairs)
     for (v,p) in BasePowerPairs
         if p != 0
             ms *= string(v)*raw"^{ "*string(p)*raw"}"
-            println(v)
-            println(p)
-            println(ms)
         end
     end
     return(ms)

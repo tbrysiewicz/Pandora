@@ -138,6 +138,7 @@ Base.show(io::IO, EProp::EnumerativeProperty) = print(io, name(EProp))
 
 const DEGREE = EnumerativeProperty{Int}("degree")
 const SYSTEM = EnumerativeProperty{System}("system")
+const INEQUATIONS = EnumerativeProperty{System}("inequations")
 const BASE_FIBRE = EnumerativeProperty{Fibre}("base_fibre")
 const NULL_ENUMERATIVE_PROPERTY = EnumerativeProperty{Nothing}("null")
 
@@ -358,12 +359,10 @@ probability, is a proven result, or is some other form of "knowledge").
 The `EnumerativeProblem` is the main concrete type used in Pandora.jl.
 """
 mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
-    system::System
     knowledge::Knowledge
 
     function EnumerativeProblem(F::System; populate = true)
         EP = new()
-        EP.system = F
         EP.knowledge = Knowledge([])
         know!(EP, SYSTEM, F)
         if populate
@@ -371,6 +370,20 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
         end
         return EP
     end
+
+
+    function EnumerativeProblem(F::System, inequations::System; populate = true)
+
+        EP = new()
+        EP.knowledge = Knowledge([])
+        know!(EP, SYSTEM, F)
+        know!(EP, INEQUATIONS, inequations)
+
+        if populate
+            populate!(EP)
+        end
+        return EP
+    end    
 end
 
 
@@ -393,6 +406,14 @@ degree(EP::EnumerativeProblem; kwargs...) = DEGREE(EP; kwargs...)
 Return the system of equations defining the enumerative problem.
 """
 system(EP::EnumerativeProblem; kwargs...) = SYSTEM(EP; kwargs...)
+
+"""
+    inequations(EP::EnumerativeProblem; kwargs...)
+
+Return the inequations of the enumerative problem.
+"""
+inequations(EP::EnumerativeProblem; kwargs...) = INEQUATIONS(EP; kwargs...)
+
 
 """
     base_fibre(EP::EnumerativeProblem; kwargs...)

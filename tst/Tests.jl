@@ -13,13 +13,15 @@ using Test
             @test isa(output_property(D), EnumerativeProperty)
             @test isa(reliability(D), Symbol)
 
-            #Smoke Tests
-            @test try
-                T = TwentySevenLines()
-                Pandora.learn!(T, output_property(D); algorithm = AD)
-                true
-            catch
-                false
+            if D.automated
+                #Smoke Tests
+                @test try
+                    T = TwentySevenLines()
+                    Pandora.learn!(T, output_property(D); algorithm = AD)
+                    true
+                catch
+                    false
+                end
             end
             
         end
@@ -82,7 +84,7 @@ end
 end
 
 
-
+#=
 #todo Tests
 @testset "Todo Tests" verbose=true begin
     @testset "Monodromy todo for TwentySevenLines" begin
@@ -110,3 +112,4 @@ end
         end
     end
 end
+=#

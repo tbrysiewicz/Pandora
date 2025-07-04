@@ -17,6 +17,7 @@ export
 ###solution, solution set, and fibre functions
 
 is_real(s::Vector{ComplexF64}; tol::Float64=1e-6) = maximum(abs ∘ imag, s) < tol
+is_real(s::Vector{Float64}) = true
 sign(s::Vector{Float64}) = sign.(s)
 real_solutions(S::Vector{Vector{ComplexF64}}; tol::Float64=1e-6) = filter(x->is_real(x; tol), S)
 nonreal_solutions(S::Vector{Vector{ComplexF64}}; tol::Float64=1e-6) = filter(x->!is_real(x; tol), S)

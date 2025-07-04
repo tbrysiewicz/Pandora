@@ -2,6 +2,8 @@ export
     branched_cover_decomposition,
     restrict
 
+
+
 function restrict(G::PermGroup,O::Vector{Int64})
     S = sort(collect(O))
     relabel = Dict{Int,Int}()

@@ -38,6 +38,8 @@ function polyhedral_homotopy(F::System) :: Fibre
     k = length(parameters(F))
     P = randn(ComplexF64, k)
     S = solutions(solve(F; target_parameters = P, start_system = :polyhedral))
+    G = inequations(F)
+    filter!(s -> all(f -> norm(evaluate(f,variables(G)=>s)) <1e-6, expressions(G))==false, S)
     return (S, P)
 end
 
@@ -63,6 +65,9 @@ function total_degree_homotopy(F::System) :: Fibre
     k = length(parameters(F))
     P = randn(ComplexF64, k)
     S = solutions(solve(F; target_parameters = P, start_system = :total_degree))
+
+    G = inequations(F)
+    filter!(s -> all(f -> norm(evaluate(f,variables(G)=>s)) <1e-6, expressions(G))==false, S)
     return (S, P)
 end
 
