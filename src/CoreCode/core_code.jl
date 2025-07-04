@@ -361,10 +361,14 @@ The `EnumerativeProblem` is the main concrete type used in Pandora.jl.
 mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
     knowledge::Knowledge
 
-    function EnumerativeProblem(F::System; populate = true)
+    function EnumerativeProblem(F::System; inequations = System([]), populate = true, torus_only = false)
         EP = new()
         EP.knowledge = Knowledge([])
         know!(EP, SYSTEM, F)
+        if torus_only
+            inequations = System([prod(variables(F))])
+        end
+        know!(EP, INEQUATIONS, inequations)  
         if populate
             populate!(EP)
         end
@@ -372,18 +376,23 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
     end
 
 
-    function EnumerativeProblem(F::System, inequations::System; populate = true)
+    function EnumerativeProblem(F::System, inequations::System; populate = true, torus_only = false)
 
         EP = new()
         EP.knowledge = Knowledge([])
         know!(EP, SYSTEM, F)
+        if torus_only
+            inequations = System(vcat(expressions(inequations),[prod(variables(F))]))
+        end
         know!(EP, INEQUATIONS, inequations)
 
         if populate
             populate!(EP)
         end
         return EP
-    end    
+    end
+    
+    
 end
 
 

@@ -34,18 +34,19 @@ ALGORITHM_DATA[n_solutions] = n_solutions_datum
 
 Compute the base fibre using polyhedral homotopy.
 """
-function polyhedral_homotopy(F::System) :: Fibre
+function polyhedral_homotopy(F::System, G::System) :: Fibre
     k = length(parameters(F))
     P = randn(ComplexF64, k)
     S = solutions(solve(F; target_parameters = P, start_system = :polyhedral))
-    G = inequations(F)
-    filter!(s -> all(f -> norm(evaluate(f,variables(G)=>s)) <1e-6, expressions(G))==false, S)
+    if length(expressions(G))>0
+        filter!(s -> all(f -> norm(evaluate(f,variables(G)=>s)) <1e-6, expressions(G))==false, S)
+    end
     return (S, P)
 end
 
 const polyhedral_homotopy_datum = AlgorithmDatum(
     name = "polyhedral_homotopy",
-    input_properties = [SYSTEM],
+    input_properties = [SYSTEM, INEQUATIONS],
     output_property = BASE_FIBRE,
     reliability = :numerical
 )
@@ -61,19 +62,19 @@ ALGORITHM_DATA[polyhedral_homotopy] = polyhedral_homotopy_datum
 
 Compute the base fibre using total degree homotopy.
 """
-function total_degree_homotopy(F::System) :: Fibre
+function total_degree_homotopy(F::System, G::System) :: Fibre
     k = length(parameters(F))
     P = randn(ComplexF64, k)
     S = solutions(solve(F; target_parameters = P, start_system = :total_degree))
-
-    G = inequations(F)
-    filter!(s -> all(f -> norm(evaluate(f,variables(G)=>s)) <1e-6, expressions(G))==false, S)
+    if length(expressions(G))>0
+        filter!(s -> all(f -> norm(evaluate(f,variables(G)=>s)) <1e-6, expressions(G))==false, S)
+    end
     return (S, P)
 end
 
 const total_degree_homotopy_datum = AlgorithmDatum(
     name = "total degree homotopy",
-    input_properties = [SYSTEM],
+    input_properties = [SYSTEM, INEQUATIONS],
     output_property = BASE_FIBRE,
     reliability = :numerical
 )
