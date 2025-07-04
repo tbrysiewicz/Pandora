@@ -70,7 +70,7 @@ end
 @kwdef mutable struct FibreDatum
     parameters::Vector{ComplexF64} = ComplexF64[]
     solutions::Vector{Vector{ComplexF64}} = Vector{Vector{ComplexF64}}()
-    function_values:: Dict{Symbol, Any} = Dict{Symbol, Any}()
+    function_values:: Dict{Function, Any} = Dict{Function, Any}()
     certificates::Union{CertificationResult,Nothing} = nothing
     F::Union{System,Nothing} = nothing 
 end

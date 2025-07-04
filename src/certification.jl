@@ -2,7 +2,8 @@ export
     certify_n_real,
     n_solutions_certified,
     certify,
-    certify!
+    certify!,
+    certificates
 
 
 
@@ -55,7 +56,15 @@ function certify!(FD::FibreDatum, EP::EnumerativeProblem)  ::CertificationResult
     return(certify!(FD, system(EP)))
 end
 
+function n_solutions_certified(FD::FibreDatum)
+    if is_certified(FD)
+        return(count(x->x.real, certificates(FD)))
+    else
+        return(nothing)
+    end
+end
 
+#=
 
 function certify_n_real(EP::EnumerativeProblem, F::Fibre)
     C = certify(system(EP),F[1]; target_parameters = F[2])
@@ -74,3 +83,5 @@ function n_solutions_certified(EP::EnumerativeProblem, F::Fibre)
     C = certify(system(EP),F[1]; target_parameters = F[2])
     return(count(x->x.certified, C.certificates))
 end
+
+=#

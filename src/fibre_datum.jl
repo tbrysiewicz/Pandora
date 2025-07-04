@@ -21,11 +21,14 @@ function Base.show(io::IO, F::FibreDatum)
     nreal = is_certified(F) ? count(x -> x.real, certificates(F)) : n_real_solutions(solutions(F))
     print(io, "FibreDatum with ", length(F.solutions), " complex solutions (",nreal," real) over ", length(F.parameters), " parameters")
     if is_certified(F) 
-        print(io, " [certified]")
+        print(io, " [certified].")
+    else
+        print(io,".")
     end
-    println(".")
     if !isempty(F.function_values)
-        print(io, " Function values: ", F.function_values)
+        for k in keys(F.function_values)
+            print(io, "  ", k, " = ", F.function_values[k])
+        end
     end
 end
 const FIBRE_DATUM = EnumerativeProperty{FibreDatum}("fibre_datum")
