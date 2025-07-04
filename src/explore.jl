@@ -105,7 +105,7 @@ end
 
 
 
-function explore_reality(EP::EnumerativeProblem; n_samples = 10, sampler = UniformSampler{Float64}(n_parameters(EP)), certify = true, kwargs...)
+function explore_reality(EP::EnumerativeProblem; n_samples = 10, sampler = UniformSampler{Float64}(n_parameters(EP)), certify = true, as_fibres = false, kwargs...)
     certification_function = (fibre,n) -> true  # Default certification function that always returns true
     if certify
         certification_function = (fibre,n) -> certify_n_real(EP, fibre) == n
@@ -150,15 +150,22 @@ function explore_reality(EP::EnumerativeProblem; n_samples = 10, sampler = Unifo
             know!(EP, KN)
         end
     end
-    return(certified_fibres, tally([fib.function_values[n_real_solutions] for fib in F]))
+    if as_fibres
+        return F
+    else
+        return(tally([fib.function_values[n_real_solutions] for fib in F]))
+    end
+    
 end
+
+const FIBRE_DATA = EnumerativeProperty{Vector{FibreDatum}}("fibre_data")
+
 
 ALGORITHM_DATA[explore_reality] = AlgorithmDatum(
     name = "Explore Reality",
     description = "Explores the reality of solutions in an EnumerativeProblem by sampling parameters and solving for real solutions. It attempts to certify a witness for each unique count of real solutions found.",
     input_properties = [SYSTEM, BASE_FIBRE],
     output_property = FIBRE_DATA,
-    reliability = :certified
+    reliability = :certified,
+    automated = false
 )
-
-const FIBRE_DATA = EnumerativeProperty{Vector{FibreDatum}}("fibre_data")

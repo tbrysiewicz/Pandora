@@ -166,6 +166,7 @@ Base.@kwdef struct AlgorithmDatum
     output_property::EnumerativeProperty = NULL_ENUMERATIVE_PROPERTY
     citations::Vector{Citation} = [NULL_CITATION]
     reliability::Symbol = :null
+    automated::Bool = true
 end
 
 export name, description, input_properties, default_kwargs, output_property, reliability, citation
@@ -214,7 +215,8 @@ const user_given_datum = AlgorithmDatum(
     description = "The user declared this property",
     input_properties = Vector{EnumerativeProperty}([]),
     output_property = ANY,
-    reliability = :user_given
+    reliability = :user_given,
+    automated = false
 )
 
 function conjunction()
@@ -225,12 +227,15 @@ const conjunction_datum = AlgorithmDatum(
     description = "Combines multiple properties into one",
     input_properties = Vector{EnumerativeProperty}([]),
     output_property = ANY,
-    reliability = :certified
+    reliability = :certified,
+    automated = false
 )
 
 global ALGORITHM_DATA = Dict{Function, AlgorithmDatum}()
 ALGORITHM_DATA[user_given] = user_given_datum
 ALGORITHM_DATA[conjunction] = conjunction_datum
+const DO_NOT_AUTOMATE = EnumerativeProperty{Vector{FibreDatum}}("fibre_data")
+
 
 name(F::Function) = haskey(ALGORITHM_DATA, F) ? name(ALGORITHM_DATA[F]) : error(NOALG)
 description(F::Function) = haskey(ALGORITHM_DATA, F) ? description(ALGORITHM_DATA[F]) : error(NOALG)

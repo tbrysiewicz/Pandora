@@ -21,11 +21,11 @@ automate!(T)
 """
 function automate!(EP::EnumerativeProblem)
     for AD in keys(ALGORITHM_DATA) #This scrolls through all algorithms and applies each to EP. 
-        if AD != user_given && AD != conjunction
         D = ALGORITHM_DATA[AD]
-        ep = output_property(D)
-        @vprintln("Computing ",ep, " via ", name(AD))
-        ep(EP)
+        if D.automated == true
+            ep = output_property(D)
+            @vprintln("Computing ",ep, " via ", name(AD))
+            ep(EP)
         end
     end
 end
