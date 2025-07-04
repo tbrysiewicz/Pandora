@@ -557,6 +557,56 @@ function learn!(EP::EnumerativeProblem, EProp::EnumerativeProperty{T};
     return know!(EP, new_knowledge)
 end
 
+"""
+    compute(EProp::EnumerativeProperty{T}, EP::EnumerativeProblem; algorithm = nothing, recompute_depth = 0, kwargs...) where T
+
+Compute the value of an enumerative property `EProp` for an enumerative problem `EP`. 
+      If recompute_depth is 1, it will recompute the property even if it is already known, using the known input knowledge for that algorithm.
+      If recompute_depth is 2, it will recompute the property, and will recompute the input knowledge using recompute_depth 1. 
+      In general, recompute_depth is the recursive limit of recomputing knowledge, but user_given information is always returned. 
+"""
+
+function compute(EProp::EnumerativeProperty{T},EP::EnumerativeProblem; 
+    algorithm = nothing, recompute_depth = 0, kwargs...) where T
+    K = get_knowledge(EProp, EP; kwargs...)
+    if K !== nothing
+        if length(K.input_knowledge) == 0
+            return(value(K))
+            #@vprintln("Returning value of ", EProp, " from knowledge: ", value(K), ".")
+        end
+    end
+    
+    #println("Recompute depth is currently: ", recompute_depth, " on computation of ", EProp, ".")
+    if recompute_depth == 0
+        #print("Checking if the knowledge of ", EProp, " is already known in EP: ", EP, "...")
+        g = get_knowledge_value(EProp, EP; kwargs...)
+        if g!==nothing
+            #print("Yes, it is known: ", g, "\n")
+            return g
+        end
+         #println("No, it is not known. Computing it now...")
+    end
+    recompute_depth = max(recompute_depth-1,0)
+    # If the algorithm is not given, find an algorithm known to Pandora which
+    # computes the given enumerative property
+    if algorithm === nothing
+        algorithm = find_algorithm(EProp, EP)
+    end
+    f = algorithm
+    @assert(ALGORITHM_DATA[f].output_property == EProp)
+    input_values = [compute(i,EP; recompute_depth=recompute_depth) for i in input_properties(f)]
+    kwargs_to_pass = copy(default_kwargs(f))
+    if !isempty(kwargs)
+        for kv in kwargs
+            if haskey(kwargs_to_pass, kv[1])
+                kwargs_to_pass[kv[1]] = kv[2]
+            end
+        end
+    end
+    o = f(input_values...; kwargs_to_pass...)
+    return o
+end
+
 function know!(EP::EnumerativeProblem, K::KnowledgeNode)
     push!(EP.knowledge, K)
     return K
@@ -605,9 +655,12 @@ end
 get_knowledge_value!(EProp::EnumerativeProperty, EP::EnumerativeProblem; kwargs...) = value(get_knowledge!(EProp, EP; kwargs...))
 
 #This is the core "getter" for enumerative properties of enumerative problems
-function (EProp::EnumerativeProperty)(EP::EnumerativeProblem; kwargs...)
-    !knows(EP, EProp; kwargs...)
-    get_knowledge_value!(EProp, EP; kwargs...)
+function (EProp::EnumerativeProperty)(EP::EnumerativeProblem; learn = true, recompute_depth = 1, kwargs...)
+    if learn == true
+        return(get_knowledge_value!(EProp, EP; kwargs...))
+    else
+        return(compute(EProp, EP; recompute_depth = recompute_depth, kwargs...))
+    end
 end
 
 include("core_enumerative_algorithms.jl")
