@@ -9,6 +9,8 @@ Pandora is code for studying enumerative problems using numerical and symbolic m
 ![Alt text](ReadMeImages/Pandoralogo.png?raw=true "Parallel, Automated, Numerical, Discovery and Optimization (Research Aid)")
 
 
+## Please Reach out!
+Pandora.jl is currently in version 0.5.0 and is under rapid development as of July 2025. Please reach out if you have comments/requests regarding its functionality or user interface. You can contact Taylor Brysiewicz at tbrysiew@uwo.ca
 
 
 ## Quick Start Demo
@@ -243,3 +245,11 @@ This is pdfTeX, Version ......
 
 ![Alt text](ReadMeImages/PandoraSummaryExample.png?raw=true "Pandora Summary")
 
+## Credits
+
+- Developers
+  - Taylor Brysiewicz
+  - Alexandra Makris
+  - Samuel Feldman
+  - Noah Vale
+  - Deepak Mundayurvalappil Sadanand
