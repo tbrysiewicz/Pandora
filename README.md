@@ -152,7 +152,6 @@ save(SupportVisualization[2], "support2.png");
 ```
 
 ![Alt text](ReadMeImages/support1.png?raw=true "Newton Polytope and Support Visualization")
-![Alt text](ReadMeImages/support2.png?raw=true "Newton Polytope and Support Visualization")
 
 
 ```julia
