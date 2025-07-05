@@ -6,7 +6,7 @@ Pandora is code for studying enumerative problems using numerical and symbolic m
 
 
 
-![Alt text](Pandoralogo.png?raw=true "Parallel, Automated, Numerical, Discovery and Optimization (Research Aid)")
+![Alt text](ReadMeImages/Pandoralogo.png?raw=true "Parallel, Automated, Numerical, Discovery and Optimization (Research Aid)")
 
 
 
@@ -128,7 +128,7 @@ Resolution used:1498
 save(P, "MyDiscriminant.png")
 ```
 
-![Alt text](OutputFiles/MyDiscriminant.png?raw=true "n_real_solutions Visualization")
+![Alt text](ReadMeImages/MyDiscriminant.png?raw=true "n_real_solutions Visualization")
 
 
 ### 7. **Refine and Save Improved Visualization**
@@ -140,7 +140,7 @@ P = visualize(V)
 save(P, "MyBetterDiscriminant.png")
 ```
 
-![Alt text](OutputFiles/MyBetterDiscriminant.png?raw=true "Better n_real_solutions Visualization")
+![Alt text](ReadMeImages/MyBetterDiscriminant.png?raw=true "Better n_real_solutions Visualization")
 
 
 ### 8. **Visualize Supports and Newton Polytopes**
@@ -151,8 +151,8 @@ save(SupportVisualization[1], "support1.png");
 save(SupportVisualization[2], "support2.png");
 ```
 
-![Alt text](OutputFiles/support1.png?raw=true "Newton Polytope and Support Visualization")
-![Alt text](OutputFiles/support2.png?raw=true "Newton Polytope and Support Visualization")
+![Alt text](ReadMeImages/support1.png?raw=true "Newton Polytope and Support Visualization")
+![Alt text](ReadMeImages/support2.png?raw=true "Newton Polytope and Support Visualization")
 
 
 ```julia
@@ -242,5 +242,5 @@ This is pdfTeX, Version ......
 ### 10. An example of the kind of output on the enumerative problem E above
 
 
-![Alt text](PandoraSummaryExample.png?raw=true "Pandora Summary")
+![Alt text](ReadMeImages/PandoraSummaryExample.png?raw=true "Pandora Summary")
 
