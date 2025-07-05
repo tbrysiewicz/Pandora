@@ -1,38 +1,176 @@
+
 # PANDO(RA)
 ### Parallel, Automated, Numerical, Discovery and Optimization (Research Aid)
 
-This is a prototype repository for a suite of numerical methods for 
-automatically and reliably analyzing enumerative problems. 
-
-### Example: Computing the 27 lines on a cubic surface
- ```julia
-julia> using Pandora
-julia> E = TwentySevenLines()
+Pandora is code for studying enumerative problems using numerical and symbolic methods. 
 
 
-           X := V(f_1..f_4) ⊆ C^4 x C^20
-           |
-           |
-           | π    ???-to-1
-           |
-           V
-          C^20
 
-An enumerative problem in 4 variable(s) cut out by 4 condition(s) over 20 parameters.
-julia> degree(E)
-27
+![Alt text](Pandoralogo.png?raw=true "Parallel, Automated, Numerical, Discovery and Optimization (Research Aid)")
 
-julia> degree(E;Method = "Monodromy",Retry = true)
-Populating a base fibre of the enumerative problem
-Using monodromy
-27
+
+
+
+## Quick Start Demo
+
+Below is a typical workflow, with code and expected output. 
+
+---
+
+### 1. **Define Variables and Parameters**
+
+```julia
+@var x, y
+@var a[1:4], b[1:4]
 ```
 
-## Computing the Galois group of the 27 lines
+### 2. **Define Your System**
+
+```julia
+f1 = a[1]*x + a[2]*y + a[3]*x^2*y + a[4]*x*y^2
+f2 = b[1]*x + b[2]*y + b[3]*x^2*y + b[4]*x*y^2
+E = EnumerativeProblem([f1,f2],variables = [x,y], parameters = vcat(a,b), torus_only=true)
+
+
+           X := V(f_1..f_2) ⊆ C^2 x C^8
+           |
+           |
+           | π   4-to-1
+           |
+           V
+          C^8
+
+An enumerative problem in 2 variable(s) cut out by 2 condition(s) over 8 parameter(s).
+
+julia> degree(E)
+4
+
+julia> bkk_bound(E)
+4
+
+julia> bezout_bound(E)
+9
+```
+### 3. **Information is collected in knowledge field of the enumerative problem**
+
+```julia
+julia> knowledge(E)
+1) [system] as computed by (User given) applied to (nothing).
+2) [inequations] as computed by (User given) applied to (nothing).
+3) [base_fibre] as computed by (polyhedral_homotopy) applied to [system, inequations]
+4) [degree] as computed by (n_solutions) applied to [base_fibre]
+5) [bkk_bound] as computed by (bkk_bound) applied to [system]
+6) [degree_sequence] as computed by (degree_sequence) applied to [system]
+7) [bezout_bound] as computed by (bezout_bound) applied to [degree_sequence]
+
+
+julia> last(knowledge(E))
+└── [bezout_bound] as computed by (bezout_bound)
+    └── [degree_sequence]
+        └── [system]
+```
+
+
+### 4. **Explore Monodromy Groups as Oscar Objects**
+
+```julia
+G = monodromy_group(E)
+Permutation group of degree 4
+
+is_primitive(G)
+false
+
+order(G)
+8
+
+gens(G)
+2-element Vector{Oscar.PermGroupElem}:
+ (3,4)
+ (1,3)(2,4)
+
+is_decomposable(E)
+true
+
+is_lacunary(E)
+true
+```
+
+---
+
+### 5. **Sample From the Parameter Space and Optimize**
+
+```julia
+ER = tally.(explore(E, [n_real_solutions, n_positive_solutions]), n_samples = 1000)
+Number of valid fibres:1000
+2-element Vector{Dict{Any, Int64}}:
+ Dict(0 => 426, 4 => 249, 2 => 325)
+ Dict(0 => 624, 2 => 23, 1 => 353)
+
+O = maximize_n_real_solutions(E)
+C = certify(record_fibre(O),E)
+CertificationResult
+===================
+• 4 solution candidates given
+• 4 certified solution intervals (4 real, 0 complex)
+• 4 distinct certified solution intervals (4 real, 0 complex)
+
+```
+
+---
+
+### 6. **Visualize and Save Discriminant**
+
+```julia
+(V,P) = visualize(E; near = record_parameters(O), strategy = :quadtree)
+EP consists of more than two parameters. Visualizing a random 2-plane in the parameter space.
+Resolution used:711
+Resolution used:1498
+save(P, "MyDiscriminant.png")
+```
+
+![Alt text](OutputFiles/MyDiscriminant.png?raw=true "n_real_solutions Visualization")
+
+
+### 7. **Refine and Save Improved Visualization**
+
+```julia
+refine!(V);
+refine!(V);
+P = visualize(V)
+save(P, "MyBetterDiscriminant.png")
+```
+
+![Alt text](OutputFiles/MyBetterDiscriminant.png?raw=true "Better n_real_solutions Visualization")
+
+
+### 8. **Visualize Supports and Newton Polytopes**
+
+```julia
+SupportVisualization = visualize_support(E);
+save(SupportVisualization[1], "support1.png");
+save(SupportVisualization[2], "support2.png");
+```
+
+![Alt text](OutputFiles/support1.png?raw=true "Newton Polytope and Support Visualization")
+![Alt text](OutputFiles/support2.png?raw=true "Newton Polytope and Support Visualization")
+
+
 ```julia
 
-julia> G = galois_group(E; nloops = 100, radius=10)
-Sampling 100 elements from the monodromy group of 
+NP = newton_polytopes(E)
+2-element Vector{Oscar.Polyhedron}:
+ Polytope in ambient dimension 2
+ Polytope in ambient dimension 2
+
+mv = volume(sum(NP)) - volume(NP[1]) - volume(NP[2])   # 4
+```
+
+### 9. **Automate Knowledge and Summarize**
+
+```julia
+
+julia> T = TwentySevenLines()
+
 
            X := V(f_1..f_4) ⊆ C^4 x C^20
            |
@@ -42,91 +180,67 @@ Sampling 100 elements from the monodromy group of
            V
           C^20
 
-An enumerative problem in 4 variable(s) cut out by 4 condition(s) over 20 parameters.
+An enumerative problem in 4 variable(s) cut out by 4 condition(s) over 20 parameter(s).
+The following information is known about this problem:
+-system
+-inequations
+-base_fibre
+-degree
 
-99 out of 100 are plausible permutations
-Permutation group of degree 27
 
-julia> using Oscar; order(G)
-51840
+julia> automate!(T)
+Computing newton_polytopes via newton_polytopes
+Pandora.jl is automatically finding an algorithm to compute newton_polytopes. To specify an algorithm, call again with algorithm=>[nameofalgorithm]
+There is a total of 1 algorithm(s) in Pandora.jl which compute(s) newton_polytopes:
+      1) [USING] newton_polytopes
+Computing bezout_bound via bezout_bound
+Pandora.jl is automatically finding an algorithm to compute bezout_bound. To specify an algorithm, call again with algorithm=>[nameofalgorithm]
+There is a total of 1 algorithm(s) in Pandora.jl which compute(s) bezout_bound:
+      1) [USING] bezout_bound
+Pandora.jl is automatically finding an algorithm to compute degree_sequence. To specify an algorithm, call again with algorithm=>[nameofalgorithm]
+There is a total of 1 algorithm(s) in Pandora.jl which compute(s) degree_sequence:
+      1) [USING] degree_sequence
+Computing base_fibre via polyhedral_homotopy
+Computing degree via n_solutions
+Computing degree_sequence via degree_sequence
+Computing monodromy group via group_generated_by_monodromy_loops
+Pandora.jl is automatically finding an algorithm to compute monodromy group. To specify an algorithm, call again with algorithm=>[nameofalgorithm]
+There is a total of 1 algorithm(s) in Pandora.jl which compute(s) monodromy group:
+      1) [USING] group_generated_by_monodromy_loops
+Pandora.jl is automatically finding an algorithm to compute monodromy_sample. To specify an algorithm, call again with algorithm=>[nameofalgorithm]
+There is a total of 1 algorithm(s) in Pandora.jl which compute(s) monodromy_sample:
+      1) [USING] Sample of [n_monodromy_loops] random loops of scaling [monodromy_loop_scaling]
+# Loops computed:            50
+# Valid permutations:        50
+# Unique valid permutations: 50
+Computing bkk_bound via bkk_bound
+Pandora.jl is automatically finding an algorithm to compute bkk_bound. To specify an algorithm, call again with algorithm=>[nameofalgorithm]
+There is a total of 1 algorithm(s) in Pandora.jl which compute(s) bkk_bound:
+      1) [USING] bkk_bound
+Computing affine_bkk_bound via affine_bkk_bound
+Pandora.jl is automatically finding an algorithm to compute affine_bkk_bound. To specify an algorithm, call again with algorithm=>[nameofalgorithm]
+There is a total of 1 algorithm(s) in Pandora.jl which compute(s) affine_bkk_bound:
+      1) [USING] affine_bkk_bound
+Computing support via support
+Pandora.jl is automatically finding an algorithm to compute support. To specify an algorithm, call again with algorithm=>[nameofalgorithm]
+There is a total of 1 algorithm(s) in Pandora.jl which compute(s) support:
+      1) [USING] support
+Computing fibre_datum via Fibre Datum
+Pandora.jl is automatically finding an algorithm to compute fibre_datum. To specify an algorithm, call again with algorithm=>[nameofalgorithm]
+There is a total of 1 algorithm(s) in Pandora.jl which compute(s) fibre_datum:
+      1) [USING] Fibre Datum
+Computing monodromy_sample via Sample of [n_monodromy_loops] random loops of scaling [monodromy_loop_scaling]
 
-julia> isprimitive(G)
-true
-
+julia> summarize(T)
+This is pdfTeX, Version ......
+..............................
 ```
-### Observing the reality constraints on the 27 lines
-```julia
-julia> Data = explore(E,[real_points_in_fibre];n_samples=10000);
-Solving for 10000 parameters... 100%|████████████████████████████████████████| Time: 0:00:14
-  # parameters solved:  10000
-  # paths tracked:      270000
-Total number of fibres computed:10000
-9957/10000 satisfies degree_check
-Retry:false
-LENGTH OF SOLS:9957
+**Output:**  
+- Summary written to `OutputFiles/latex_summary.pdf`
 
 
-julia> tally(Data[3][1])
-Dict{Any, Int64} with 4 entries:
-  3  => 7488
-  7  => 2059
-  15 => 413
-  27 => 5
-```
-
-### Finding all real solutions
-```julia
-julia> OD = optimize_real(E)
-i'i.i'i.!
----------------------------------------------------------------------------
-Optimizer for an enumerative problem with 27 many solutions.
-  Current barrier-weighted objective function: (27.0, -0.04042909428237266)
-   Record barrier-weighted objective function: (27.0, -0.04042909428237266)
-  Goal: Reached
----------------------------------------------------------------------------
+### 10. An example of the kind of output on the enumerative problem E above
 
 
+![Alt text](PandoraSummaryExample.png?raw=true "Pandora Summary")
 
-```
-
-### Visualizing a discriminant slice
-```
-julia> P = OD.record_fibre[2]
-20-element Vector{Float64}:
- -2.804451318458232
-  0.7940808007947211
-  7.361465112381069
- -4.611297477231954
- -0.27901826818369635
- -0.7923994094742532
- -6.573816057838942
-  ⋮
- -0.7657799067649271
-  1.3448489447510072
-  1.9205988028997956
-  5.550237971895067
- -1.0080509935587196
-  1.0963234606809722
- 
-julia> EP = restrict_enumerative_problem(E,[P+randn(Float64,20),P+randn(Float64,20),P]);
-
-
-julia> (ImageData,Image) = visualize_parameter_space(EP);
-
-```
-
-
-![Alt text](Discriminant.png?raw=true "Discriminant Visualization")
-
-The main datatypes in Pandora are currently
-- Enumerative Problem
-- Variety
-
-The main functionality in Pandora currently includes
-- Monodromy Group Computation
-- Lazy Evaluation of Enumerative Problems
-- Automated Exploration Tools
-- Ability to optimize functions on fibres of enumerative problems over their parameter spaces via shotgun hill-climbing, including
-  - Number of real solutions
-  - Number of positive solutions
-  - Any other given score function

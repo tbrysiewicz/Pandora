@@ -4,7 +4,8 @@ export
     reality_exploration!,
     fibre_datum,
     fibre_data,
-    explore_reality
+    explore_reality,
+    tally
 
 
 function tally(S)

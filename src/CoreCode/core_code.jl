@@ -444,7 +444,13 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
         end
         return EP
     end
-    
+ 
+    function EnumerativeProblem(EX::Vector{Expression}; variables::Vector{Variable}=[], 
+        parameters::Vector{Variable} = [], populate = true, inequations = System([]), torus_only = false)
+
+        F = System(EX, variables = variables, parameters = parameters)
+        return EnumerativeProblem(F, inequations; torus_only=torus_only, populate = populate)
+    end   
     
 end
 

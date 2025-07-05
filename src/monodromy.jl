@@ -263,7 +263,7 @@ ALGORITHM_DATA[group_generated_by_monodromy_loops]=group_generated_by_monodromy_
 function is_decomposable(EP::EnumerativeProblem)
     G = galois_group(EP)
     if is_transitive(G)
-        return is_primitive(G)
+        return !is_primitive(G)
     else
         return false
     end
