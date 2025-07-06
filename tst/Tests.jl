@@ -84,6 +84,76 @@ end
 end
 
 
+@testset "Readme tests" begin
+    # 1. Define variables and parameters
+    @var x y
+    @var a[1:4] b[1:4]
+
+    # 2. Define your system
+    f1 = a[1]*x + a[2]*y + a[3]*x^2*y + a[4]*x*y^2
+    f2 = b[1]*x + b[2]*y + b[3]*x^2*y + b[4]*x*y^2
+    E = EnumerativeProblem([f1, f2], variables = [x, y], parameters = vcat(a, b), torus_only=true)
+
+    # 3. Compute invariants and knowledge
+    @test degree(E) == 4
+    @test bkk_bound(E) == 4
+    @test bezout_bound(E) == 9
+    K = knowledge(E)
+    @test length(K) > 0
+    # Output of last(knowledge(E)) is a KnowledgeNode, structure may vary #[unknown output]
+
+    # 4. Explore group structure
+    G = monodromy_group(E)
+    @test is_primitive(G) == false
+    @test order(G) == 8
+    gensG = gens(G)
+    @test length(gensG) == 2
+    @test is_decomposable(E) == true
+    @test is_lacunary(E) == true
+
+    # 5. Sample reality and optimize
+    ER = explore_reality(E; n_samples=1000)
+    @test isa(ER, Dict)
+    # Output of ER is a Dict with integer keys and values #[unknown output]
+
+    O = maximize_n_real_solutions(E)
+    @test !isnothing(O)
+    C = certify(record_fibre(O), E)
+    @test C isa CertificationResult
+
+    # 6. Visualize and save discriminant
+    V, P = visualize(E; near = record_parameters(O), strategy = :quadtree)
+    @test !isnothing(V)
+    @test !isnothing(P)
+    save(P, "OutputFiles/MyDiscriminant.png")
+    @test isfile("OutputFiles/MyDiscriminant.png") #[unknown output if path changes]
+
+    # 7. Refine and save improved visualization
+    refine!(V)
+    refine!(V)
+    P2 = visualize(V)
+    save(P2, "OutputFiles/MyBetterDiscriminant.png")
+    @test isfile("OutputFiles/MyBetterDiscriminant.png") #[unknown output if path changes]
+
+    # 8. Visualize supports and Newton polytopes
+    SupportVisualization = visualize_support(E)
+    save(SupportVisualization[1], "OutputFiles/support1.png")
+    save(SupportVisualization[2], "OutputFiles/support2.png")
+    @test isfile("OutputFiles/support1.png") #[unknown output if path changes]
+    @test isfile("OutputFiles/support2.png") #[unknown output if path changes]
+
+    NP = newton_polytopes(E)
+    @test length(NP) == 2
+    mv = volume(sum(NP)) - volume(NP[1]) - volume(NP[2])
+    @test mv == 4
+
+    # 9. Automate knowledge and summarize
+    T = TwentySevenLines()
+    automate!(T)
+    summarize(T)
+    @test isfile("OutputFiles/summary.pdf") #[unknown output if path changes]
+end
+
 #=
 #todo Tests
 @testset "Todo Tests" verbose=true begin
