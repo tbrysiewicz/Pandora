@@ -1,5 +1,7 @@
 using Test
 
+@testset "All algorithms" verbose=true begin 
+
 @testset "Automated Algorithm Tests" verbose=true begin
 
 
@@ -119,7 +121,7 @@ end
     O = maximize_n_real_solutions(E)
     @test !isnothing(O)
     C = certify(record_fibre(O), E)
-    @test C isa CertificationResult
+    @test C isa Pandora.CertificationResult
 
     # 6. Visualize and save discriminant
     V, P = visualize(E; near = record_parameters(O), strategy = :quadtree)
@@ -151,7 +153,9 @@ end
     T = TwentySevenLines()
     automate!(T)
     summarize(T)
-    @test isfile("OutputFiles/summary.pdf") #[unknown output if path changes]
+    @test isfile("OutputFiles/latex_summary.pdf") #[unknown output if path changes]
+end
+
 end
 
 #=
