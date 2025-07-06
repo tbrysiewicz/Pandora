@@ -212,7 +212,7 @@ end
 const ANY = EnumerativeProperty{Any}("any")
 
 const user_given_datum = AlgorithmDatum(
-    name = "User given",
+    name = "user_given",
     description = "The user declared this property",
     input_properties = Vector{EnumerativeProperty}([]),
     output_property = ANY,
@@ -224,8 +224,8 @@ function conjunction()
 end
 
 const conjunction_datum = AlgorithmDatum(
-    name = "Conjunction",
-    description = "Combines multiple properties into one",
+    name = "conjunction",
+    description = "Combines multiple knowledge nodes into one",
     input_properties = Vector{EnumerativeProperty}([]),
     output_property = ANY,
     reliability = :certified,

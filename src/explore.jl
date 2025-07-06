@@ -163,7 +163,7 @@ const FIBRE_DATA = EnumerativeProperty{Vector{FibreDatum}}("fibre_data")
 
 
 ALGORITHM_DATA[explore_reality] = AlgorithmDatum(
-    name = "Explore Reality",
+    name = "explore_reality",
     description = "Explores the reality of solutions in an EnumerativeProblem by sampling parameters and solving for real solutions. It attempts to certify a witness for each unique count of real solutions found.",
     input_properties = [SYSTEM, BASE_FIBRE],
     output_property = FIBRE_DATA,

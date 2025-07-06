@@ -78,3 +78,4 @@ const total_degree_homotopy_datum = AlgorithmDatum(
     output_property = BASE_FIBRE,
     reliability = :numerical
 )
+ALGORITHM_DATA[total_degree_homotopy] = total_degree_homotopy_datum

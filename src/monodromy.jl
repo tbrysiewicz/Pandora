@@ -201,7 +201,8 @@ monodromy_sample(EP::EnumerativeProblem; kwargs...) = MONODROMY_SAMPLE(EP; kwarg
 
 #TODO: When EnumerativeSolver is coded, that should be the input property
 const large_monodromy_sample_datum = AlgorithmDatum(
-    name = "Sample of [n_monodromy_loops] random loops of scaling [monodromy_loop_scaling]",
+    name = "large_monodromy_sample",
+    description = "Sample of [n_monodromy_loops] random loops of scaling [monodromy_loop_scaling]",
     input_properties = [SYSTEM, BASE_FIBRE],
     default_kwargs = Dict{Symbol,Any}(:n_monodromy_loops=>50,:monodromy_loop_scaling=>1.0),
     output_property = MONODROMY_SAMPLE,

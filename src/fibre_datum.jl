@@ -54,7 +54,7 @@ function compute_fibre_datum(F::System, BF::Fibre; real = false, kwargs...)::Fib
 end
 
 compute_fibre_datum_datum = AlgorithmDatum(
-    name = "Fibre Datum",
+    name = "compute_fibre_datum",
     description = "Computes a single fibre datum for the enumerative problem.",
     input_properties = [SYSTEM, BASE_FIBRE],
     output_property = FIBRE_DATUM,

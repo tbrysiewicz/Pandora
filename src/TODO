@@ -7,11 +7,8 @@ TODO List
         Such a construction (coming from restrict for example) should come 
         with a function embedding the sliced parameters into the new ones. 
         This allows for an implicit slice or a parametrized slice
-[ ] Figure out how to visualize the knowledge tree? 
-[ ] Create an interesting_fibre knowledge node for bookkeeping and referencing
-[ ] Should fibre cache exist?
+[ ] Equidimensional Variety -> Enumerative Problem
+[ ] Dominant morphism of variety -> Enumerative Problem
 [ ] 
-[ ]
-[ ]
 [ ]
 [ ]

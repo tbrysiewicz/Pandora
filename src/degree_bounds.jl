@@ -29,7 +29,7 @@ function compute_bkk_bound(F::System)::Int
 end
 
 compute_bkk_bound_datum = AlgorithmDatum(
-    name = "bkk_bound",
+    name = "compute_bkk_bound",
     description = "Computes the BKK bound for the number of isolated solutions in the torus",
     input_properties = [SYSTEM],
     output_property = BKK_BOUND,
@@ -56,7 +56,7 @@ function compute_affine_bkk_bound(F::System)::Int
 end
 
 compute_affine_bkk_bound_datum = AlgorithmDatum(
-    name = "affine_bkk_bound",
+    name = "compute_affine_bkk_bound",
     description = "Computes the bkk bound on affine space (bounding the number of isolated solutions in C^n)",
     input_properties = [SYSTEM],
     output_property = AFFINE_BKK_BOUND,
@@ -85,7 +85,7 @@ function compute_degree_sequence(F::System)::Vector{Int}
 end
 
 compute_degree_sequence_datum = AlgorithmDatum(
-    name = "degree_sequence",
+    name = "compute_degree_sequence",
     description = "Computes the degree sequence of a system",
     input_properties = [SYSTEM],
     output_property = DEGREE_SEQUENCE,
@@ -113,7 +113,7 @@ function compute_bezout_bound(D::Vector{Int})::Int
 end
 
 compute_bezout_bound_datum = AlgorithmDatum(
-    name = "bezout_bound",
+    name = "compute_bezout_bound",
     description = "Product of total degrees of the input polynomials",
     input_properties = [DEGREE_SEQUENCE],
     output_property = BEZOUT_BOUND,
@@ -143,7 +143,7 @@ function compute_support(F::System)::Vector{Matrix{Int}}
 end
 
 compute_support_datum = AlgorithmDatum(
-    name = "support",
+    name = "compute_support",
     description = "Computes the supports of each expression in terms of matrices whose columns correspond to monomials",
     input_properties = [SYSTEM],
     output_property = SUPPORT,
@@ -171,7 +171,7 @@ function compute_newton_polytopes(F::System)::Vector{Polyhedron}
 end
 
 compute_newton_polytopes_datum = AlgorithmDatum(
-    name = "newton_polytopes",
+    name = "compute_newton_polytopes",
     description = "Computes a vector of Newton polytopes of the system",
     input_properties = [SYSTEM],
     output_property = NEWTON_POLYTOPES,
