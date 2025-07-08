@@ -106,7 +106,7 @@ end
 
 
 
-function explore_reality(EP::EnumerativeProblem; n_samples = 10, sampler = UniformSampler{Float64}(n_parameters(EP)), certify = true, as_fibres = false, kwargs...)
+function explore_reality(EP::EnumerativeProblem; n_samples = 1000, sampler = UniformSampler{Float64}(n_parameters(EP)), certify = true, as_fibres = false, kwargs...)
     certification_function = (fibre,n) -> true  # Default certification function that always returns true
     if certify
         certification_function = (fibre,n) -> certify_n_real(EP, fibre) == n
@@ -154,7 +154,7 @@ function explore_reality(EP::EnumerativeProblem; n_samples = 10, sampler = Unifo
     if as_fibres
         return F
     else
-        return(tally([fib.function_values[n_real_solutions] for fib in F]))
+        return([fib.function_values[n_real_solutions] for fib in F])
     end
     
 end
