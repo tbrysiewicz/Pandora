@@ -37,8 +37,8 @@ The Newton polytopes and support of the defining polynomials of the enumerative 
 
 \begin{figure}[!htpb]
 \centering
-\includegraphics[scale=0.3]{Newton_Polytopes1.png}
-\includegraphics[scale=0.3]{Newton_Polytopes2.png}
+\includegraphics[scale=0.3]{OutputFiles/Newton_Polytopes1.png}
+\includegraphics[scale=0.3]{OutputFiles/Newton_Polytopes2.png}
 \caption{The Newton polytopes and support of the defining polynomials of the enumerative problem.}
 \label{fig:NewtonPolytopes}
 \end{figure}

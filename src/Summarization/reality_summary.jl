@@ -13,7 +13,7 @@ function reality_summary(EP::EnumerativeProblem;kwargs...)
 
     possible_reals = (degree(EP) % 2):2:degree(EP)
 
-    H = histogram(SD; bins = possible_reals, kwargs...)
+    H = histogram(SD; bins = 0:1:degree(EP)+2, kwargs...)
     save(H, "reality_histogram.png")
 
     summary *= raw"""
