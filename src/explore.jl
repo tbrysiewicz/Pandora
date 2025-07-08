@@ -127,7 +127,7 @@ function explore_reality(EP::EnumerativeProblem; n_samples = 1000, sampler = Uni
             #@vprintln("Trying to certify that function value $u is found in instance $(i) of $(length(fibres_with_u))")
             fib = fibres_with_u[i]
             certify!(fib, EP)
-            if n_solutions_certified(fib) == u
+            if n_real_solutions_certified(fib) == u
                 #@vprintln("Certified that function value $u is found in fibre number $(i)")
                 certified = true
                 certified_fibre = fib
