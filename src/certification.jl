@@ -1,6 +1,7 @@
 export 
     certify_n_real,
     n_solutions_certified,
+    n_real_solutions_certified,
     certify,
     certify!,
     certificates
@@ -58,7 +59,14 @@ end
 
 function n_solutions_certified(FD::FibreDatum)
     if is_certified(FD)
-        return(count(x->x.real, certificates(FD)))
+        return(count(x->x.certified, certificates(FD)))
+    else
+        return(nothing)
+    end
+end
+function n_real_solutions_certified(FD::FibreDatum)
+    if is_certified(FD)
+        return(count(x->x.certified && x.real, certificates(FD)))
     else
         return(nothing)
     end

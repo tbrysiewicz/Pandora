@@ -170,3 +170,41 @@ ALGORITHM_DATA[explore_reality] = AlgorithmDatum(
     reliability = :certified,
     automated = false
 )
+
+
+
+function find_all_real_counts(EP::EnumerativeProblem)
+    E = explore(EP, n_real_solutions; sampler = UniformSampler{Float64}(n_parameters(EP)), n_samples = 100, real_parameters = true, as_fibres = true)
+    real_counts = sort(unique([f.function_values[n_real_solutions] for f in E]))
+    @vprintln("Found the following real solution counts: $real_counts")
+    possible_real_counts = degree(EP) % 2:2:degree(EP)
+    @vprintln("Possible real solution counts: $possible_real_counts")
+    missing_counts = setdiff(possible_real_counts, real_counts)
+    found_fibres = []
+    if length(missing_counts) > 0
+        @vprintln("Missing real solution counts: $missing_counts")
+        for k in missing_counts
+            @vprint("Trying to find a witness for real solution count $k")
+            O = find_k_real_solutions(EP, k; n_samples = 20, max_steps=10)
+            if n_real_solutions(record_fibre(O)[1]) == k
+                @vprintln("Success: Found a real solution count $k")
+                push!(found_fibres, record_fibre(O))
+                push!(E,FibreDatum(record_fibre(O)))
+            else
+                @vprintln("Failed to find a real solution count $k")
+            end
+        end
+    end
+    found_counts = [n_real_solutions(f) for f in found_fibres]
+    still_missing_counts = setdiff(missing_counts,found_counts)
+    all_found_counts = unique(vcat(found_counts,real_counts))
+    certified_fibres = []
+    for c in all_found_counts
+        cfib = E[findfirst(x->n_real_solutions(x)==c, E)]
+        certify!(cfib,EP)
+        push!(certified_fibres,cfib)
+        cfib.function_values[n_real_solutions] = n_real_solutions(cfib)
+    end
+    sort!(certified_fibres, by = x -> n_real_solutions(x))
+    return(certified_fibres)
+end
