@@ -272,7 +272,3 @@ function is_decomposable(EP::EnumerativeProblem)
 end
 
 
-function orbits(G::PermGroup)
-    O = map(collect,oscar_orbits(G))
-    return O
-end
