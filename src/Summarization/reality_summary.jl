@@ -67,7 +67,7 @@ function reality_summary(EP::EnumerativeProblem;kwargs...)
 \label{fig:near_record_fibre}
 \end{figure}"""
 
-    (VSD,P) = visualize(EP; near = record_parameters(O), strategy = :quadtree, resolution = 100)
+    (VSD,P) = visualize(EP; near = record_parameters(O), strategy = :quadtree, resolution = 1000)
     save(P, "near_record_fibre.png")
     else
         summary *= raw"""The maximum number of real solutions found in the fibres is $"""*string(maxO)*raw""", but the maximum number of real solutions found in the sample was $"""*string(maxEX)*raw""". """

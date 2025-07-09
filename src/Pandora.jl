@@ -70,6 +70,7 @@ include("visualization.jl")
 include("certification.jl")
 include("fibre_datum.jl")
 include("explore.jl")
+include("Examples/sparse_polynomial_systems.jl")
 include("sparse_enumerative_problems.jl")
 include("sample_datum.jl")
 export ALGORITHM_DATA

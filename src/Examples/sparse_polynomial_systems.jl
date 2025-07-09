@@ -1,4 +1,5 @@
-
+export
+    sparse_system
 
 function sparse_system(Abullet::Vector{Matrix{Int}})
     n = length(Abullet)
