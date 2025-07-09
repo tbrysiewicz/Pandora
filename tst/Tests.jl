@@ -115,7 +115,7 @@ end
 
     # 5. Sample reality and optimize
     ER = explore_reality(E; n_samples=1000)
-    @test isa(ER, Dict)
+    @test isa(ER, Vector)
     # Output of ER is a Dict with integer keys and values #[unknown output]
 
     O = maximize_n_real_solutions(E)

@@ -24,11 +24,11 @@ using Oscar: PointVector
 # Use and extend from Oscar
 import Oscar: perm, degree
 # Use from Oscar with intent to export
-using Oscar: is_primitive, order, is_transitive, describe, gens, faces, volume
+using Oscar: is_primitive, order, is_transitive, describe, gens, faces, volume, is_natural_alternating_group, is_natural_symmetric_group, minimal_block_reps
 #imports as new names
 import Oscar: vertices as oscar_vertices, dim as oscar_dim, ambient_dim as oscar_ambient_dim
 # Oscar exports
-export gens, order, is_primitive, is_transitive, describe, dim, vertices, faces, volume
+export gens, order, is_primitive, is_transitive, describe, dim, vertices, faces, volume, is_natural_alternating_group, is_natural_symmetric_group, minimal_block_reps
 
 
 using IntegerSmithNormalForm: snf, elementary_divisors

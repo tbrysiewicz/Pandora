@@ -37,7 +37,7 @@ The function accepts the following keyword arguments:
 
 Note: The function filters out fibres that are not generic according to the `valid_fibre` function. 
 """
-function explore(EP::EnumerativeProblem, f::Function;  sampler = UniformSampler{Float64}(n_parameters(EP)), real_parameters=true, n_samples=1000,  as_fibres = false,kwargs...)::Vector{FibreDatum}
+function explore(EP::EnumerativeProblem, f::Function;  sampler = UniformSampler{Float64}(n_parameters(EP)), real_parameters=true, n_samples=1000,  as_fibres = false,kwargs...)
     explore(EP, [f]; n_samples = n_samples, sampler = sampler, real_parameters=real_parameters,  as_fibres = as_fibres, kwargs...) 
 end
 

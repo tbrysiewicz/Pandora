@@ -43,6 +43,7 @@ include("abstract_summary.jl")
 include("background_summary.jl")
 include("degree_summary.jl")
 include("reality_summary.jl")
+include("monodromy_summary.jl")
 include("bibliography.jl")
 
 function compile_latex_to_pdf(tex_path::String; output_dir::String = dirname(tex_path))
@@ -54,7 +55,7 @@ end
 function summarize(EP::EnumerativeProblem;
     metadata::LatexDocumentMetadata = LatexDocumentMetadata(),
     output_path::String = "OutputFiles/latex_summary.tex",
-    section_list::Vector{Function} = [abstract_summary, background_summary, degree_summary, reality_summary, bibliography_summary],
+    section_list::Vector{Function} = [abstract_summary, background_summary, degree_summary, reality_summary, monodromy_summary, bibliography_summary],
     compile_pdf::Bool = true)
 
     # Generate the LaTeX content
