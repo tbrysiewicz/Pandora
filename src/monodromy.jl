@@ -9,7 +9,8 @@ export
     permutation,
     permutation!,
     group_generated_by_monodromy_loops,
-    is_decomposable
+    is_decomposable, 
+    orbits
 
 """
      Loop(P::Vector{Vector{ComplexF64}})
@@ -268,4 +269,10 @@ function is_decomposable(EP::EnumerativeProblem)
     else
         return false
     end
+end
+
+
+function orbits(G::PermGroup)
+    O = map(collect,oscar_orbits(G))
+    return O
 end

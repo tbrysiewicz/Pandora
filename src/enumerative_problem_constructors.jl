@@ -16,7 +16,13 @@ function restrict(G::PermGroup,O::Vector{Int64})
     return(H)
 end
 
+"""
+    branched_cover_decomposition(EP::EnumerativeProblem)
 
+Given an enumerative problem `EP`, this function computes the branched cover decomposition of the problem.
+It returns a list of enumerative problems, each corresponding to a distinct orbit of the monodromy group of `EP`.
+The components all have the same system, but different base fibres.
+"""
 function branched_cover_decomposition(EP::EnumerativeProblem)
     G = galois_group(EP)
     if is_transitive(G)
