@@ -414,7 +414,7 @@ The `EnumerativeProblem` is the main concrete type used in Pandora.jl.
 mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
     knowledge::Knowledge
 
-    function EnumerativeProblem(F::System; inequations = System([]), populate = true, torus_only = false)
+    function EnumerativeProblem(F::System; inequations = System([]), populate = true, torus_only = false, certify=false)
         EP = new()
         EP.knowledge = Knowledge([])
         know!(EP, SYSTEM, F)
@@ -424,6 +424,15 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
         know!(EP, INEQUATIONS, inequations)  
         if populate
             populate!(EP)
+        end
+        if certify 
+            println("Certifying")
+            FD = fibre_datum(EP)
+            println(FD)
+            remove_knowledge!(EP, BASE_FIBRE)
+            remove_knowledge!(EP, DEGREE)
+            know!(EP, BASE_FIBRE, (FD[1],FD[2]))
+            learn!(EP, DEGREE; algorithm = n_solutions)
         end
         return EP
     end
@@ -759,6 +768,10 @@ function get_knowledge!(EProp::EnumerativeProperty, EP::EnumerativeProblem; kwar
     end
 end
 
+function remove_knowledge!(EP::EnumerativeProblem, EProp::EnumerativeProperty)
+    filter!(k -> property(k) != EProp, EP.knowledge)
+    return EP
+end
 get_knowledge_value!(EProp::EnumerativeProperty, EP::EnumerativeProblem; kwargs...) = value(get_knowledge!(EProp, EP; kwargs...))
 
 #This is the core "getter" for enumerative properties of enumerative problems

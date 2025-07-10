@@ -78,6 +78,55 @@ end
 
 
 ##Code taken from https://mathrepo.mis.mpg.de/circlesTangentConics/
+function TangentCircles(SIG)
+    @var s, t, r # Circle centered at (s, t) with radius r
+    @var u[1:3], v[1:3] # Three points of tangency (u[1], v[1]), ..., (u[3], v[3])
+    @var a[1:3,1:6] # Three fixed conics with coefficients defined by a[1], ..., a[6]; ... ; c[1], ..., c[6]
+    
+    #=
+    Set up the polynomial system defining tritangent circles
+    =#
+    @var x,y
+    C_1 = (x-s)^2+(y-t)^2-r
+    Q = []
+    for i in 1:3
+    	if SIG[i] == :L
+    		push!(Q,a[i,1]*x+a[i,2]*y+1)
+    	elseif SIG[i] == :L2
+    		push!(Q, (a[i,1]*x+a[i,2]*y+1)^2)
+    	elseif SIG[i] == :LL
+    		push!(Q, (a[i,1]*x+a[i,2]*y+a[i,3])*(a[i,4]*x+a[i,5]*y+1))
+    	elseif SIG[i] == :C
+    		push!(Q, (x-a[i,1])^2+(y-a[i,2])^2+a[i,3])
+    	elseif SIG[i] == :Q
+    		push!(Q,a[i,1]*x^2 + a[i,2]*x*y + a[i,3]*y^2 + a[i,4]*x + a[i,5]*y + 1)
+    	elseif SIG[i] == :E
+    		push!(Q,(a[i,1]*x + a[i,2]*y)*(a[i,3]*x+y) + a[i,4]*x + a[i,5]*y + 1)
+    	end
+    end
+    Q_1 = Q[1]
+    Q_2 = Q[2]
+    Q_3 = Q[3] 
+
+    f_1 = evaluate(C_1, [x,y]=>[u[1],v[1]])
+    f_2 = evaluate(C_1, [x,y]=>[u[2],v[2]])
+    f_3 = evaluate(C_1, [x,y]=>[u[3],v[3]])
+    
+    g_1 = evaluate(Q_1, [x,y]=>[u[1],v[1]])
+    g_2 = evaluate(Q_2, [x,y]=>[u[2],v[2]])
+    g_3 = evaluate(Q_3, [x,y]=>[u[3],v[3]])
+    
+    h_1 = det([differentiate(f_1, [u[1], v[1]]) differentiate(g_1, [u[1], v[1]])])
+    h_2 =  det([differentiate(f_2, [u[2], v[2]]) differentiate(g_2, [u[2], v[2]])]) # Circle and conic are tangent at (u[2], v[2])
+    h_3 =  det([differentiate(f_3, [u[3], v[3]]) differentiate(g_3, [u[3], v[3]])]) # Circle and conic are tangent at (u[3], v[3])
+    
+    F = System([f_1, f_2, f_3, g_1, g_2, g_3, h_1, h_2, h_3], variables = [u[1], v[1], u[2], v[2], u[3], v[3], s, t, r], 
+    parameters = vec(a));
+    
+    return(EnumerativeProblem(F; certify=true))
+end
+
+##Code taken from https://mathrepo.mis.mpg.de/circlesTangentConics/
 function TangentCircles()
     @var s, t, r # Circle centered at (s, t) with radius r
     @var u[1:3], v[1:3] # Three points of tangency (u[1], v[1]), ..., (u[3], v[3])
