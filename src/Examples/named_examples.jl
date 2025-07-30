@@ -77,6 +77,31 @@ end
 
 
 
+
+function TangentConics()
+    @var Q[1:5]
+    @var u[1:5], v[1:5] 
+    @var a[1:5,1:6] # Five fixed conics with coefficients defined by a[1], ..., a[6]
+    #=
+    Set up the polynomial system defining tritangent circles
+    =#
+    @var x,y
+    C = Q[1]*x^2+Q[2]*x*y+Q[3]*y^2+Q[4]*x+Q[5]*y+1 # Conic
+    ParameterConics = []
+    for i in 1:5
+    	push!(ParameterConics,a[i,1]*x^2 + a[i,2]*x*y + a[i,3]*y^2 + a[i,4]*x + a[i,5]*y + 1)
+    end
+    Eqs = []
+    for i in 1:5
+        push!(Eqs, evaluate(C,[x,y]=>[u[i],v[i]]))
+        push!(Eqs, evaluate(ParameterConics[i], [x,y]=>[u[i],v[i]]))
+        push!(Eqs, det([differentiate(Eqs[end], [u[i], v[i]]) differentiate(Eqs[end-1], [u[i], v[i]])])) 
+    end
+    F = System(Eqs, variables = vcat(vec(Q), vec(u),vec(v)), parameters = vec(a))
+
+    return(EnumerativeProblem(F))
+end
+
 ##Code taken from https://mathrepo.mis.mpg.de/circlesTangentConics/
 function TangentCircles(SIG)
     @var s, t, r # Circle centered at (s, t) with radius r
