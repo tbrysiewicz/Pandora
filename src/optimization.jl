@@ -463,7 +463,7 @@ function update_optimizer_data!(O::Optimizer, fibre_data::Dict{Fibre, Any}, best
     # Calculate error and taboo proportions.
     error_fibre_count = count(x -> valid_fibre(O.EP,x)==false, keys(fibre_data))
     taboo_fibre_count = count(x -> valid_fibre(O.EP,x) && taboo(O.scoring_scheme)(x[1]) > old_record_score[1], keys(fibre_data))
-    improvement_fibre_count = count(x -> valid_fibre(O.EP,x) && taboo(O.scoring_scheme)(x[1]) < old_record_score[1] && objective(O.scoring_scheme)(x[1])>old_record_score[2], keys(fibre_data))
+    improvement_fibre_count = count(x -> valid_fibre(O.EP,x) && taboo(O.scoring_scheme)(x[1]) <= old_record_score[1] && objective(O.scoring_scheme)(x[1])>old_record_score[2], keys(fibre_data))
 
     OD.last_error_proportion = error_fibre_count / N
     OD.last_taboo_proportion = taboo_fibre_count / N
