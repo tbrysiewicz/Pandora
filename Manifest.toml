@@ -859,9 +859,9 @@ weakdeps = ["GAP", "Polymake"]
 
 [[deps.HomotopyContinuation]]
 deps = ["Arblib", "DelimitedFiles", "DynamicPolynomials", "ElasticArrays", "FiniteDiff", "IntervalTrees", "IterTools", "LRUCache", "LinearAlgebra", "LoopVectorization", "MixedSubdivisions", "MultivariatePolynomials", "Parameters", "PrettyTables", "Printf", "ProgressMeter", "ProjectiveVectors", "Random", "Reexport", "SemialgebraicSets", "SimpleGraphs", "StructArrays", "SymEngine_jll", "TreeViews"]
-git-tree-sha1 = "8ad6c19af4c7404a60c3cd3345a883763063a022"
+git-tree-sha1 = "26f9b4f1dbd6caa7dd82da3ce746326d3e4b9372"
 uuid = "f213a82b-91d6-5c5d-acf7-10f1c761b327"
-version = "2.15.2"
+version = "2.16.0"
 
 [[deps.HostCPUFeatures]]
 deps = ["BitTwiddlingConvenienceFunctions", "IfElse", "Libdl", "Static"]
