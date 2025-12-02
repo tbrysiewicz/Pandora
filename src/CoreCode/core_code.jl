@@ -484,6 +484,14 @@ Return the system of equations defining the enumerative problem.
 """
 system(EP::EnumerativeProblem; kwargs...) = SYSTEM(EP; kwargs...)
 
+
+"""
+    inequations(EP::EnumerativeProblem; kwargs...)
+
+Return the inequations imposed in the enumerative problem.
+"""
+inequations(EP::EnumerativeProblem; kwargs...) = INEQUATIONS(EP; kwargs...)
+
 """
     inequations(EP::EnumerativeProblem; kwargs...)
 
