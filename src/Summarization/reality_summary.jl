@@ -62,12 +62,12 @@ function reality_summary(EP::EnumerativeProblem;kwargs...)
         summary *= raw"""Figure \ref{fig:near_record_fibre} shows a 2-dimensional slice of the parameter space near this fibre."""
         summary *= raw"""\begin{figure}[!htpb]
 \centering
-\includegraphics[scale=0.3]{OutputFiles/near_record_fibre.png}
+\includegraphics[scale=0.5]{OutputFiles/near_record_fibre.png}
 \caption{A 2-dimensional slice of the parameter space near the fibre with maximum number of real solutions.}
 \label{fig:near_record_fibre}
 \end{figure}"""
 
-    (VSD,P) = visualize(EP; near = record_parameters(O), strategy = :quadtree, resolution = 1000)
+    (VSD,P) = visualize(EP; near = record_parameters(O), strategy = :quadtree, resolution = 2000)
     save(P, "near_record_fibre.png")
     else
         summary *= raw"""The maximum number of real solutions found in the fibres is $"""*string(maxO)*raw""", but the maximum number of real solutions found in the sample was $"""*string(maxEX)*raw""". """

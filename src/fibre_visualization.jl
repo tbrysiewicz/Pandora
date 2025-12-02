@@ -611,7 +611,7 @@ function visualize(EP::EnumerativeProblem; kwargs...) :: Tuple{ValuedSubdivision
 
     VSD = ValuedSubdivision(new_EP; kwargs...)
 
-    repeats = strat == :careful ? 2 : 2
+    repeats = strat == :careful ? 3 : 2
     for i in 1:repeats
         refine!(VSD;kwargs...)
         if strat == :careful
