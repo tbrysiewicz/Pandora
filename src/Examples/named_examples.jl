@@ -4,7 +4,8 @@ export
     SphereProjection,
     BarthSextic,
     KuramotoModel,
-    SymmetricTwentySevenLines
+    SymmetricTwentySevenLines,
+    TangentConics
 
 function SphereProjection()
     @var x,y,z
@@ -102,6 +103,69 @@ function TangentConics()
     return(EnumerativeProblem(F))
 end
 
+
+##Code taken from https://mathrepo.mis.mpg.de/circlesTangentConics/
+function TangentConics2(SIG)
+    @var b[1:5]
+    @var u[1:5], v[1:5] # Three points of tangency (u[1], v[1]), ..., (u[3], v[3])
+    @var a[1:5,1:6] # Three fixed conics with coefficients defined by a[1], ..., a[6]; ... ; c[1], ..., c[6]
+    
+    #=
+    Set up the polynomial system defining tritangent circles
+    =#
+    @var x,y
+    C_1 = b[1]+b[2]*x+b[3]*y+b[4]*x^2+b[5]*x*y+y^2 # Conic
+    Q = []
+    for i in 1:5
+    	if SIG[i] == :L
+    		push!(Q,a[i,1]*x+a[i,2]*y+1)
+    	elseif SIG[i] == :L2
+    		push!(Q, (a[i,1]*x+a[i,2]*y+1)^2)
+    	elseif SIG[i] == :LL
+    		push!(Q, (a[i,1]*x+a[i,2]*y+a[i,3])*(a[i,4]*x+a[i,5]*y+1))
+    	elseif SIG[i] == :C
+    		push!(Q, (x-a[i,1])^2+(y-a[i,2])^2+a[i,3])
+    	elseif SIG[i] == :Q
+            if i==1
+                push!(Q,a[i,1]*x^2 - a[i,1]*x+a[i,2]*y^2-a[i,2]*y + a[i,3]*x*y)
+            else
+    		push!(Q,a[i,1]*x^2 + a[i,2]*x*y + a[i,3]*y^2 + a[i,4]*x + a[i,5]*y + 1)
+            end
+    	elseif SIG[i] == :E
+    		push!(Q,(a[i,1]*x + a[i,2]*y)*(a[i,3]*x+y) + a[i,4]*x + a[i,5]*y + 1)
+    	end
+    end
+    Q_1 = Q[1]
+    Q_2 = Q[2]
+    Q_3 = Q[3] 
+    Q_4 = Q[4]
+    Q_5 = Q[5]
+
+    f_1 = evaluate(C_1, [x,y]=>[u[1],v[1]])
+    f_2 = evaluate(C_1, [x,y]=>[u[2],v[2]])
+    f_3 = evaluate(C_1, [x,y]=>[u[3],v[3]])
+    f_4 = evaluate(C_1, [x,y]=>[u[4],v[4]])
+    f_5 = evaluate(C_1, [x,y]=>[u[5],v[5]])
+    
+    g_1 = evaluate(Q_1, [x,y]=>[u[1],v[1]])
+    g_2 = evaluate(Q_2, [x,y]=>[u[2],v[2]])
+    g_3 = evaluate(Q_3, [x,y]=>[u[3],v[3]])
+    g_4 = evaluate(Q_4, [x,y]=>[u[4],v[4]])
+    g_5 = evaluate(Q_5, [x,y]=>[u[5],v[5]])
+    
+    h_1 = det([differentiate(f_1, [u[1], v[1]]) differentiate(g_1, [u[1], v[1]])])
+    h_2 =  det([differentiate(f_2, [u[2], v[2]]) differentiate(g_2, [u[2], v[2]])]) # Circle and conic are tangent at (u[2], v[2])
+    h_3 =  det([differentiate(f_3, [u[3], v[3]]) differentiate(g_3, [u[3], v[3]])]) # Circle and conic are tangent at (u[3], v[3])
+    h_4 =  det([differentiate(f_4, [u[4], v[4]]) differentiate(g_4, [u[4], v[4]])]) # Circle and conic are tangent at (u[4], v[4])
+    h_5 =  det([differentiate(f_5, [u[5], v[5]]) differentiate(g_5, [u[5], v[5]])]) # Circle and conic are tangent at (u[5], v[5])
+    
+    F = System([f_1, f_2, f_3, f_4, f_5, g_1, g_2, g_3, g_4, g_5, h_1, h_2, h_3, h_4, h_5], variables = vcat(vec(b), vec(u), vec(v)), parameters = vec(a));
+
+    
+    return(EnumerativeProblem(F; certify=true))
+end
+
+
 ##Code taken from https://mathrepo.mis.mpg.de/circlesTangentConics/
 function TangentCircles(SIG)
     @var s, t, r # Circle centered at (s, t) with radius r
@@ -124,7 +188,11 @@ function TangentCircles(SIG)
     	elseif SIG[i] == :C
     		push!(Q, (x-a[i,1])^2+(y-a[i,2])^2+a[i,3])
     	elseif SIG[i] == :Q
+            if i==1
+                push!(Q,a[i,1]*x^2 - a[i,1]*x+a[i,2]*y^2-a[i,2]*y + a[i,3]*x*y)
+            else
     		push!(Q,a[i,1]*x^2 + a[i,2]*x*y + a[i,3]*y^2 + a[i,4]*x + a[i,5]*y + 1)
+            end
     	elseif SIG[i] == :E
     		push!(Q,(a[i,1]*x + a[i,2]*y)*(a[i,3]*x+y) + a[i,4]*x + a[i,5]*y + 1)
     	end

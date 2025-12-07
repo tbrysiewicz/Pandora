@@ -390,16 +390,16 @@ function update_optimizer_parameters!(O::Optimizer; optimistic = false)
     # For now, we will just scale
     if OD.last_error_proportion > 0.5
         # Change solver fibre
-        new_parameter = OD.record_fibre[2] + randn(ComplexF64, n_parameters(O.EP))
+        new_parameter = OD.record_fibre[2] + im*[1.0 for i in 1:n_parameters(O.EP)]
         O.solver_fibre = (O.EP(new_parameter),new_parameter)
         @vprintln("Changing solver fibre since so many errors occurred.")
     end
-    if OD.last_taboo_proportion > 0.8
+    if OD.last_taboo_proportion > 0.5
         # Scale down the sampler by 0.9
         scale!(sampler, 0.9)
         @vprintln("Scaling down sampler since so many taboo fibres were found: ", radius(O))
     end
-    if OD.last_taboo_proportion < 0.2 && OD.last_improvement_proportion > 0.0 
+    if OD.last_taboo_proportion < 0.3 && OD.last_improvement_proportion > 0.0 
         # Scale up the sampler by 1.1
         scale!(sampler, 1.1)
         @vprintln("Scaling up sampler since taboo fibres were not found and some improvement was made: ", radius(O))
@@ -409,7 +409,7 @@ function update_optimizer_parameters!(O::Optimizer; optimistic = false)
         scale!(sampler, 1.2)
         @vprintln("Scaling up sampler since good improvement was made: ", radius(O))
     end
-    if OD.last_improvement_proportion == 0.0 && OD.steps_no_objective_progress > 10
+    if OD.last_improvement_proportion == 0.0 && OD.steps_no_objective_progress > 5
         # If we are not making any progress, we will scale down the sampler by 0.8
         scale!(sampler, 0.5)
         @vprintln("Scaling down sampler since no improvement was made for a long time. Probably at a local optimum: ", radius(O))

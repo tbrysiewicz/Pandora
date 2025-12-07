@@ -11,6 +11,7 @@ export EnumerativeProperty,
        algorithms_which_return,
        base_parameters,
        base_fibre,
+       inequations,
        system,
        degree,
        specialize,
@@ -491,14 +492,6 @@ system(EP::EnumerativeProblem; kwargs...) = SYSTEM(EP; kwargs...)
 Return the inequations imposed in the enumerative problem.
 """
 inequations(EP::EnumerativeProblem; kwargs...) = INEQUATIONS(EP; kwargs...)
-
-"""
-    inequations(EP::EnumerativeProblem; kwargs...)
-
-Return the inequations of the enumerative problem.
-"""
-inequations(EP::EnumerativeProblem; kwargs...) = INEQUATIONS(EP; kwargs...)
-
 
 """
     base_fibre(EP::EnumerativeProblem; kwargs...)
