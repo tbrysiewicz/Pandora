@@ -60,10 +60,44 @@ end
         return(EnumerativeSolver(ss,sm,ssff,smff))
     end
 
+#Solve over many parameters P of  F(EP) from fibre = (S1,P1) -> {(?,p)}_{p in P}, tracking only solution at index idx
+#Warning: this forgets the parameters when returned. So when using, be sure to save parameters
+function solve(EP::EnumerativeProblem, fibre::Fibre, P::Vector{Vector{T}}, idx::Int) where T <: Number
+    S = solve(system(EP),[solutions(fibre)[idx]]; start_parameters= parameters(fibre), target_parameters = P)
+    return(map(x->x[1][1].solution,S))
+end
+
+#Solve over a single parameter p of  F(EP) from fibre = (S1,P1) -> (?,p), tracking only solution at index idx
+function solve(EP::EnumerativeProblem, fibre::Fibre, p::Vector{T}, idx::Int) where T
+    S = solve(system(EP),[solutions(fibre)[idx]]; start_parameters= parameters(fibre), target_parameters = p)
+    return(S[1].solution)
+end
+
+#solve when no fibre is given, tracking only solution at index idx
+function solve(EP::EnumerativeProblem, p::Vector{T}, idx::Int) where T
+    if knows(EP,BASE_FIBRE)
+        return(solve(EP,base_fibre(EP),p,idx))
+    else
+        populate!(EP)
+        return(solve(EP,p,idx))
+    end
+end
+
+#many solve when no fibre is given, tracking only solution at index idx
+function solve(EP::EnumerativeProblem, P::Vector{Vector{T}}, idx::Int) where T
+    if knows(EP,BASE_FIBRE)
+        return(solve(EP,base_fibre(EP),P,idx))
+    else
+        populate!(EP)
+        return(solve(EP,P,idx))
+    end
+end
+
+
 #Solve over many parameters P of  F(EP) from fibre = (S1,P1) -> {(?,p)}_{p in P}
-function solve(EP::EnumerativeProblem, fibre::Fibre, P::Vector{Vector{T}} where T <: Number)
+function solve(EP::EnumerativeProblem, fibre::Fibre, P::Vector{Vector{T}}) where T
     S = solve(system(EP),solutions(fibre); start_parameters= parameters(fibre), target_parameters = P)
-    return(map(x->solutions(x[1]),S))
+    return(S)
 end
 
 #Solve over a single parameter p of  F(EP) from fibre = (S1,P1) -> (?,p)
@@ -100,6 +134,13 @@ end
 (EP::EnumerativeProblem)(P::Vector{Vector{T}} where T <:Number) = solve(EP,P)
 (EP::EnumerativeProblem)(p::Vector{T} where T <:Number) = solve(EP,p)
 (EP::EnumerativeProblem)() = solve(EP)
+
+(EP::EnumerativeProblem)(fibre::Fibre, P::Vector{Vector{T}}, idx::Int) where T <: Number = solve(EP,fibre,P,idx)
+(EP::EnumerativeProblem)(fibre::Fibre, p::Vector{T}, idx::Int) where T = solve(EP,fibre,p,idx)      
+(EP::EnumerativeProblem)(P::Vector{Vector{T}}, idx::Int) where T <:Number = solve(EP,P,idx)
+(EP::EnumerativeProblem)(p::Vector{T}, idx::Int) where T <:Number = solve(EP,p,idx)
+
+
 
 function solve(EP::EnumerativeProblem)
     return(solve(EP,randn(ComplexF64,n_parameters(EP))))

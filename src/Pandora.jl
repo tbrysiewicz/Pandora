@@ -73,5 +73,6 @@ include("explore.jl")
 include("Examples/sparse_polynomial_systems.jl")
 include("sparse_enumerative_problems.jl")
 include("sample_datum.jl")
+include("lazy_brute.jl")
 export ALGORITHM_DATA
 end

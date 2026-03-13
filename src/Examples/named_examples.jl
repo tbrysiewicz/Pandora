@@ -5,7 +5,8 @@ export
     BarthSextic,
     KuramotoModel,
     SymmetricTwentySevenLines,
-    TangentConics
+    TangentConics,
+    LinesOnQuintic3Fold
 
 function SphereProjection()
     @var x,y,z
@@ -261,6 +262,38 @@ function BarthSextic()
     golden_ratio = (1 + sqrt(5))/2
     f = subs(f, w=>golden_ratio)
     F = System([f], variables = [z], parameters = [x,y])
+
+    return EnumerativeProblem(F)
+end
+function LinesOnQuintic3Fold()
+    @var x[1:5], a[1:6, 1:6, 1:6, 1:6, 1:6]
+
+    terms = [(i, j, k, l, m) for i in 0:5, j in 0:5, k in 0:5, l in 0:5, m in 0:5 if i + j + k + l + m == 5]
+
+    f = sum(
+        a[i + 1, j + 1, k + 1, l + 1, m + 1] *
+        x[1]^i * x[2]^j * x[3]^k * x[4]^l * x[5]^m
+        for (i, j, k, l, m) in terms
+    )
+
+    affine_f = subs(f, x[5] => 1)
+
+    @var t, b[1:2, 1:5]
+    line = [
+        b[1, 1] + t * b[2, 1],
+        b[1, 2] + t * b[2, 2],
+        b[1, 3] + t * b[2, 3],
+        t,
+    ]
+
+    g = subs(affine_f, [x[1], x[2], x[3], x[4]] => line)
+
+    params = [a[i + 1, j + 1, k + 1, l + 1, m + 1] for (i, j, k, l, m) in terms]
+    F = System(
+        coefficients(g, [t]),
+        variables = [b[1, 1], b[1, 2], b[1, 3], b[2, 1], b[2, 2], b[2, 3]],
+        parameters = params,
+    )
 
     return EnumerativeProblem(F)
 end
