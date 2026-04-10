@@ -76,7 +76,9 @@ function SymmetricTwentySevenLines()
     E = EnumerativeProblem(F)
 end
 
-
+function ApolloniusCircles()
+    T = TangentCircles([:C,:C,:C])
+end
 
 
 
