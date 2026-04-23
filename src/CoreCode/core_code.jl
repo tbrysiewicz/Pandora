@@ -100,6 +100,10 @@ Fibre(S::Vector{Vector{ComplexF64}}, P::Vector{Float64}) = (S,Vector{ComplexF64}
 Fibre(S::Vector{Vector{ComplexF64}}, P::Vector{ComplexF64}) = (S,Vector{ComplexF64}(P))
 Fibre(F::Tuple{Vector{Vector{ComplexF64}}, Vector{Float64}}) = (F[1],Vector{ComplexF64}(F[2]))
 Fibre(F::Tuple{Vector{Vector{ComplexF64}}, Vector{ComplexF64}}) = F
+Fibre(F::Tuple{Result, Vector{Float64}}) = (solutions(F[1]), Vector{ComplexF64}(F[2]))
+Fibre(F::Tuple{Result, Vector{ComplexF64}}) = (solutions(F[1]), Vector{ComplexF64}(F[2]))
+
+
 
 FibreDatum(F::Tuple{Vector{Vector{ComplexF64}}, Vector{ComplexF64}}) = FibreDatum(parameters = F[2],solutions = F[1])
 FibreDatum(F::Tuple{Vector{Vector{ComplexF64}}, Vector{Float64}}) = FibreDatum(parameters = Vector{ComplexF64}(F[2]),solutions = F[1])

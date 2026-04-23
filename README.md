@@ -1,249 +1,179 @@
 
 # PANDO(RA)
-### Parallel, Automated, Numerical, Discovery and Optimization (Research Aid)
 
-Pandora is code for studying enumerative problems using numerical and symbolic methods. 
+## Parallel, Automated, Numerical, Discovery and Optimization (Research Aid)
 
+Pandora is a Julia package for studying enumerative problems with numerical and symbolic methods.
 
+![Pandora logo](ReadMeImages/Pandoralogo.png?raw=true "Parallel, Automated, Numerical, Discovery and Optimization (Research Aid)")
 
-![Alt text](ReadMeImages/Pandoralogo.png?raw=true "Parallel, Automated, Numerical, Discovery and Optimization (Research Aid)")
+## Contact
 
+Pandora.jl is under active development (current README update: April 2026). Comments and feature requests are welcome.
 
-## Please Reach out!
-Pandora.jl is currently in version 0.5.0 and is under rapid development as of July 2025. Please reach out if you have comments/requests regarding its functionality or user interface. You can contact Taylor Brysiewicz at tbrysiew@uwo.ca
+- Taylor Brysiewicz: tbrysiew@uwo.ca
 
+## Installation
+
+From the repository root:
+
+```bash
+julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.precompile()'
+```
 
 ## Quick Start Demo
 
-Below is a typical workflow, with code and expected output. 
-
----
-
-### 1. **Define Variables and Parameters**
-
 ```julia
+using Pandora
+using Oscar
+
 @var x, y
 @var a[1:4], b[1:4]
-```
 
-### 2. **Define Your System**
-
-```julia
 f1 = a[1]*x + a[2]*y + a[3]*x^2*y + a[4]*x*y^2
 f2 = b[1]*x + b[2]*y + b[3]*x^2*y + b[4]*x*y^2
-E = EnumerativeProblem([f1,f2],variables = [x,y], parameters = vcat(a,b), torus_only=true)
 
+E = EnumerativeProblem([f1, f2], variables=[x, y], parameters=vcat(a, b), torus_only=true)
 
-           X := V(f_1..f_2) ⊆ C^2 x C^8
-           |
-           |
-           | π   4-to-1
-           |
-           V
-          C^8
+degree(E)
+bkk_bound(E)
+bezout_bound(E)
 
-An enumerative problem in 2 variable(s) cut out by 2 condition(s) over 8 parameter(s).
+knowledge(E)
+last(knowledge(E))
 
-julia> degree(E)
-4
-
-julia> bkk_bound(E)
-4
-
-julia> bezout_bound(E)
-9
-```
-### 3. **Information is collected in knowledge field of the enumerative problem**
-
-```julia
-julia> knowledge(E)
-1) [system] as computed by (User given) applied to (nothing).
-2) [inequations] as computed by (User given) applied to (nothing).
-3) [base_fibre] as computed by (polyhedral_homotopy) applied to [system, inequations]
-4) [degree] as computed by (n_solutions) applied to [base_fibre]
-5) [bkk_bound] as computed by (bkk_bound) applied to [system]
-6) [degree_sequence] as computed by (degree_sequence) applied to [system]
-7) [bezout_bound] as computed by (bezout_bound) applied to [degree_sequence]
-
-
-julia> last(knowledge(E))
-└── [bezout_bound] as computed by (bezout_bound)
-    └── [degree_sequence]
-        └── [system]
-```
-
-
-### 4. **Explore Monodromy Groups as Oscar Objects**
-
-```julia
 G = monodromy_group(E)
-Permutation group of degree 4
-
 is_primitive(G)
-false
-
 order(G)
-8
-
 gens(G)
-2-element Vector{Oscar.PermGroupElem}:
- (3,4)
- (1,3)(2,4)
 
 is_decomposable(E)
-true
-
 is_lacunary(E)
-true
 ```
 
----
+Expected values for this example include `degree(E) == 4`, `bkk_bound(E) == 4`, and `bezout_bound(E) == 9`.
 
-### 5. **Sample From the Parameter Space and Optimize**
+## Sampling and Optimization
 
 ```julia
-ER = tally.(explore(E, [n_real_solutions, n_positive_solutions]), n_samples = 1000)
-Number of valid fibres:1000
-2-element Vector{Dict{Any, Int64}}:
- Dict(0 => 426, 4 => 249, 2 => 325)
- Dict(0 => 624, 2 => 23, 1 => 353)
-
+ER = tally.(explore(E, [n_real_solutions, n_positive_solutions], n_samples=1000))
 O = maximize_n_real_solutions(E)
-C = certify(record_fibre(O),E)
-CertificationResult
-===================
-• 4 solution candidates given
-• 4 certified solution intervals (4 real, 0 complex)
-• 4 distinct certified solution intervals (4 real, 0 complex)
+C = certify(record_fibre(O), E)
 
+ER
+C
 ```
 
----
-
-### 6. **Visualize and Save Discriminant**
+## Visualization
 
 ```julia
-(V,P) = visualize(E; near = record_parameters(O), strategy = :quadtree)
-EP consists of more than two parameters. Visualizing a random 2-plane in the parameter space.
-Resolution used:711
-Resolution used:1498
+(V, P) = visualize(E; near=record_parameters(O), strategy=:quadtree)
 save(P, "MyDiscriminant.png")
-```
 
-![Alt text](ReadMeImages/MyDiscriminant.png?raw=true "n_real_solutions Visualization")
+refine!(V)
+refine!(V)
+P2 = visualize(V)
+save(P2, "MyBetterDiscriminant.png")
 
-
-### 7. **Refine and Save Improved Visualization**
-
-```julia
-refine!(V);
-refine!(V);
-P = visualize(V)
-save(P, "MyBetterDiscriminant.png")
-```
-
-![Alt text](ReadMeImages/MyBetterDiscriminant.png?raw=true "Better n_real_solutions Visualization")
-
-
-### 8. **Visualize Supports and Newton Polytopes**
-
-```julia
-SupportVisualization = visualize_support(E);
-save(SupportVisualization[1], "support1.png");
-save(SupportVisualization[2], "support2.png");
-```
-
-![Alt text](ReadMeImages/support1.png?raw=true "Newton Polytope and Support Visualization")
-
-
-```julia
+SupportVisualization = visualize_support(E)
+save(SupportVisualization[1], "support1.png")
+save(SupportVisualization[2], "support2.png")
 
 NP = newton_polytopes(E)
-2-element Vector{Oscar.Polyhedron}:
- Polytope in ambient dimension 2
- Polytope in ambient dimension 2
-
-mv = volume(sum(NP)) - volume(NP[1]) - volume(NP[2])   # 4
+mv = volume(sum(NP)) - volume(NP[1]) - volume(NP[2])
 ```
 
-### 9. **Automate Knowledge and Summarize**
+Example outputs:
+
+- ![Discriminant](ReadMeImages/MyDiscriminant.png?raw=true "n_real_solutions Visualization")
+- ![Refined discriminant](ReadMeImages/MyBetterDiscriminant.png?raw=true "Better n_real_solutions Visualization")
+- ![Support visualization](ReadMeImages/support1.png?raw=true "Newton Polytope and Support Visualization")
+
+## Automation and Summary
 
 ```julia
-
-julia> T = TwentySevenLines()
-
-
-           X := V(f_1..f_4) ⊆ C^4 x C^20
-           |
-           |
-           | π   27-to-1
-           |
-           V
-          C^20
-
-An enumerative problem in 4 variable(s) cut out by 4 condition(s) over 20 parameter(s).
-The following information is known about this problem:
--system
--inequations
--base_fibre
--degree
-
-
-julia> automate!(T)
-Computing newton_polytopes via newton_polytopes
-Pandora.jl is automatically finding an algorithm to compute newton_polytopes. To specify an algorithm, call again with algorithm=>[nameofalgorithm]
-There is a total of 1 algorithm(s) in Pandora.jl which compute(s) newton_polytopes:
-      1) [USING] newton_polytopes
-Computing bezout_bound via bezout_bound
-Pandora.jl is automatically finding an algorithm to compute bezout_bound. To specify an algorithm, call again with algorithm=>[nameofalgorithm]
-There is a total of 1 algorithm(s) in Pandora.jl which compute(s) bezout_bound:
-      1) [USING] bezout_bound
-Pandora.jl is automatically finding an algorithm to compute degree_sequence. To specify an algorithm, call again with algorithm=>[nameofalgorithm]
-There is a total of 1 algorithm(s) in Pandora.jl which compute(s) degree_sequence:
-      1) [USING] degree_sequence
-Computing base_fibre via polyhedral_homotopy
-Computing degree via n_solutions
-Computing degree_sequence via degree_sequence
-Computing monodromy group via group_generated_by_monodromy_loops
-Pandora.jl is automatically finding an algorithm to compute monodromy group. To specify an algorithm, call again with algorithm=>[nameofalgorithm]
-There is a total of 1 algorithm(s) in Pandora.jl which compute(s) monodromy group:
-      1) [USING] group_generated_by_monodromy_loops
-Pandora.jl is automatically finding an algorithm to compute monodromy_sample. To specify an algorithm, call again with algorithm=>[nameofalgorithm]
-There is a total of 1 algorithm(s) in Pandora.jl which compute(s) monodromy_sample:
-      1) [USING] Sample of [n_monodromy_loops] random loops of scaling [monodromy_loop_scaling]
-# Loops computed:            50
-# Valid permutations:        50
-# Unique valid permutations: 50
-Computing bkk_bound via bkk_bound
-Pandora.jl is automatically finding an algorithm to compute bkk_bound. To specify an algorithm, call again with algorithm=>[nameofalgorithm]
-There is a total of 1 algorithm(s) in Pandora.jl which compute(s) bkk_bound:
-      1) [USING] bkk_bound
-Computing affine_bkk_bound via affine_bkk_bound
-Pandora.jl is automatically finding an algorithm to compute affine_bkk_bound. To specify an algorithm, call again with algorithm=>[nameofalgorithm]
-There is a total of 1 algorithm(s) in Pandora.jl which compute(s) affine_bkk_bound:
-      1) [USING] affine_bkk_bound
-Computing support via support
-Pandora.jl is automatically finding an algorithm to compute support. To specify an algorithm, call again with algorithm=>[nameofalgorithm]
-There is a total of 1 algorithm(s) in Pandora.jl which compute(s) support:
-      1) [USING] support
-Computing fibre_datum via Fibre Datum
-Pandora.jl is automatically finding an algorithm to compute fibre_datum. To specify an algorithm, call again with algorithm=>[nameofalgorithm]
-There is a total of 1 algorithm(s) in Pandora.jl which compute(s) fibre_datum:
-      1) [USING] Fibre Datum
-Computing monodromy_sample via Sample of [n_monodromy_loops] random loops of scaling [monodromy_loop_scaling]
-
-julia> summarize(T)
-This is pdfTeX, Version ......
-..............................
+T = TwentySevenLines()
+automate!(T)
+summarize(T)
 ```
-**Output:**  
-- Summary written to `OutputFiles/latex_summary.pdf`
 
+Typical output file:
 
-### 10. An example of the kind of output on the enumerative problem E above
+- `OutputFiles/latex_summary.pdf`
 
+Example summary:
 
-![Alt text](ReadMeImages/PandoraSummaryExample.png?raw=true "Pandora Summary")
+![Pandora summary example](ReadMeImages/PandoraSummaryExample.png?raw=true "Pandora Summary")
+
+## Verification Script (run from repository root)
+
+The following script is a reproducible smoke test for all workflows shown above.
+
+```bash
+julia --project=. <<'JULIA'
+using Pkg
+Pkg.instantiate()
+
+using Pandora
+using Oscar
+
+@var x, y
+@var a[1:4], b[1:4]
+
+f1 = a[1]*x + a[2]*y + a[3]*x^2*y + a[4]*x*y^2
+f2 = b[1]*x + b[2]*y + b[3]*x^2*y + b[4]*x*y^2
+E = EnumerativeProblem([f1, f2], variables=[x, y], parameters=vcat(a, b), torus_only=true)
+
+@assert degree(E) == 4
+@assert bkk_bound(E) == 4
+@assert bezout_bound(E) == 9
+
+k = knowledge(E)
+@assert !isempty(k)
+@assert last(k) !== nothing
+
+G = monodromy_group(E)
+@assert order(G) == 8
+@assert length(gens(G)) == 2
+@assert is_decomposable(E)
+@assert is_lacunary(E)
+
+ER = tally.(explore(E, [n_real_solutions, n_positive_solutions], n_samples=200))
+@assert length(ER) == 2
+
+O = maximize_n_real_solutions(E)
+C = certify(record_fibre(O), E)
+@assert C isa CertificationResult
+
+(V, P) = visualize(E; near=record_parameters(O), strategy=:quadtree)
+save(P, "MyDiscriminant.png")
+
+refine!(V)
+refine!(V)
+P2 = visualize(V)
+save(P2, "MyBetterDiscriminant.png")
+
+SupportVisualization = visualize_support(E)
+save(SupportVisualization[1], "support1.png")
+save(SupportVisualization[2], "support2.png")
+
+NP = newton_polytopes(E)
+@assert length(NP) == 2
+mv = volume(sum(NP)) - volume(NP[1]) - volume(NP[2])
+println("Mixed volume: ", mv)
+
+T = TwentySevenLines()
+automate!(T)
+
+try
+    summarize(T)
+catch err
+    @warn "summarize(T) failed (often due to missing LaTeX tools)" exception=(err, catch_backtrace())
+end
+
+println("README smoke test completed.")
+JULIA
+```
 
 ## Credits
 
@@ -253,5 +183,3 @@ This is pdfTeX, Version ......
   - Samuel Feldman
   - Noah Vale
   - Deepak Mundayurvalappil Sadanand
-
-*Updated July 5, 2025

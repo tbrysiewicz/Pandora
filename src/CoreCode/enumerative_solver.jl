@@ -97,6 +97,7 @@ end
 #Solve over many parameters P of  F(EP) from fibre = (S1,P1) -> {(?,p)}_{p in P}
 function solve(EP::EnumerativeProblem, fibre::Fibre, P::Vector{Vector{T}}) where T
     S = solve(system(EP),solutions(fibre); start_parameters= parameters(fibre), target_parameters = P)
+    S = map(x->solutions(x[1]),S)
     return(S)
 end
 

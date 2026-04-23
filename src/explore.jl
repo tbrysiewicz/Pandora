@@ -52,7 +52,7 @@ function explore(EP::EnumerativeProblem, F::AbstractVector{<:Function}; sampler 
     end
 
     P = sampler(n_samples)
-    fibres = map(Fibre,collect(zip(EP(P),P)))
+    fibres =  map(Fibre,zip(EP(P),P))
     filter!(fibre -> valid_fibre(EP, fibre), fibres)
     @vprintln("Number of valid fibres:$(length(fibres))")
     if as_fibres == false
