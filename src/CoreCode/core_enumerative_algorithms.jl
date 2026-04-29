@@ -79,3 +79,32 @@ const total_degree_homotopy_datum = AlgorithmDatum(
     reliability = :numerical
 )
 ALGORITHM_DATA[total_degree_homotopy] = total_degree_homotopy_datum
+
+
+##############################################################
+#   Implementation of BASE_FIBRE via Monodromy               #
+##############################################################
+
+"""
+    monodromy(F::System, G::System) :: Fibre
+
+Compute the base fibre of F using monodromy.
+"""
+function monodromy(F::System, G::System) :: Fibre
+    M = monodromy_solve(F)
+    S = solutions(M)
+    P = parameters(M)
+    if length(expressions(G))>0
+        filter!(s -> all(f -> norm(evaluate(f,variables(G)=>s)) <1e-6, expressions(G))==false, S)
+    end
+    return (S, P)
+end
+
+const monodromy_datum = AlgorithmDatum(
+    name = "monodromy",
+    input_properties = [SYSTEM, INEQUATIONS],
+    output_property = BASE_FIBRE,
+    reliability = :numerical
+)
+
+ALGORITHM_DATA[monodromy] = monodromy_datum

@@ -419,7 +419,7 @@ The `EnumerativeProblem` is the main concrete type used in Pandora.jl.
 mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
     knowledge::Knowledge
 
-    function EnumerativeProblem(F::System; inequations = System([]), populate = true, torus_only = false, certify=false)
+    function EnumerativeProblem(F::System; inequations = System([]), populate = true, torus_only = false, certify=false, monodromy=false)
         EP = new()
         EP.knowledge = Knowledge([])
         know!(EP, SYSTEM, F)
@@ -428,7 +428,7 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
         end
         know!(EP, INEQUATIONS, inequations)  
         if populate
-            populate!(EP)
+            populate!(EP; monodromy = monodromy)
         end
         if certify 
             println("Certifying")
@@ -443,7 +443,7 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
     end
 
 
-    function EnumerativeProblem(F::System, inequations::System; populate = true, torus_only = false)
+    function EnumerativeProblem(F::System, inequations::System; populate = true, torus_only = false, monodromy = false)
 
         EP = new()
         EP.knowledge = Knowledge([])
@@ -454,25 +454,29 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
         know!(EP, INEQUATIONS, inequations)
 
         if populate
-            populate!(EP)
+            populate!(EP; monodromy = monodromy)
         end
         return EP
     end
  
     function EnumerativeProblem(EX::Vector{Expression}; variables::Vector{Variable}=[], 
-        parameters::Vector{Variable} = [], populate = true, inequations = System([]), torus_only = false)
+        parameters::Vector{Variable} = [], populate = true, inequations = System([]), torus_only = false, monodromy = false)
 
         F = System(EX, variables = variables, parameters = parameters)
-        return EnumerativeProblem(F, inequations; torus_only=torus_only, populate = populate)
+        return EnumerativeProblem(F, inequations; torus_only=torus_only, populate = populate, monodromy = monodromy)
     end   
     
 end
 
 
-
 function populate!(EP::EnumerativeProblem; kwargs...)
-    learn!(EP, BASE_FIBRE; algorithm = polyhedral_homotopy, kwargs...)
-    learn!(EP, DEGREE; algorithm = n_solutions, kwargs...)
+    #check if monodromy is true in kwargs, if so, learn base fibre using monodromy
+    if get(kwargs, :monodromy, false)
+        learn!(EP, BASE_FIBRE; algorithm = monodromy, kwargs...)
+    else
+        learn!(EP, BASE_FIBRE; algorithm = polyhedral_homotopy, kwargs...)
+    end
+     learn!(EP, DEGREE; algorithm = n_solutions, kwargs...)
 end
 
 """

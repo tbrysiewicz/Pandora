@@ -8,7 +8,7 @@ const VERSION_NUMBER = VersionNumber(PROJECT_TOML["version"])
 using Dates: today
 
 # Use from HC only
-using HomotopyContinuation: TrackerOptions, CertificationResult, Result, subs, coefficients, support_coefficients, paths_to_track, degrees, Expression, Variable, differentiate
+using HomotopyContinuation: TrackerOptions, CertificationResult, Result, subs, coefficients, support_coefficients, paths_to_track, degrees, Expression, Variable, differentiate, monodromy_solve
 # Use and extend from HC
 import HomotopyContinuation: expressions, variables, parameters, solve, solutions, evaluate, certify, mixed_volume
 # Use from HC with intent to export
