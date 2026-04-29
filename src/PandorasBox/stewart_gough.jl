@@ -5,7 +5,16 @@ export StewartGough
 ########### Problem Formulation ################
 ################################################
 
+"""
+    StewartGough()
 
+    Formulates the forward kinematics problem for the general Stewart-Gough platform.
+    
+**Reference:**
+Dietmaier, P. (1998). The Stewart-Gough platform of general geometry can have 40 real postures. In: *Advances in Robot Kinematics: Analysis and Control*. Springer, Dordrecht. https://doi.org/10.1007/978-94-015-9064-8_1
+"""
+
+#The formulation is copied from Dietmaier's 1998 paper titled "The Stewart–Gough platform of general geometry can have 40 real postures".
 function StewartGough()
     # Define Variables (n, e1, e2)
     @var n[1:3] e1[1:3] e2[1:3]
