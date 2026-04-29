@@ -1,3 +1,4 @@
+export LinesOnQuintic3Fold, TwentySevenLines, SymmetricTwentySevenLines
 
 function LinesOnQuintic3Fold()
     @var x[1:5], a[1:6, 1:6, 1:6, 1:6, 1:6]

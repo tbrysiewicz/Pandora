@@ -1,3 +1,5 @@
+export BarthSextic, SphereProjection
+
 
 function BarthSextic()
     @var w, x, y, z

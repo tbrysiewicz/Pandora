@@ -1,3 +1,6 @@
+export LinesOnTwoQuadricsInP4, PlaneConicsOnQuinticThreefold
+
+
 function LinesOnTwoQuadricsInP4()
     # Lines on a complete intersection of two quadrics in P^4.
     # Expected number: 16.

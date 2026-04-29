@@ -1,6 +1,8 @@
+export CubicBisecants
+
 
 #From https://arxiv.org/pdf/2603.25003
-function twisted_cubic_bisecants()
+function CubicBisecants()
     @var m[1:4,1:4]
     @var t[1:2] s[1:2]
 

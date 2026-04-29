@@ -1,3 +1,5 @@
+export AltBurmester
+
 #As formulated in "The complete solution of Alt-Burmester synthesis problems for four-bar linkages"
 #by Brake et. al. 
 #doi: https://doi.org/10.1115/1.4033251

@@ -1,3 +1,5 @@
+export LinesMeetingFourLinesInP3
+
 function LinesMeetingFourLinesInP3()
     @var p[1:2,1:4]
     @var q[1:4,1:2,1:4]

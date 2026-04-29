@@ -1,3 +1,5 @@
+export SpectrahedralNodes
+
 #=
 Nodes on symmetroids in P^3.
 
@@ -39,7 +41,7 @@ classification by real/spectrahedral node configurations is studied in:
 
 =#
 
-function nodes_on_symmetroid(d::Int)
+function SpectrahedralNodes(d::Int)
 
     @var x[1:4], a[1:3,1:d,1:d]
 
