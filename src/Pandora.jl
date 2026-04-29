@@ -71,5 +71,6 @@ include("fibre_datum.jl")
 include("explore.jl")
 include("sample_datum.jl")
 include("lazy_brute.jl")
+include("PandorasBox/stewart_gough.jl")
 export ALGORITHM_DATA
 end
