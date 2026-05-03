@@ -34,12 +34,12 @@ ALGORITHM_DATA[n_solutions] = n_solutions_datum
 
 Compute the base fibre using polyhedral homotopy.
 """
-function polyhedral_homotopy(F::System, G::System) :: Fibre
+function polyhedral_homotopy(F::System, G::System)::Fibre
     k = length(parameters(F))
     P = randn(ComplexF64, k)
     S = solutions(solve(F; target_parameters = P, start_system = :polyhedral))
-    if length(expressions(G))>0
-        filter!(s -> all(f -> norm(evaluate(f,variables(G)=>s)) <1e-6, expressions(G))==false, S)
+    if length(expressions(G)) > 0
+        filter!(s -> all(f -> norm(evaluate(f, variables(G) => s)) < 1e-6, expressions(G)) == false, S)
     end
     return (S, P)
 end
@@ -62,12 +62,12 @@ ALGORITHM_DATA[polyhedral_homotopy] = polyhedral_homotopy_datum
 
 Compute the base fibre using total degree homotopy.
 """
-function total_degree_homotopy(F::System, G::System) :: Fibre
+function total_degree_homotopy(F::System, G::System)::Fibre
     k = length(parameters(F))
     P = randn(ComplexF64, k)
     S = solutions(solve(F; target_parameters = P, start_system = :total_degree))
-    if length(expressions(G))>0
-        filter!(s -> all(f -> norm(evaluate(f,variables(G)=>s)) <1e-6, expressions(G))==false, S)
+    if length(expressions(G)) > 0
+        filter!(s -> all(f -> norm(evaluate(f, variables(G) => s)) < 1e-6, expressions(G)) == false, S)
     end
     return (S, P)
 end
@@ -80,7 +80,6 @@ const total_degree_homotopy_datum = AlgorithmDatum(
 )
 ALGORITHM_DATA[total_degree_homotopy] = total_degree_homotopy_datum
 
-
 ##############################################################
 #   Implementation of BASE_FIBRE via Monodromy               #
 ##############################################################
@@ -90,12 +89,12 @@ ALGORITHM_DATA[total_degree_homotopy] = total_degree_homotopy_datum
 
 Compute the base fibre of F using monodromy.
 """
-function monodromy(F::System, G::System) :: Fibre
+function monodromy(F::System, G::System)::Fibre
     M = monodromy_solve(F)
     S = solutions(M)
     P = parameters(M)
-    if length(expressions(G))>0
-        filter!(s -> all(f -> norm(evaluate(f,variables(G)=>s)) <1e-6, expressions(G))==false, S)
+    if length(expressions(G)) > 0
+        filter!(s -> all(f -> norm(evaluate(f, variables(G) => s)) < 1e-6, expressions(G)) == false, S)
     end
     return (S, P)
 end

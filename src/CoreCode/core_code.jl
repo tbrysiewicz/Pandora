@@ -54,6 +54,7 @@ macro vprintln(args...)
         println($(esc.(args)...))
     end)
 end
+
 macro vprint(args...)
     return :(if VERBOSE[]
         print($(esc.(args)...))
@@ -76,17 +77,16 @@ end
 @kwdef mutable struct FibreDatum
     parameters::Vector{ComplexF64} = ComplexF64[]
     solutions::Vector{Vector{ComplexF64}} = Vector{Vector{ComplexF64}}()
-    function_values:: Dict{Function, Any} = Dict{Function, Any}()
-    certificates::Union{CertificationResult,Nothing} = nothing
-    F::Union{System,Nothing} = nothing 
+    function_values::Dict{Function, Any} = Dict{Function, Any}()
+    certificates::Union{CertificationResult, Nothing} = nothing
+    F::Union{System, Nothing} = nothing
 end
 
-
 # Essentially makes FibreDatum behave like a pair of solutions and parameters (which is a Fibre)
-function Base.getindex(F::FibreDatum, i::Int) 
-    if i==1
+function Base.getindex(F::FibreDatum, i::Int)
+    if i == 1
         return F.solutions
-    elseif i==2
+    elseif i == 2
         return F.parameters
     end
 end
@@ -101,18 +101,15 @@ A `Fibre` is a tuple `(S, P)` of two vectors:
 """
 const Fibre = Union{Tuple{Vector{Vector{ComplexF64}}, Vector{ComplexF64}}, FibreDatum}
 
-Fibre(S::Vector{Vector{ComplexF64}}, P::Vector{Float64}) = (S,Vector{ComplexF64}(P))
-Fibre(S::Vector{Vector{ComplexF64}}, P::Vector{ComplexF64}) = (S,Vector{ComplexF64}(P))
-Fibre(F::Tuple{Vector{Vector{ComplexF64}}, Vector{Float64}}) = (F[1],Vector{ComplexF64}(F[2]))
+Fibre(S::Vector{Vector{ComplexF64}}, P::Vector{Float64}) = (S, Vector{ComplexF64}(P))
+Fibre(S::Vector{Vector{ComplexF64}}, P::Vector{ComplexF64}) = (S, Vector{ComplexF64}(P))
+Fibre(F::Tuple{Vector{Vector{ComplexF64}}, Vector{Float64}}) = (F[1], Vector{ComplexF64}(F[2]))
 Fibre(F::Tuple{Vector{Vector{ComplexF64}}, Vector{ComplexF64}}) = F
 Fibre(F::Tuple{Result, Vector{Float64}}) = (solutions(F[1]), Vector{ComplexF64}(F[2]))
 Fibre(F::Tuple{Result, Vector{ComplexF64}}) = (solutions(F[1]), Vector{ComplexF64}(F[2]))
 
-
-
-FibreDatum(F::Tuple{Vector{Vector{ComplexF64}}, Vector{ComplexF64}}) = FibreDatum(parameters = F[2],solutions = F[1])
-FibreDatum(F::Tuple{Vector{Vector{ComplexF64}}, Vector{Float64}}) = FibreDatum(parameters = Vector{ComplexF64}(F[2]),solutions = F[1])
-
+FibreDatum(F::Tuple{Vector{Vector{ComplexF64}}, Vector{ComplexF64}}) = FibreDatum(parameters = F[2], solutions = F[1])
+FibreDatum(F::Tuple{Vector{Vector{ComplexF64}}, Vector{Float64}}) = FibreDatum(parameters = Vector{ComplexF64}(F[2]), solutions = F[1])
 
 """Return the vector of solutions in the fibre."""
 solutions(fibre::Fibre) = fibre[1]
@@ -161,7 +158,7 @@ include("../citations.jl")
 
 """
 `AlgorithmDatum` is a type that represents an algorithm used in enumerative problems.
-Its fields are 
+Its fields are
 - `name`: A string representing the name of the algorithm.
 - `description`: A string describing the algorithm.
 - `input_properties`: A vector of `EnumerativeProperty` or `EnumerativeData` instances that the algorithm takes as input.
@@ -248,7 +245,6 @@ ALGORITHM_DATA[user_given] = user_given_datum
 ALGORITHM_DATA[conjunction] = conjunction_datum
 const DO_NOT_AUTOMATE = EnumerativeData{Vector{FibreDatum}}("fibre_data")
 
-
 name(F::Function) = haskey(ALGORITHM_DATA, F) ? name(ALGORITHM_DATA[F]) : error(NOALG)
 description(F::Function) = haskey(ALGORITHM_DATA, F) ? description(ALGORITHM_DATA[F]) : error(NOALG)
 input_properties(F::Function) = haskey(ALGORITHM_DATA, F) ? input_properties(ALGORITHM_DATA[F]) : error(NOALG)
@@ -305,16 +301,16 @@ known_properties(K::Knowledge) = unique([property(k) for k in K])
 known_data(K::Knowledge) = unique([property(k) for k in K])
 #TODO: reliability(K::KnowledgeNode) must track all the way back
 
-export 
-    property, 
-    value, 
-    input_knowledge, 
-    input_kwargs, 
+export
+    property,
+    value,
+    input_knowledge,
+    input_kwargs,
     algorithm
 
 function Base.show(io::IO, K::Knowledge)
-    for (i,k) in enumerate(K)
-        print(io, i,") ", string(k), "\n")
+    for (i, k) in enumerate(K)
+        print(io, i, ") ", string(k), "\n")
     end
 end
 
@@ -337,7 +333,7 @@ end
 =#
 
 function Base.string(K::KnowledgeNode{T}) where T
-    s = "["*string(property(K))
+    s = "[" * string(property(K))
     s *= "] as computed by (" * string(name(algorithm(K))) * ") applied to "
     if length(input_knowledge(K)) == 0
         s *= "(nothing)."
@@ -350,6 +346,7 @@ function Base.string(K::KnowledgeNode{T}) where T
     end
     return s
 end
+
 function Base.show(io::IO, K::KnowledgeNode)
     function show_tree(K::KnowledgeNode; prefix = "", islast = true, isroot = false)
         connector = islast ? "└──" : "├──"
@@ -367,6 +364,7 @@ function Base.show(io::IO, K::KnowledgeNode)
     end
     show_tree(K; isroot = true)
 end
+
 function Base.show(io::IO, ::MIME"text/plain", K::KnowledgeNode)
     function show_tree(K::KnowledgeNode; prefix = "", islast = true, isroot = false)
         connector = islast ? "└──" : "├──"
@@ -384,6 +382,7 @@ function Base.show(io::IO, ::MIME"text/plain", K::KnowledgeNode)
     end
     show_tree(K; isroot = true)
 end
+
 function Base.display(K::KnowledgeNode)
     function show_tree(K::KnowledgeNode; prefix = "", islast = true, isroot = false)
         connector = islast ? "└──" : "├──"
@@ -426,7 +425,7 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
     properties::Knowledge
     data::Knowledge
 
-    function EnumerativeProblem(F::System; inequations = System([]), populate = true, torus_only = false, certify=false, monodromy=false)
+    function EnumerativeProblem(F::System; inequations = System([]), populate = true, torus_only = false, certify = false, monodromy = false)
         EP = new()
         EP.properties = Knowledge([])
         EP.data = Knowledge([])
@@ -434,31 +433,29 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
         if torus_only
             inequations = System([prod(variables(F))])
         end
-        know!(EP, INEQUATIONS, inequations)  
+        know!(EP, INEQUATIONS, inequations)
         if populate
             populate!(EP; monodromy = monodromy)
         end
-        if certify 
+        if certify
             println("Certifying")
             FD = fibre_datum(EP)
             println(FD)
             remove_knowledge!(EP, BASE_FIBRE)
             remove_knowledge!(EP, DEGREE)
-            know!(EP, BASE_FIBRE, (FD[1],FD[2]))
+            know!(EP, BASE_FIBRE, (FD[1], FD[2]))
             learn!(EP, DEGREE; algorithm = n_solutions)
         end
         return EP
     end
 
-
     function EnumerativeProblem(F::System, inequations::System; populate = true, torus_only = false, monodromy = false)
-
         EP = new()
         EP.properties = Knowledge([])
         EP.data = Knowledge([])
         know!(EP, SYSTEM, F)
         if torus_only
-            inequations = System(vcat(expressions(inequations),[prod(variables(F))]))
+            inequations = System(vcat(expressions(inequations), [prod(variables(F))]))
         end
         know!(EP, INEQUATIONS, inequations)
 
@@ -468,24 +465,22 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
         return EP
     end
  
-    function EnumerativeProblem(EX::Vector{Expression}; variables::Vector{Variable}=[], 
+    function EnumerativeProblem(EX::Vector{Expression}; variables::Vector{Variable} = [],
         parameters::Vector{Variable} = [], populate = true, inequations = System([]), torus_only = false, monodromy = false)
 
         F = System(EX, variables = variables, parameters = parameters)
-        return EnumerativeProblem(F, inequations; torus_only=torus_only, populate = populate, monodromy = monodromy)
-    end   
-    
+        return EnumerativeProblem(F, inequations; torus_only = torus_only, populate = populate, monodromy = monodromy)
+    end
 end
 
-
 function populate!(EP::EnumerativeProblem; kwargs...)
-    #check if monodromy is true in kwargs, if so, learn base fibre using monodromy
+    # Check if monodromy is true in kwargs; if so, learn the base fibre using monodromy.
     if get(kwargs, :monodromy, false)
         learn!(EP, BASE_FIBRE; algorithm = monodromy, kwargs...)
     else
         learn!(EP, BASE_FIBRE; algorithm = polyhedral_homotopy, kwargs...)
     end
-     learn!(EP, DEGREE; algorithm = n_solutions, kwargs...)
+    learn!(EP, DEGREE; algorithm = n_solutions, kwargs...)
 end
 
 """
@@ -599,7 +594,7 @@ base_solutions(EP::EnumerativeProblem) = base_fibre(EP)[1]
 
 
 function is_real(EP::EnumerativeProblem)
-    T = typeof(map(E->coefficients(E,vcat(variables(EP),parameters(EP))), expressions(EP)))
+    T = typeof(map(E -> coefficients(E, vcat(variables(EP), parameters(EP))), expressions(EP)))
     return promote_type(T, Vector{Vector{Float64}}) == Vector{Vector{Float64}}
 end
 
@@ -628,6 +623,7 @@ function knowledge_agrees_with_kwargs(k::KnowledgeNode; kwargs...)
     isempty(kwargs) && return true
     ikwargs = input_kwargs(k)
     isempty(ikwargs) && return true
+
     d = Dict(kwargs)
     for i in keys(ikwargs)
         if haskey(d, i)
@@ -644,16 +640,15 @@ function attribute_bucket(EP::EnumerativeProblem, EAttr::EnumerativeAttribute)
 end
 
 function knows(EP::EnumerativeProblem, EProp::EnumerativeAttribute; kwargs...)
-    #TODO: must check that the knowledge node has input kwargs which agree with kwargs...
-    candidate_knowledge = filter(k->property(k) == EProp, attribute_bucket(EP, EProp))
-    kwarg_agreement  = filter(k->knowledge_agrees_with_kwargs(k;kwargs...),candidate_knowledge)
-    if length(kwarg_agreement)>0
-        return(true)
+    # TODO: must check that the knowledge node has input kwargs which agree with kwargs.
+    candidate_knowledge = filter(k -> property(k) == EProp, attribute_bucket(EP, EProp))
+    kwarg_agreement = filter(k -> knowledge_agrees_with_kwargs(k; kwargs...), candidate_knowledge)
+    if length(kwarg_agreement) > 0
+        return true
     else
-        return(false)
+        return false
     end
 end
-
 
 function find_algorithm(EProp::EnumerativeAttribute, EP::EnumerativeProblem)
     potential_algorithms = algorithms_which_return(EProp)
@@ -674,14 +669,18 @@ function find_algorithm(EProp::EnumerativeAttribute, EP::EnumerativeProblem)
     return algorithm_to_use
 end
 
-function learn!(EP::EnumerativeProblem, EProp::Union{EnumerativeProperty{T}, EnumerativeData{T}};
-    algorithm = nothing, kwargs...)      where T
-
-    #If the algorithm is not given, find an algorithm known to Pandora which
-    #  computes the given enumerative property
+function learn!(
+    EP::EnumerativeProblem,
+    EProp::Union{EnumerativeProperty{T}, EnumerativeData{T}};
+    algorithm = nothing,
+    kwargs...
+) where T
+    # If the algorithm is not given, find an algorithm known to Pandora which
+    # computes the given enumerative property.
     if algorithm === nothing
         algorithm = find_algorithm(EProp, EP)
     end
+
     f = algorithm
     @assert(ALGORITHM_DATA[f].output_property == EProp)
     input_knowledge = [get_knowledge!(i, EP; kwargs...) for i in input_properties(f)]
@@ -707,36 +706,42 @@ Compute the value of an enumerative property `EProp` for an enumerative problem 
       If recompute_depth is 2, it will recompute the property, and will recompute the input knowledge using recompute_depth 1. 
       In general, recompute_depth is the recursive limit of recomputing knowledge, but user_given information is always returned. 
 """
-
-function compute(EProp::Union{EnumerativeProperty{T}, EnumerativeData{T}},EP::EnumerativeProblem;
-    algorithm = nothing, recompute_depth = 0, kwargs...) where T
+function compute(
+    EProp::Union{EnumerativeProperty{T}, EnumerativeData{T}},
+    EP::EnumerativeProblem;
+    algorithm = nothing,
+    recompute_depth = 0,
+    kwargs...
+) where T
     K = get_knowledge(EProp, EP; kwargs...)
     if K !== nothing
         if length(K.input_knowledge) == 0
-            return(value(K))
-            #@vprintln("Returning value of ", EProp, " from knowledge: ", value(K), ".")
+            return value(K)
+            # @vprintln("Returning value of ", EProp, " from knowledge: ", value(K), ".")
         end
     end
-    
-    #println("Recompute depth is currently: ", recompute_depth, " on computation of ", EProp, ".")
+
+    # println("Recompute depth is currently: ", recompute_depth, " on computation of ", EProp, ".")
     if recompute_depth == 0
-        #print("Checking if the knowledge of ", EProp, " is already known in EP: ", EP, "...")
+        # print("Checking if the knowledge of ", EProp, " is already known in EP: ", EP, "...")
         g = get_knowledge_value(EProp, EP; kwargs...)
-        if g!==nothing
-            #print("Yes, it is known: ", g, "\n")
+        if g !== nothing
+            # print("Yes, it is known: ", g, "\n")
             return g
         end
-         #println("No, it is not known. Computing it now...")
+        # println("No, it is not known. Computing it now...")
     end
-    recompute_depth = max(recompute_depth-1,0)
+
+    recompute_depth = max(recompute_depth - 1, 0)
     # If the algorithm is not given, find an algorithm known to Pandora which
-    # computes the given enumerative property
+    # computes the given enumerative property.
     if algorithm === nothing
         algorithm = find_algorithm(EProp, EP)
     end
+
     f = algorithm
     @assert(ALGORITHM_DATA[f].output_property == EProp)
-    input_values = [compute(i,EP; recompute_depth=recompute_depth) for i in input_properties(f)]
+    input_values = [compute(i, EP; recompute_depth = recompute_depth) for i in input_properties(f)]
     kwargs_to_pass = copy(default_kwargs(f))
     if !isempty(kwargs)
         for kv in kwargs
@@ -764,14 +769,14 @@ function know!(EP::EnumerativeProblem, EProp::Union{EnumerativeProperty{T}, Enum
 end
 
 function knowledge_tree(K::KnowledgeNode; prefix = "", islast = true)
-           connector = islast ? "└──" : "├──"
-           println(prefix * connector * " [" * string(property(K)) * "]")
-           new_prefix = prefix * (islast ? "    " : "│   ")
-           children = input_knowledge(K)
-           n = length(children)
-           for (i, child) in enumerate(children)
-               knowledge_tree(child; prefix = new_prefix, islast = i == n)
-           end
+    connector = islast ? "└──" : "├──"
+    println(prefix * connector * " [" * string(property(K)) * "]")
+    new_prefix = prefix * (islast ? "    " : "│   ")
+    children = input_knowledge(K)
+    n = length(children)
+    for (i, child) in enumerate(children)
+        knowledge_tree(child; prefix = new_prefix, islast = i == n)
+    end
 end
 
 ############ Getter System for Enumerative Attributes of Enumerative Problem #############
@@ -780,6 +785,7 @@ function get_knowledge(EProp::EnumerativeAttribute, EP::EnumerativeProblem; kwar
     if !knows(EP, EProp; kwargs...)
         return nothing
     end
+
     candidate_knowledge = filter(k -> property(k) == EProp, attribute_bucket(EP, EProp))
     kwarg_agreement = filter(k -> knowledge_agrees_with_kwargs(k; kwargs...), candidate_knowledge)
     if length(kwarg_agreement) == 1
@@ -840,48 +846,50 @@ end
 include("core_enumerative_algorithms.jl")
 
 function Base.show(io::IO, EP::EnumerativeProblem)
-    tenspaces="          "
-    print(io,"\n\n")
-    print(io,tenspaces," X := V(")
-    if n_polynomials(EP)==1
-        print(io,"f_1")
+    tenspaces = "          "
+    print(io, "\n\n")
+    print(io, tenspaces, " X := V(")
+    if n_polynomials(EP) == 1
+        print(io, "f_1")
     else
-        print(io,"f_1..f_",n_polynomials(EP),"")
+        print(io, "f_1..f_", n_polynomials(EP), "")
     end
-    print(io,") ⊆ C^",ambient_dimension(EP)," x C^",n_parameters(EP),"\n");
-    println(io,tenspaces," |")
-    println(io,tenspaces," |")
-    print(io,tenspaces," | π ")
-    if knows(EP,DEGREE)
-        println(io,"  ",DEGREE(EP),"-to-1")
+    print(io, ") ⊆ C^", ambient_dimension(EP), " x C^", n_parameters(EP), "\n")
+    println(io, tenspaces, " |")
+    println(io, tenspaces, " |")
+    print(io, tenspaces, " | π ")
+    if knows(EP, DEGREE)
+        println(io, "  ", DEGREE(EP), "-to-1")
     else
-        println(io,"   ???-to-1")
+        println(io, "   ???-to-1")
     end
-    println(io,tenspaces," |")
-    println(io,tenspaces," V")
-    println(io,tenspaces,"C^",n_parameters(EP),"\n")
-    println(io,"An enumerative problem in ",ambient_dimension(EP)," variable(s) cut out by ", 
-                n_polynomials(EP)," condition(s) over ", n_parameters(EP)," parameter(s).")
-    @vprintln(io,"The following information is known about this problem:")
+    println(io, tenspaces, " |")
+    println(io, tenspaces, " V")
+    println(io, tenspaces, "C^", n_parameters(EP), "\n")
+    println(
+        io,
+        "An enumerative problem in ", ambient_dimension(EP), " variable(s) cut out by ",
+        n_polynomials(EP), " condition(s) over ", n_parameters(EP), " parameter(s).",
+    )
+    @vprintln(io, "The following information is known about this problem:")
     for k in known_properties(properties(EP))
-        l = length(filter(x->property(x)==k,properties(EP)))
+        l = length(filter(x -> property(x) == k, properties(EP)))
         if l == 1
-         @vprintln(io,"-",k)
+            @vprintln(io, "-", k)
         else
-         @vprintln(io,"-",k, " (# ways known: ",l,")")
+            @vprintln(io, "-", k, " (# ways known: ", l, ")")
         end
     end
-    @vprintln(io,"The following data has been computed for this problem:")
+    @vprintln(io, "The following data has been computed for this problem:")
     for k in known_data(data(EP))
-        l = length(filter(x->property(x)==k,data(EP)))
+        l = length(filter(x -> property(x) == k, data(EP)))
         if l == 1
-         @vprintln(io,"-",k)
+            @vprintln(io, "-", k)
         else
-         @vprintln(io,"-",k, " (# datasets: ",l,")")
+            @vprintln(io, "-", k, " (# datasets: ", l, ")")
         end
     end
 end
-
 
 include("enumerative_solver.jl")
 
@@ -889,31 +897,29 @@ function algorithms_which_return(EProp::EnumerativeAttribute)
     filter(A -> output_property(ALGORITHM_DATA[A]) == EProp, collect(keys(ALGORITHM_DATA)))
 end
 
-
-
 function is_certified(K::KnowledgeNode)
     return reliability(K) == [:user_given]
-end 
+end
 
 function reliability_consensus(reliability_bucket::Vector{Symbol})
     reliability_bucket = unique(filter(r -> r != :certified, reliability_bucket))
 end
 
-function reliability(K::KnowledgeNode) 
+function reliability(K::KnowledgeNode)
     reliability_bucket = [ALGORITHM_DATA[algorithm(K)].reliability]
     for i in input_knowledge(K)
         for r in reliability(i)
-        push!(reliability_bucket, r)
+            push!(reliability_bucket, r)
         end
     end
-    return(reliability_consensus(reliability_bucket))
+    return reliability_consensus(reliability_bucket)
 end
 
 function combine_knowledge(K::Knowledge)
-    new_type = type((map(k->get_type(property(k)), K)))
+    new_type = type((map(k -> get_type(property(k)), K)))
     new_name = join([name(property(k)) for k in K], " & ")
     combined_EP = EnumerativeProperty{new_type}(new_name)
-    combined_value = (map(k->value(k), K))
+    combined_value = (map(k -> value(k), K))
     combined_input_knowledge = vcat([input_knowledge(k) for k in K]...)
     combined_input_kwargs = Dict{Symbol, Any}()
     new_knowledge = KnowledgeNode{new_type}(combined_EP, combined_value, combined_input_knowledge, combined_input_kwargs, conjunction)
