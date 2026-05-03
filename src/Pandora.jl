@@ -57,6 +57,7 @@ end
 
 include("CoreCode/core_code.jl")
 include("degree_bounds.jl")
+include("sparse_enumerative_problems.jl")
 include("automation.jl")
 include("monodromy.jl")
 include("enumerative_problem_constructors.jl")

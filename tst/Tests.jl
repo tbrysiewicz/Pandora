@@ -11,8 +11,8 @@ using Test
             
             #Type Tests
             @test isa(D, AlgorithmDatum)
-            @test isa(input_properties(D), Vector{EnumerativeProperty})
-            @test isa(output_property(D), EnumerativeProperty)
+            @test isa(input_properties(D), Vector{Pandora.EnumerativeAttribute})
+            @test isa(output_property(D), Pandora.EnumerativeAttribute)
             @test isa(reliability(D), Symbol)
 
             if D.automated

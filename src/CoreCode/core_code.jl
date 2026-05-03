@@ -3,6 +3,8 @@
 ##############################################################
 
 export EnumerativeProperty,
+       EnumerativeData,
+       EnumerativeAttribute,
        Fibre,
        AlgorithmDatum,
        KnowledgeNode,
@@ -19,6 +21,9 @@ export EnumerativeProperty,
        parameters,
        n_solutions,
        knowledge,
+       enumerative_data,
+       properties,
+       data,
        ambient_dimension,
        n_polynomials,
        n_parameters,
@@ -147,6 +152,7 @@ const INEQUATIONS = EnumerativeProperty{System}("inequations")
 const BASE_FIBRE = EnumerativeProperty{Fibre}("base_fibre")
 const NULL_ENUMERATIVE_PROPERTY = EnumerativeProperty{Nothing}("null")
 
+include("enumerative_data.jl")
 
 include("../citations.jl")
 ##############################################################
@@ -158,18 +164,18 @@ include("../citations.jl")
 Its fields are 
 - `name`: A string representing the name of the algorithm.
 - `description`: A string describing the algorithm.
-- `input_properties`: A vector of `EnumerativeProperty` instances that the algorithm takes as input.
+- `input_properties`: A vector of `EnumerativeProperty` or `EnumerativeData` instances that the algorithm takes as input.
 - `default_kwargs`: A dictionary of keyword arguments that the algorithm can take, with default values.
-- `output_property`: An `EnumerativeProperty` that the algorithm outputs.
+- `output_property`: An `EnumerativeProperty` or `EnumerativeData` instance that the algorithm outputs.
 - `citations`: A list of `Citation`s that provide reference to the algorithm.
 - `reliability`: A symbol indicating the reliability of the algorithm.
 """
 Base.@kwdef struct AlgorithmDatum
     name::String = "Unnamed Algorithm"
     description::String = " an algorithm"
-    input_properties::Vector{EnumerativeProperty} = EnumerativeProperty[]
+    input_properties::Vector{EnumerativeAttribute} = EnumerativeAttribute[]
     default_kwargs::Dict{Symbol, Any} = Dict{Symbol, Any}()
-    output_property::EnumerativeProperty = NULL_ENUMERATIVE_PROPERTY
+    output_property::EnumerativeAttribute = NULL_ENUMERATIVE_PROPERTY
     citations::Vector{Citation} = [NULL_CITATION]
     reliability::Symbol = :null
     automated::Bool = true
@@ -219,7 +225,7 @@ const ANY = EnumerativeProperty{Any}("any")
 const user_given_datum = AlgorithmDatum(
     name = "user_given",
     description = "The user declared this property",
-    input_properties = Vector{EnumerativeProperty}([]),
+    input_properties = EnumerativeAttribute[],
     output_property = ANY,
     reliability = :user_given,
     automated = false
@@ -231,7 +237,7 @@ end
 const conjunction_datum = AlgorithmDatum(
     name = "conjunction",
     description = "Combines multiple knowledge nodes into one",
-    input_properties = Vector{EnumerativeProperty}([]),
+    input_properties = EnumerativeAttribute[],
     output_property = ANY,
     reliability = :certified,
     automated = false
@@ -240,7 +246,7 @@ const conjunction_datum = AlgorithmDatum(
 global ALGORITHM_DATA = Dict{Function, AlgorithmDatum}()
 ALGORITHM_DATA[user_given] = user_given_datum
 ALGORITHM_DATA[conjunction] = conjunction_datum
-const DO_NOT_AUTOMATE = EnumerativeProperty{Vector{FibreDatum}}("fibre_data")
+const DO_NOT_AUTOMATE = EnumerativeData{Vector{FibreDatum}}("fibre_data")
 
 
 name(F::Function) = haskey(ALGORITHM_DATA, F) ? name(ALGORITHM_DATA[F]) : error(NOALG)
@@ -256,16 +262,16 @@ reliability(F::Function) = haskey(ALGORITHM_DATA, F) ? reliability(ALGORITHM_DAT
 ##############################################################
 
 """
-`KnowledgeNode` is a type that represents a piece of knowledge about an enumerative problem.
+`KnowledgeNode` is a type that records a property or data value for an enumerative problem.
 It contains the following fields:
-- `property`: An `EnumerativeProperty{T}` that this knowledge node represents.
-- `value`: The value of the property, of type `T`.
+- `property`: An `EnumerativeProperty{T}` or `EnumerativeData{T}` that this knowledge node represents.
+- `value`: The value of the property or data, of type `T`.
 - `input_knowledge`: A vector of `KnowledgeNode` instances that are the inputs to the algorithm that computed this knowledge.
 - `input_kwargs`: A dictionary of keyword arguments that were used when computing this knowledge.
 - `algorithm`: The function that was used to compute this knowledge.
 """
 mutable struct KnowledgeNode{T}
-    property::EnumerativeProperty{T}
+    property::Union{EnumerativeProperty{T}, EnumerativeData{T}}
     value::T
     input_knowledge::Vector{KnowledgeNode}
     input_kwargs::Dict{Symbol, Any}
@@ -296,6 +302,7 @@ input_kwargs(K::KnowledgeNode) = K.input_kwargs
 algorithm(K::KnowledgeNode) = K.algorithm
 
 known_properties(K::Knowledge) = unique([property(k) for k in K])
+known_data(K::Knowledge) = unique([property(k) for k in K])
 #TODO: reliability(K::KnowledgeNode) must track all the way back
 
 export 
@@ -409,19 +416,20 @@ abstract type AbstractEnumerativeProblem end
 
 """
 `EnumerativeProblem` is a concrete type that represents an enumerative problem.
-It contains a `System` representing the equations of the problem and a `Knowledge` object
-that stores the properties which are known about the problem, including how this knowledge
-was obtained, and how reliable it is (e.g. whether it is known with probability 1, high
-probability, is a proven result, or is some other form of "knowledge"). 
+It contains a `System` representing the equations of the problem, a list of
+intrinsic properties known about the problem, and a list of computational data
+attached to the problem.
 
 The `EnumerativeProblem` is the main concrete type used in Pandora.jl.
 """
 mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
-    knowledge::Knowledge
+    properties::Knowledge
+    data::Knowledge
 
     function EnumerativeProblem(F::System; inequations = System([]), populate = true, torus_only = false, certify=false, monodromy=false)
         EP = new()
-        EP.knowledge = Knowledge([])
+        EP.properties = Knowledge([])
+        EP.data = Knowledge([])
         know!(EP, SYSTEM, F)
         if torus_only
             inequations = System([prod(variables(F))])
@@ -446,7 +454,8 @@ mutable struct EnumerativeProblem <: AbstractEnumerativeProblem
     function EnumerativeProblem(F::System, inequations::System; populate = true, torus_only = false, monodromy = false)
 
         EP = new()
-        EP.knowledge = Knowledge([])
+        EP.properties = Knowledge([])
+        EP.data = Knowledge([])
         know!(EP, SYSTEM, F)
         if torus_only
             inequations = System(vcat(expressions(inequations),[prod(variables(F))]))
@@ -512,9 +521,24 @@ end
 
 """
     knowledge(EP::EnumerativeProblem)
-Return the vector of knowledge nodes associated with the enumerative problem.
+Return all property and data nodes associated with the enumerative problem.
 """
-knowledge(EP::EnumerativeProblem) = EP.knowledge
+knowledge(EP::EnumerativeProblem) = vcat(properties(EP), data(EP))
+"""
+    properties(EP::EnumerativeProblem)
+Return the vector of property nodes associated with the enumerative problem.
+"""
+properties(EP::EnumerativeProblem) = EP.properties
+"""
+    enumerative_data(EP::EnumerativeProblem)
+Return the vector of data nodes associated with the enumerative problem.
+"""
+enumerative_data(EP::EnumerativeProblem) = data(EP)
+"""
+    data(EP::EnumerativeProblem)
+Return the vector of data nodes associated with the enumerative problem.
+"""
+data(EP::EnumerativeProblem) = EP.data
 """
     variables(EP::EnumerativeProblem)
 Return the variables of system of the enumerative problem.
@@ -615,9 +639,13 @@ function knowledge_agrees_with_kwargs(k::KnowledgeNode; kwargs...)
     return true
 end
 
-function knows(EP::EnumerativeProblem, EProp::EnumerativeProperty; kwargs...)
+function attribute_bucket(EP::EnumerativeProblem, EAttr::EnumerativeAttribute)
+    is_enumerative_data(EAttr) ? data(EP) : properties(EP)
+end
+
+function knows(EP::EnumerativeProblem, EProp::EnumerativeAttribute; kwargs...)
     #TODO: must check that the knowledge node has input kwargs which agree with kwargs...
-    candidate_knowledge = filter(k->property(k) == EProp, knowledge(EP))
+    candidate_knowledge = filter(k->property(k) == EProp, attribute_bucket(EP, EProp))
     kwarg_agreement  = filter(k->knowledge_agrees_with_kwargs(k;kwargs...),candidate_knowledge)
     if length(kwarg_agreement)>0
         return(true)
@@ -627,7 +655,7 @@ function knows(EP::EnumerativeProblem, EProp::EnumerativeProperty; kwargs...)
 end
 
 
-function find_algorithm(EProp::EnumerativeProperty, EP::EnumerativeProblem)
+function find_algorithm(EProp::EnumerativeAttribute, EP::EnumerativeProblem)
     potential_algorithms = algorithms_which_return(EProp)
     @vprintln("Pandora.jl is automatically finding an algorithm to compute ", EProp, ". To specify an algorithm, call again with algorithm=>[nameofalgorithm]")
     @vprintln("There is a total of ", length(potential_algorithms), " algorithm(s) in Pandora.jl which compute(s) ", name(EProp), ":")
@@ -646,7 +674,7 @@ function find_algorithm(EProp::EnumerativeProperty, EP::EnumerativeProblem)
     return algorithm_to_use
 end
 
-function learn!(EP::EnumerativeProblem, EProp::EnumerativeProperty{T}; 
+function learn!(EP::EnumerativeProblem, EProp::Union{EnumerativeProperty{T}, EnumerativeData{T}};
     algorithm = nothing, kwargs...)      where T
 
     #If the algorithm is not given, find an algorithm known to Pandora which
@@ -680,7 +708,7 @@ Compute the value of an enumerative property `EProp` for an enumerative problem 
       In general, recompute_depth is the recursive limit of recomputing knowledge, but user_given information is always returned. 
 """
 
-function compute(EProp::EnumerativeProperty{T},EP::EnumerativeProblem; 
+function compute(EProp::Union{EnumerativeProperty{T}, EnumerativeData{T}},EP::EnumerativeProblem;
     algorithm = nothing, recompute_depth = 0, kwargs...) where T
     K = get_knowledge(EProp, EP; kwargs...)
     if K !== nothing
@@ -722,11 +750,15 @@ function compute(EProp::EnumerativeProperty{T},EP::EnumerativeProblem;
 end
 
 function know!(EP::EnumerativeProblem, K::KnowledgeNode)
-    push!(EP.knowledge, K)
+    if is_enumerative_data(property(K))
+        push!(EP.data, K)
+    else
+        push!(EP.properties, K)
+    end
     return K
 end
 
-function know!(EP::EnumerativeProblem, EProp::EnumerativeProperty{T}, value::T) where T
+function know!(EP::EnumerativeProblem, EProp::Union{EnumerativeProperty{T}, EnumerativeData{T}}, value::T) where T
     K = KnowledgeNode(EProp, value, Vector{KnowledgeNode}(), Dict{Symbol, Any}(), user_given)
     know!(EP, K)
 end
@@ -742,23 +774,28 @@ function knowledge_tree(K::KnowledgeNode; prefix = "", islast = true)
            end
 end
 
-############ Getter System for EnumerativeProperty of Enumerative Problem #############
+############ Getter System for Enumerative Attributes of Enumerative Problem #############
 
-function get_knowledge(EProp::EnumerativeProperty, EP::EnumerativeProblem; kwargs...)
+function get_knowledge(EProp::EnumerativeAttribute, EP::EnumerativeProblem; kwargs...)
     if !knows(EP, EProp; kwargs...)
         return nothing
     end
-    candidate_knowledge = filter(k -> property(k) == EProp, knowledge(EP))
+    candidate_knowledge = filter(k -> property(k) == EProp, attribute_bucket(EP, EProp))
     kwarg_agreement = filter(k -> knowledge_agrees_with_kwargs(k; kwargs...), candidate_knowledge)
     if length(kwarg_agreement) == 1
         return kwarg_agreement[1]
     else
-        @vprintln("Warning: the property [", EProp, "] with given keyword arguments has more than one knowledge node.")
-        return kwarg_agreement[1]
+        if is_enumerative_data(EProp)
+            @vprintln("The data [", EProp, "] with given keyword arguments has more than one node. Returning the most recent one.")
+            return kwarg_agreement[end]
+        else
+            @vprintln("Warning: the property [", EProp, "] with given keyword arguments has more than one knowledge node.")
+            return kwarg_agreement[1]
+        end
     end
 end
 
-function get_knowledge_value(EProp::EnumerativeProperty, EP::EnumerativeProblem; kwargs...)
+function get_knowledge_value(EProp::EnumerativeAttribute, EP::EnumerativeProblem; kwargs...)
     K = get_knowledge(EProp, EP; kwargs...)
     if K !== nothing
         return value(K)
@@ -767,7 +804,7 @@ function get_knowledge_value(EProp::EnumerativeProperty, EP::EnumerativeProblem;
     end
 end
 
-function get_knowledge!(EProp::EnumerativeProperty, EP::EnumerativeProblem; kwargs...)
+function get_knowledge!(EProp::EnumerativeAttribute, EP::EnumerativeProblem; kwargs...)
     gk = get_knowledge(EProp, EP; kwargs...)
     if gk !== nothing
         return gk
@@ -777,11 +814,11 @@ function get_knowledge!(EProp::EnumerativeProperty, EP::EnumerativeProblem; kwar
     end
 end
 
-function remove_knowledge!(EP::EnumerativeProblem, EProp::EnumerativeProperty)
-    filter!(k -> property(k) != EProp, EP.knowledge)
+function remove_knowledge!(EP::EnumerativeProblem, EProp::EnumerativeAttribute)
+    filter!(k -> property(k) != EProp, attribute_bucket(EP, EProp))
     return EP
 end
-get_knowledge_value!(EProp::EnumerativeProperty, EP::EnumerativeProblem; kwargs...) = value(get_knowledge!(EProp, EP; kwargs...))
+get_knowledge_value!(EProp::EnumerativeAttribute, EP::EnumerativeProblem; kwargs...) = value(get_knowledge!(EProp, EP; kwargs...))
 
 #This is the core "getter" for enumerative properties of enumerative problems
 function (EProp::EnumerativeProperty)(EP::EnumerativeProblem; learn = true, recompute_depth = 1, kwargs...)
@@ -789,6 +826,14 @@ function (EProp::EnumerativeProperty)(EP::EnumerativeProblem; learn = true, reco
         return(get_knowledge_value!(EProp, EP; kwargs...))
     else
         return(compute(EProp, EP; recompute_depth = recompute_depth, kwargs...))
+    end
+end
+
+function (EData::EnumerativeData)(EP::EnumerativeProblem; learn = true, recompute_depth = 1, kwargs...)
+    if learn == true
+        return(get_knowledge_value!(EData, EP; kwargs...))
+    else
+        return(compute(EData, EP; recompute_depth = recompute_depth, kwargs...))
     end
 end
 
@@ -818,12 +863,21 @@ function Base.show(io::IO, EP::EnumerativeProblem)
     println(io,"An enumerative problem in ",ambient_dimension(EP)," variable(s) cut out by ", 
                 n_polynomials(EP)," condition(s) over ", n_parameters(EP)," parameter(s).")
     @vprintln(io,"The following information is known about this problem:")
-    for k in known_properties(knowledge(EP))
-        l = length(filter(x->property(x)==k,knowledge(EP)))
+    for k in known_properties(properties(EP))
+        l = length(filter(x->property(x)==k,properties(EP)))
         if l == 1
          @vprintln(io,"-",k)
         else
          @vprintln(io,"-",k, " (# ways known: ",l,")")
+        end
+    end
+    @vprintln(io,"The following data has been computed for this problem:")
+    for k in known_data(data(EP))
+        l = length(filter(x->property(x)==k,data(EP)))
+        if l == 1
+         @vprintln(io,"-",k)
+        else
+         @vprintln(io,"-",k, " (# datasets: ",l,")")
         end
     end
 end
@@ -831,7 +885,7 @@ end
 
 include("enumerative_solver.jl")
 
-function algorithms_which_return(EProp::EnumerativeProperty)
+function algorithms_which_return(EProp::EnumerativeAttribute)
     filter(A -> output_property(ALGORITHM_DATA[A]) == EProp, collect(keys(ALGORITHM_DATA)))
 end
 

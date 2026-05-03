@@ -31,7 +31,7 @@ function Base.show(io::IO, F::FibreDatum)
         end
     end
 end
-const FIBRE_DATUM = EnumerativeProperty{FibreDatum}("fibre_datum")
+const FIBRE_DATUM = EnumerativeData{FibreDatum}("fibre_datum")
 
 """
     fibre_datum(EP::EnumerativeProblem; real = false, kwargs...)
@@ -64,4 +64,4 @@ compute_fibre_datum_datum = AlgorithmDatum(
 ALGORITHM_DATA[compute_fibre_datum] = compute_fibre_datum_datum
 
 
-fibre_data(EP::EnumerativeProblem) = [K.value for K in filter(k -> property(k) == FIBRE_DATUM, knowledge(EP))]
+fibre_data(EP::EnumerativeProblem) = [K.value for K in filter(k -> property(k) == FIBRE_DATUM, data(EP))]

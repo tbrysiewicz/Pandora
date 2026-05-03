@@ -195,7 +195,7 @@ function large_monodromy_sample(F::System, bf::Fibre; n_monodromy_loops::Int = 5
 end
 
 
-const MONODROMY_SAMPLE = EnumerativeProperty{Vector{MonodromyLoop}}("monodromy_sample")
+const MONODROMY_SAMPLE = EnumerativeData{Vector{MonodromyLoop}}("monodromy_sample")
 
 monodromy_sample(EP::EnumerativeProblem; kwargs...) = MONODROMY_SAMPLE(EP; kwargs...)
 
@@ -270,5 +270,4 @@ function is_decomposable(EP::EnumerativeProblem)
         return false
     end
 end
-
 

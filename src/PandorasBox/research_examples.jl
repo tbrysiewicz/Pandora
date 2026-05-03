@@ -160,7 +160,7 @@ S = base_fibre(EP)[1]
 P = base_fibre(EP)[2]
 S = sort(S, lt=(x,y)->real(sum(x))<real(sum(y)))
 S = S[[1,5,9,13,17,21,25,29,33,37]]
-EP.knowledge=EP.knowledge[[1,2]]
+EP.properties=EP.properties[[1,2]]
 Pandora.know!(EP,Pandora.BASE_FIBRE,(S,P))
 
 

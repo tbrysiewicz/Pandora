@@ -159,7 +159,7 @@ function explore_reality(EP::EnumerativeProblem; n_samples = 1000, sampler = Uni
     
 end
 
-const FIBRE_DATA = EnumerativeProperty{Vector{FibreDatum}}("fibre_data")
+const FIBRE_DATA = EnumerativeData{Vector{FibreDatum}}("fibre_data")
 
 
 ALGORITHM_DATA[explore_reality] = AlgorithmDatum(
