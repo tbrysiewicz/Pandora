@@ -23,9 +23,9 @@ function automate!(EP::EnumerativeProblem)
     for AD in keys(ALGORITHM_DATA) #This scrolls through all algorithms and applies each to EP. 
         D = ALGORITHM_DATA[AD]
         if D.automated == true
-            ep = output_property(D)
-            @vprintln("Computing ",ep, " via ", name(AD))
-            ep(EP)
+            EA = output_attribute(D)
+            @vprintln("Computing ", EA, " via ", name(AD))
+            EA(EP)
         end
     end
 end

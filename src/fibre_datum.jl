@@ -56,12 +56,12 @@ end
 compute_fibre_datum_datum = AlgorithmDatum(
     name = "compute_fibre_datum",
     description = "Computes a single fibre datum for the enumerative problem.",
-    input_properties = [SYSTEM, BASE_FIBRE],
-    output_property = FIBRE_DATUM,
+    input_attributes = [SYSTEM, BASE_FIBRE],
+    output_attribute = FIBRE_DATUM,
     reliability = :certified
 )
 
 ALGORITHM_DATA[compute_fibre_datum] = compute_fibre_datum_datum
 
 
-fibre_data(EP::EnumerativeProblem) = [K.value for K in filter(k -> property(k) == FIBRE_DATUM, data(EP))]
+fibre_data(EP::EnumerativeProblem) = [K.value for K in filter(k -> attribute(k) == FIBRE_DATUM, data(EP))]

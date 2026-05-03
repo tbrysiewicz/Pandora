@@ -11,15 +11,15 @@ using Test
             
             #Type Tests
             @test isa(D, AlgorithmDatum)
-            @test isa(input_properties(D), Vector{Pandora.EnumerativeAttribute})
-            @test isa(output_property(D), Pandora.EnumerativeAttribute)
+            @test isa(input_attributes(D), Vector{Pandora.EnumerativeAttribute})
+            @test isa(output_attribute(D), Pandora.EnumerativeAttribute)
             @test isa(reliability(D), Symbol)
 
             if D.automated
                 #Smoke Tests
                 @test try
                     T = TwentySevenLines()
-                    Pandora.learn!(T, output_property(D); algorithm = AD)
+                    Pandora.learn!(T, output_attribute(D); algorithm = AD)
                     true
                 catch
                     false

@@ -29,7 +29,7 @@ export EnumerativeProperty,
        n_parameters,
        variables,
        expressions,
-       property,
+       attribute,
        value,
        input_knowledge,
        input_kwargs,
@@ -133,30 +133,30 @@ include("../citations.jl")
 Its fields are
 - `name`: A string representing the name of the algorithm.
 - `description`: A string describing the algorithm.
-- `input_properties`: A vector of `EnumerativeProperty` or `EnumerativeData` instances that the algorithm takes as input.
+- `input_attributes`: A vector of `EnumerativeProperty` or `EnumerativeData` instances that the algorithm takes as input.
 - `default_kwargs`: A dictionary of keyword arguments that the algorithm can take, with default values.
-- `output_property`: An `EnumerativeProperty` or `EnumerativeData` instance that the algorithm outputs.
+- `output_attribute`: An `EnumerativeProperty` or `EnumerativeData` instance that the algorithm outputs.
 - `citations`: A list of `Citation`s that provide reference to the algorithm.
 - `reliability`: A symbol indicating the reliability of the algorithm.
 """
 Base.@kwdef struct AlgorithmDatum
     name::String = "Unnamed Algorithm"
     description::String = " an algorithm"
-    input_properties::Vector{EnumerativeAttribute} = EnumerativeAttribute[]
+    input_attributes::Vector{EnumerativeAttribute} = EnumerativeAttribute[]
     default_kwargs::Dict{Symbol, Any} = Dict{Symbol, Any}()
-    output_property::EnumerativeAttribute = NULL_ENUMERATIVE_PROPERTY
+    output_attribute::EnumerativeAttribute = NULL_ENUMERATIVE_ATTRIBUTE
     citations::Vector{Citation} = [NULL_CITATION]
     reliability::Symbol = :null
     automated::Bool = true
 end
 
-export name, description, input_properties, default_kwargs, output_property, reliability, citation
+export name, description, input_attributes, default_kwargs, output_attribute, reliability, citation
 
 name(AD::AlgorithmDatum) = AD.name
 description(AD::AlgorithmDatum) = AD.description
-input_properties(AD::AlgorithmDatum) = AD.input_properties
+input_attributes(AD::AlgorithmDatum) = AD.input_attributes
 default_kwargs(AD::AlgorithmDatum) = AD.default_kwargs
-output_property(AD::AlgorithmDatum) = AD.output_property
+output_attribute(AD::AlgorithmDatum) = AD.output_attribute
 reliability(AD::AlgorithmDatum) = AD.reliability
 citations(AD::AlgorithmDatum) = AD.citations
 
@@ -176,10 +176,10 @@ function Base.show(io::IO, AD::AlgorithmDatum)
     println(io, "Algorithm Datum:        ", name(AD))
     println(io, description(AD))
     println(io, "Input:            ")
-    for i in input_properties(AD)
+    for i in input_attributes(AD)
         println(io, "                  ", i)
     end
-    println(io, "Output:\n                  ", output_property(AD))
+    println(io, "Output:\n                  ", output_attribute(AD))
     println(io, "Core Function:    ", core_function(AD))
     println(io, "Citations:         ", [short(c) for c in citations(AD)])
     println(io, "Reliability:      ", reliability(AD))
@@ -193,9 +193,9 @@ const ANY = EnumerativeProperty{Any}("any")
 
 const user_given_datum = AlgorithmDatum(
     name = "user_given",
-    description = "The user declared this property",
-    input_properties = EnumerativeAttribute[],
-    output_property = ANY,
+    description = "The user declared this attribute",
+    input_attributes = EnumerativeAttribute[],
+    output_attribute = ANY,
     reliability = :user_given,
     automated = false
 )
@@ -206,8 +206,8 @@ end
 const conjunction_datum = AlgorithmDatum(
     name = "conjunction",
     description = "Combines multiple knowledge nodes into one",
-    input_properties = EnumerativeAttribute[],
-    output_property = ANY,
+    input_attributes = EnumerativeAttribute[],
+    output_attribute = ANY,
     reliability = :certified,
     automated = false
 )
@@ -219,9 +219,9 @@ const DO_NOT_AUTOMATE = EnumerativeData{Vector{FibreDatum}}("fibre_data")
 
 name(F::Function) = haskey(ALGORITHM_DATA, F) ? name(ALGORITHM_DATA[F]) : error(NOALG)
 description(F::Function) = haskey(ALGORITHM_DATA, F) ? description(ALGORITHM_DATA[F]) : error(NOALG)
-input_properties(F::Function) = haskey(ALGORITHM_DATA, F) ? input_properties(ALGORITHM_DATA[F]) : error(NOALG)
+input_attributes(F::Function) = haskey(ALGORITHM_DATA, F) ? input_attributes(ALGORITHM_DATA[F]) : error(NOALG)
 default_kwargs(F::Function) = haskey(ALGORITHM_DATA, F) ? default_kwargs(ALGORITHM_DATA[F]) : error(NOALG)
-output_property(F::Function) = haskey(ALGORITHM_DATA, F) ? output_property(ALGORITHM_DATA[F]) : error(NOALG)
+output_attribute(F::Function) = haskey(ALGORITHM_DATA, F) ? output_attribute(ALGORITHM_DATA[F]) : error(NOALG)
 citations(F::Function) = haskey(ALGORITHM_DATA, F) ? citations(ALGORITHM_DATA[F]) : error(NOALG)
 reliability(F::Function) = haskey(ALGORITHM_DATA, F) ? reliability(ALGORITHM_DATA[F]) : error(NOALG)
 
@@ -470,7 +470,7 @@ function Base.show(io::IO, EP::EnumerativeProblem)
     )
     @vprintln(io, "The following information is known about this problem:")
     for k in known_properties(properties(EP))
-        l = length(filter(x -> property(x) == k, properties(EP)))
+        l = length(filter(x -> attribute(x) == k, properties(EP)))
         if l == 1
             @vprintln(io, "-", k)
         else
@@ -479,7 +479,7 @@ function Base.show(io::IO, EP::EnumerativeProblem)
     end
     @vprintln(io, "The following data has been computed for this problem:")
     for k in known_data(data(EP))
-        l = length(filter(x -> property(x) == k, data(EP)))
+        l = length(filter(x -> attribute(x) == k, data(EP)))
         if l == 1
             @vprintln(io, "-", k)
         else

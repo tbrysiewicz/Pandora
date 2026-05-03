@@ -18,8 +18,8 @@ end
 
 const n_solutions_datum = AlgorithmDatum(
     name = "n_solutions",
-    input_properties = [BASE_FIBRE],
-    output_property = DEGREE,
+    input_attributes = [BASE_FIBRE],
+    output_attribute = DEGREE,
     reliability = :certified
 )
 
@@ -46,8 +46,8 @@ end
 
 const polyhedral_homotopy_datum = AlgorithmDatum(
     name = "polyhedral_homotopy",
-    input_properties = [SYSTEM, INEQUATIONS],
-    output_property = BASE_FIBRE,
+    input_attributes = [SYSTEM, INEQUATIONS],
+    output_attribute = BASE_FIBRE,
     reliability = :numerical
 )
 
@@ -74,8 +74,8 @@ end
 
 const total_degree_homotopy_datum = AlgorithmDatum(
     name = "total degree homotopy",
-    input_properties = [SYSTEM, INEQUATIONS],
-    output_property = BASE_FIBRE,
+    input_attributes = [SYSTEM, INEQUATIONS],
+    output_attribute = BASE_FIBRE,
     reliability = :numerical
 )
 ALGORITHM_DATA[total_degree_homotopy] = total_degree_homotopy_datum
@@ -101,8 +101,8 @@ end
 
 const monodromy_datum = AlgorithmDatum(
     name = "monodromy",
-    input_properties = [SYSTEM, INEQUATIONS],
-    output_property = BASE_FIBRE,
+    input_attributes = [SYSTEM, INEQUATIONS],
+    output_attribute = BASE_FIBRE,
     reliability = :numerical
 )
 

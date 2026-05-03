@@ -20,6 +20,7 @@ struct EnumerativeData{T}
 end
 
 const EnumerativeAttribute = Union{EnumerativeProperty, EnumerativeData}
+const NULL_ENUMERATIVE_ATTRIBUTE = EnumerativeData{Nothing}("null")
 
 get_type(::EnumerativeData{T}) where {T} = T
 name(EData::EnumerativeData) = EData.name
@@ -29,4 +30,3 @@ is_enumerative_property(::EnumerativeProperty) = true
 is_enumerative_property(::EnumerativeData) = false
 is_enumerative_data(::EnumerativeProperty) = false
 is_enumerative_data(::EnumerativeData) = true
-

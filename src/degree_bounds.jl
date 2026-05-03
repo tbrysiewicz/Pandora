@@ -31,8 +31,8 @@ end
 compute_bkk_bound_datum = AlgorithmDatum(
     name = "compute_bkk_bound",
     description = "Computes the BKK bound for the number of isolated solutions in the torus",
-    input_properties = [SYSTEM],
-    output_property = BKK_BOUND,
+    input_attributes = [SYSTEM],
+    output_attribute = BKK_BOUND,
     reliability = :certified
 )
 
@@ -58,8 +58,8 @@ end
 compute_affine_bkk_bound_datum = AlgorithmDatum(
     name = "compute_affine_bkk_bound",
     description = "Computes the bkk bound on affine space (bounding the number of isolated solutions in C^n)",
-    input_properties = [SYSTEM],
-    output_property = AFFINE_BKK_BOUND,
+    input_attributes = [SYSTEM],
+    output_attribute = AFFINE_BKK_BOUND,
     reliability = :certified
 )
 
@@ -87,8 +87,8 @@ end
 compute_degree_sequence_datum = AlgorithmDatum(
     name = "compute_degree_sequence",
     description = "Computes the degree sequence of a system",
-    input_properties = [SYSTEM],
-    output_property = DEGREE_SEQUENCE,
+    input_attributes = [SYSTEM],
+    output_attribute = DEGREE_SEQUENCE,
     reliability = :certified
 )
 
@@ -115,8 +115,8 @@ end
 compute_bezout_bound_datum = AlgorithmDatum(
     name = "compute_bezout_bound",
     description = "Product of total degrees of the input polynomials",
-    input_properties = [DEGREE_SEQUENCE],
-    output_property = BEZOUT_BOUND,
+    input_attributes = [DEGREE_SEQUENCE],
+    output_attribute = BEZOUT_BOUND,
     reliability = :certified
 )
 
@@ -145,8 +145,8 @@ end
 compute_support_datum = AlgorithmDatum(
     name = "compute_support",
     description = "Computes the supports of each expression in terms of matrices whose columns correspond to monomials",
-    input_properties = [SYSTEM],
-    output_property = SUPPORT,
+    input_attributes = [SYSTEM],
+    output_attribute = SUPPORT,
     reliability = :certified
 )
 
@@ -173,8 +173,8 @@ end
 compute_newton_polytopes_datum = AlgorithmDatum(
     name = "compute_newton_polytopes",
     description = "Computes a vector of Newton polytopes of the system",
-    input_properties = [SYSTEM],
-    output_property = NEWTON_POLYTOPES,
+    input_attributes = [SYSTEM],
+    output_attribute = NEWTON_POLYTOPES,
     reliability = :certified
 )
 
