@@ -5,9 +5,11 @@
 """
     update_base_fibre!(EP::EnumerativeProblem, F::Fibre)
 
-Update the base fibre of the enumerative problem and learn the degree using `n_solutions`.
+Replace the base fibre of the enumerative problem and relearn the degree using `n_solutions`.
 """
 function update_base_fibre!(EP::EnumerativeProblem, F::Fibre)
+    remove_knowledge!(EP, BASE_FIBRE)
+    remove_knowledge!(EP, DEGREE)
     know!(EP, BASE_FIBRE, F)
     learn!(EP, DEGREE; algorithm = n_solutions)
 end
@@ -84,7 +86,7 @@ ALGORITHM_DATA[total_degree_homotopy] = total_degree_homotopy_datum
 #   Implementation of BASE_FIBRE via Monodromy               #
 ##############################################################
 
-"""
+""" 
     monodromy(F::System, G::System) :: Fibre
 
 Compute the base fibre of F using monodromy.
