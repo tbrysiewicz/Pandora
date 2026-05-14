@@ -1,4 +1,4 @@
-import Base: length, show, getindex
+import Base: length, show, getindex, firstindex, lastindex
 export 
     MonodromyLoop,
     ParameterPath,
@@ -32,6 +32,14 @@ end
 
 function getindex(path::ParameterPath, i::Int)
     return path.P[i]
+end
+
+function firstindex(path::ParameterPath)
+    return firstindex(path.P)
+end
+
+function lastindex(path::ParameterPath)
+    return lastindex(path.P)
 end
 
 """
