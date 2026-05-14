@@ -97,9 +97,9 @@ FibreDatum(FD::FibreDatum) = FD
 A `Fibre` is a tuple `(S, P)` of two vectors:
 
 - `S::Vector{Vector{ComplexF64}}`: A vector of solutions, each of which is a vector of complex numbers
-- `P::Vector{ComplexF64}`: A vector of parameters, each of which is a complex number
+- `P::Vector{<:Number}`: A vector of parameters
 """
-const Fibre = Union{Tuple{Vector{Vector{ComplexF64}}, Vector{ComplexF64}}, FibreDatum}
+const Fibre = Union{Tuple{Vector{Vector{ComplexF64}}, Vector{T}} where T <: Number, FibreDatum}
 
 Fibre(S::Vector{Vector{ComplexF64}}, P::Vector{Float64}) = (S, Vector{ComplexF64}(P))
 Fibre(S::Vector{Vector{ComplexF64}}, P::Vector{ComplexF64}) = (S, Vector{ComplexF64}(P))

@@ -104,10 +104,21 @@ function solve(EP::EnumerativeProblem, fibre::Fibre, P::Vector{Vector{T}}) where
     return S
 end
 
+function solve(EP::EnumerativeProblem, fibre::Tuple{Vector{Vector{ComplexF64}}, Vector{T}}, P::Vector{Vector{U}}) where {T <: Number, U <: Number}
+    result = solve(system(EP), fibre[1]; start_parameters = fibre[2], target_parameters = P)
+    result = map(x -> solutions(x[1]), result)
+    return result
+end
+
 # Solve over a single parameter p of F(EP) from fibre = (S1, P1) -> (?, p).
 function solve(EP::EnumerativeProblem, fibre::Fibre, p::Vector{T} where T)
     S = solve(system(EP), solutions(fibre); start_parameters = parameters(fibre), target_parameters = p)
     return solutions(S)
+end
+
+function solve(EP::EnumerativeProblem, fibre::Tuple{Vector{Vector{ComplexF64}}, Vector{T}}, p::Vector{U}) where {T <: Number, U <: Number}
+    result = solve(system(EP), fibre[1]; start_parameters = fibre[2], target_parameters = p)
+    return solutions(result)
 end
 
 # Solve when no fibre is given.
@@ -135,6 +146,8 @@ end
 
 (EP::EnumerativeProblem)(fibre::Fibre, P::Vector{Vector{T}} where T <: Number) = solve(EP, fibre, P)
 (EP::EnumerativeProblem)(fibre::Fibre, p::Vector{T} where T) = solve(EP, fibre, p)
+(EP::EnumerativeProblem)(fibre::Tuple{Vector{Vector{ComplexF64}}, Vector{T}}, P::Vector{Vector{U}}) where {T <: Number, U <: Number} = solve(EP, fibre, P)
+(EP::EnumerativeProblem)(fibre::Tuple{Vector{Vector{ComplexF64}}, Vector{T}}, p::Vector{U}) where {T <: Number, U <: Number} = solve(EP, fibre, p)
 (EP::EnumerativeProblem)(P::Vector{Vector{T}} where T <: Number) = solve(EP, P)
 (EP::EnumerativeProblem)(p::Vector{T} where T <: Number) = solve(EP, p)
 (EP::EnumerativeProblem)() = solve(EP)

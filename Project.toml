@@ -1,6 +1,6 @@
 name = "Pandora"
 uuid = "ddb62b48-25b1-445b-9844-d5846bdd42c2"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["tbrysiewicz <taylorbrysiewicz@gmail.com>"]
 
 [deps]
