@@ -1,7 +1,8 @@
 import Base: length, show, getindex
 export 
     MonodromyLoop,
-    Loop,
+    ParameterPath,
+    is_loop,
     large_monodromy_sample,
     monodromy_group,
     galois_group,
@@ -13,40 +14,55 @@ export
     orbits
 
 """
-     Loop(P::Vector{Vector{ComplexF64}})
+     ParameterPath(P::Vector{Vector{ComplexF64}})
 
-Creates a loop object from a vector of parameter vectors `P`. The first and last elements of `P` must be the same, representing the start and end of the loop.
+Creates a parameter path from a vector of parameter vectors `P`.
 """
-struct Loop
-    P :: Vector{Vector{ComplexF64}} # A list of parameters starting and ending at F[2]
-    function Loop(P::Vector{Vector{ComplexF64}})
-        @assert length(P) >= 2 "Loop must have at least two parameters."
-        @assert isapprox(P[1], P[end]) "Loop must start and end at the same parameter."
+struct ParameterPath
+    P :: Vector{Vector{ComplexF64}}
+    function ParameterPath(P::Vector{Vector{ComplexF64}})
+        @assert length(P) >= 2 "ParameterPath must have at least two parameters."
         new(P)
     end
 end
 
-function length(L::Loop)
-    return length(L.P)
+function length(path::ParameterPath)
+    return length(path.P)
 end
 
-function getindex(L::Loop, i::Int)
-    return L.P[i]
+function getindex(path::ParameterPath, i::Int)
+    return path.P[i]
 end
-
 
 """
-    MonodromyLoop(F::Fibre, L::Loop, sigma::Union{PermGroupElem,Nothing})
+    is_loop(path::ParameterPath; kwargs...)
+
+Return whether `path` starts and ends at approximately the same parameter.
+Keyword arguments are passed to `isapprox`.
+"""
+function is_loop(path::ParameterPath; kwargs...)
+    return isapprox(path[1], path[end]; kwargs...)
+end
+
+"""
+    MonodromyLoop(F::Fibre, path::ParameterPath, sigma::Union{PermGroupElem,Nothing})
 """
 mutable struct MonodromyLoop
     F :: Fibre                      # Gives sols and ordering on them. (S,P)
-    L :: Loop          # A list of parameters starting and ending at F[2]
+    path :: ParameterPath            # A closed parameter path starting and ending at F[2]
     sigma :: Union{PermGroupElem,Nothing}
 
+    function MonodromyLoop(F::Fibre, path::ParameterPath, sigma::Union{PermGroupElem,Nothing})
+        @assert is_loop(path) "MonodromyLoop requires a closed parameter path."
+        new(F, path, sigma)
+    end
+
+    function MonodromyLoop(F::Fibre, path::ParameterPath)
+        return MonodromyLoop(F, path, nothing)
+    end
+
     function MonodromyLoop(F::Fibre, P::Vector{Vector{ComplexF64}}, sigma::Union{PermGroupElem,Nothing})
-        @assert length(P) >= 2 "Monodromy loop must have at least two parameters."
-        @assert isapprox(P[1], P[end]) "Monodromy loop must start and end at the same parameter."
-        new(F, Loop(P), sigma)
+        return MonodromyLoop(F, ParameterPath(P), sigma)
     end
 
     function MonodromyLoop(F::Fibre, P::Vector{Vector{ComplexF64}})
@@ -77,9 +93,9 @@ end
 
 function Base.show(io::IO, ML::MonodromyLoop)
     if ML.sigma === nothing
-        print(io,"A monodromy ",length(ML.L),"-loop.")
+        print(io,"A monodromy ",length(ML.path),"-loop.")
     else
-        print(io,"A monodromy ",length(ML.L),"-loop with permutation ",ML.sigma)
+        print(io,"A monodromy ",length(ML.path),"-loop with permutation ",ML.sigma)
     end
 end
 
@@ -114,11 +130,11 @@ end
 """
     (EP::EnumerativeProblem)(ML::MonodromyLoop)
 
-    Tracks the base fibre of the monodromy loop `ML` over the loop defined by `ML.L` with respect to the enumerative problem `EP`.
+    Tracks the base fibre of the monodromy loop `ML` over `ML.path` with respect to the enumerative problem `EP`.
 """
 function (EP::EnumerativeProblem)(ML::MonodromyLoop)
     (S,P) = base_fibre(ML)
-    loop = ML.L.P
+    loop = ML.path.P
     for l in loop[2:end]
         (S,P) = (EP((S,P),l),l)
     end
@@ -126,13 +142,13 @@ function (EP::EnumerativeProblem)(ML::MonodromyLoop)
 end
 
 """
-    (EP::EnumerativeProblem)(L::Loop)
+    (EP::EnumerativeProblem)(path::ParameterPath)
 
-    Tracks the base fibre `F = (S,P)` of `EP` over the loop  `L`, conjugated with a path from `P` to `L[1]=L[end]`.
+    Tracks the base fibre `F = (S,P)` of `EP` over `path`, conjugated with paths to and from the base parameter.
 """
-function (EP::EnumerativeProblem)(L::Loop)
+function (EP::EnumerativeProblem)(path::ParameterPath)
     (S,P) = base_fibre(EP)
-    loop = L.P
+    loop = path.P
     for l in loop[1:end]
         (S,P) = (EP((S,P),l),l)
     end
@@ -270,4 +286,3 @@ function is_decomposable(EP::EnumerativeProblem)
         return false
     end
 end
-
