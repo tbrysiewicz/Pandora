@@ -250,7 +250,14 @@ end
 """
 function group_generated_by_monodromy_loops(MLS::Vector{MonodromyLoop})
     mg = minimal_generating_set(subgroup(unique([ML.sigma for ML in MLS])))
-    return(subgroup(mg))
+    if length(mg)==0
+        n=degree(MLS[1].sigma)
+        G = symmetric_group(n)
+        H = sub(G, [one(G)])[1]
+        return(H)
+    else
+        return(subgroup(mg))
+    end
 end
 
 const MONODROMY_GROUP = EnumerativeProperty{PermGroup}("monodromy group")
