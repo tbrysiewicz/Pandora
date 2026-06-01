@@ -51,6 +51,6 @@ function AltBurmester(M,N)
         F = System(eqs, parameters = vcat(dx, dy, t[1:M]), variables = vcat(g1, g2, z1, z2, t[M+1:M+N], T, Tbar))
     end
 
-    return F
+    return EnumerativeProblem(F)
 end
 
