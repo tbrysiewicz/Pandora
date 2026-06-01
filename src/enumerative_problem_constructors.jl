@@ -44,7 +44,7 @@ end
 #   as p_1+span(p_i-p_1) where span(p_i-p_1) = span(b_1...b_k-1) where the bi's are
 #   an orthonormal basis for the span. 
 #TODO: Which cache values can be inherited by the restriction?
-function restrict(EP::EnumerativeProblem,P::Vector{Vector{Float64}})
+function restrict(EP::EnumerativeProblem,P::Vector{Vector{T}}) where {T<:Number}
 	n = length(P)
     @var tt[1:n-1]
     basis_vectors = gram_schmidt([(P[i]-P[1]) for i in 2:n])
